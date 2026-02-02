@@ -1,0 +1,18 @@
+{
+  // EXAMPLE: Copy this file to vscode-settings.json and add your private settings
+  // This will be merged with the public settings.json during installation
+  
+  // Example: API keys and tokens
+  "someExtension.apiKey": "YOUR_API_KEY_HERE",
+  
+  // Example: Private sync settings
+  "sync.gist": "YOUR_GIST_ID_HERE",
+  
+  // Example: Machine-specific paths
+  "python.autoComplete.extraPaths": [
+    "/opt/ros/jazzy/lib/python3.12/site-packages"
+  ],
+  
+  // Add any other private settings here
+  "atlascode.jira.auth.token": "YOUR_JIRA_TOKEN"
+}

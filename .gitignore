@@ -1,0 +1,41 @@
+# Private configurations
+private/*
+!private/.gitkeep
+!private/README.md
+!private/*.example
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# IDE/Editor
+.vscode/
+.idea/
+*.iml
+
+# System
+*.log
+.cache/
+
+# SSH keys and sensitive data
+*.pem
+*.key
+id_rsa*
+*.ppk
