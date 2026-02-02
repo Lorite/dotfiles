@@ -1,0 +1,76 @@
+[user]
+	# Update these with your information
+	name = Lorite
+	email = a.lorite.mora@gmail.com
+
+[core]
+	editor = code --wait
+	autocrlf = input
+	excludesfile = ~/.gitignore_global
+	
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = true
+
+[push]
+	default = simple
+	autoSetupRemote = true
+
+[fetch]
+	prune = true
+
+[diff]
+	colorMoved = zebra
+
+[color]
+	ui = auto
+
+[alias]
+	# Short commands
+	st = status
+	co = checkout
+	br = branch
+	ci = commit
+	
+	# Enhanced commands
+	unstage = reset HEAD --
+	last = log -1 HEAD
+	visual = log --graph --oneline --decorate --all
+	
+	# Show branches with commit info
+	branches = branch -vv
+	
+	# Amend last commit without editing message
+	amend = commit --amend --no-edit
+	
+	# Show modified files in last commit
+	dl = "!git ll -1"
+	
+	# Diff with previous commit
+	dlc = diff --cached HEAD^
+	
+	# List aliases
+	la = "!git config -l | grep alias | cut -c 7-"
+	
+	# Undo last commit but keep changes
+	undo = reset --soft HEAD~1
+	
+	# Clean merged branches
+	cleanup = "!git branch --merged | grep -v '\\*\\|main\\|master\\|develop' | xargs -r git branch -d"
+	
+	# Show commit log with file changes
+	ll = log --pretty=format:\"%C(yellow)%h%Cred%d\\ %Creset%s%Cblue\\ [%cn]\" --decorate --numstat
+	
+	# Short log
+	ls = log --pretty=format:\"%C(yellow)%h%Cred%d\\ %Creset%s%Cblue\\ [%cn]\" --decorate
+	
+	# Find commits by message
+	find = "!f() { git log --all --grep=\"$1\"; }; f"
+	
+	# Find commits by code change
+	fc = "!f() { git log --all -S\"$1\"; }; f"
+
+[credential]
+	helper = cache --timeout=3600
