@@ -31,7 +31,7 @@ ZSH_THEME=""
 # HYPHEN_INSENSITIVE="true"
 
 # Uncomment the following line to disable bi-weekly auto-update checks.
-DISABLE_AUTO_UPDATE="true"
+DISABLE_AUTO_UPDATE="false"
 
 # Uncomment the following line to automatically update without prompting.
 # DISABLE_UPDATE_PROMPT="true"
@@ -111,6 +111,21 @@ if [ -f .env ]; then
 fi
 if [ -f .env.secrets ]; then
     source .env.secrets
+fi
+
+# aliases
+alias clean_squash_merged_local_git_branches='git checkout -q main && git for-each-ref refs/heads/ \"--format=%(refname:short)\" | while read branch; do mergeBase=\$(git merge-base main \$branch) && [[ \$(git cherry main \$(git commit-tree \$(git rev-parse \"\$branch^{tree}\") -p \$mergeBase -m _)) == \"-\"* ]] && git branch -D \$branch; done'
+alias clean_squash_merged_local_git_branches_dry_run='git checkout -q main && git for-each-ref refs/heads/ \"--format=%(refname:short)\" | while read branch; do mergeBase=\$(git merge-base main \$branch) && [[ \$(git cherry main \$(git commit-tree \$(git rev-parse \"\$branch^{tree}\") -p \$mergeBase -m _)) == \"-\"* ]] && echo \"\$branch is merged into main and can be deleted\"; done'
+
+# source dev container specific zshrc if it exists
+if [ -n "$REMOTE_CONTAINERS" ] || [ -f /.dockerenv ] || [ -d /workspaces ]; then
+    # Try to find .devcontainer/.zshrc in workspaces directory
+    for workspace_dir in /workspaces/*; do
+        if [ -f "$workspace_dir/.devcontainer/.zshrc" ]; then
+            source "$workspace_dir/.devcontainer/.zshrc"
+            break
+        fi
+    done
 fi
 
 # source vte for terminal notifications
