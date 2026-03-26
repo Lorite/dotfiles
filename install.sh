@@ -345,8 +345,9 @@ fi
 # Backup dconf settings
 print_info "Backing up dconf settings..."
 if command -v dconf &> /dev/null; then
-    dconf dump / > "$DOTFILES_DIR/dconf-settings.ini"
-    print_success "dconf settings backed up to dconf-settings.ini"
+    mkdir -p "$DOTFILES_DIR/private"
+    dconf dump / > "$DOTFILES_DIR/private/dconf-settings.ini"
+    print_success "dconf settings backed up to private/dconf-settings.ini"
 else
     print_warning "dconf not found, skipping backup"
 fi
@@ -413,5 +414,5 @@ echo -e "  3. For private VS Code settings, create ${YELLOW}private/vscode-setti
 echo -e "  4. Configure Brave and Zotero manually as needed"
 echo -e "\n${BLUE}Notes:${NC}"
 echo -e "  • Your old configs were backed up with ${YELLOW}.backup${NC} extension"
-echo -e "  • To restore dconf settings: ${YELLOW}dconf load / < dconf-settings.ini${NC}"
+echo -e "  • To restore dconf settings: ${YELLOW}dconf load / < private/dconf-settings.ini${NC}"
 echo -e "  • To uninstall: ${YELLOW}./uninstall.sh${NC}"

@@ -9,7 +9,7 @@ Personal Linux dotfiles and system configuration management.
 - **Terminal**: Tmux configuration for productivity
 - **Version Control**: Git with useful aliases and settings
 - **Editor**: VS Code settings (with private config support)
-- **System**: Ubuntu dconf settings backup/restore
+- **System**: Ubuntu dconf settings backup/restore (private)
 - **Applications**: Configuration for Brave browser and Zotero
 
 ## Prerequisites
@@ -49,7 +49,7 @@ cd ~/.dotfiles
 - `.config/Code/User/settings.json` → VS Code settings (if using private config)
 
 ### System Backups
-- Ubuntu dconf settings saved to `dconf-settings.ini`
+- Ubuntu dconf settings saved to `private/dconf-settings.ini` (ignored by git)
 
 ## Private Configuration
 
@@ -87,14 +87,14 @@ dotfiles/
 ├── .zshrc                 # Zsh configuration
 ├── .gitconfig             # Git configuration
 ├── .tmux.conf             # Tmux configuration
-├── dconf-settings.ini     # Ubuntu dconf backup
 ├── .config/
 │   ├── starship.toml      # Starship prompt config
 │   └── Code/
 │       └── User/
 │           └── settings.json  # VS Code settings (public)
 └── private/               # Private configs (not tracked)
-    └── vscode-settings.json.example
+    ├── vscode-settings.json.example
+    └── dconf-settings.ini.example
 ```
 
 ## Uninstalling
@@ -114,7 +114,7 @@ Edit the configuration files directly in this repository, then commit and push c
 - The install script creates backups of existing configurations before symlinking
 - Backups are stored with `.backup` extension
 - Private configurations are never committed to the repository
-- dconf settings are system-specific and may need manual review before restoring
+- dconf settings are private, system-specific, and may need manual review before restoring
 
 ## License
 

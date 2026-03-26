@@ -1,0 +1,3 @@
+# Private Ubuntu dconf backup example.
+# The install script writes the real backup to private/dconf-settings.ini
+# and this file is only a tracked placeholder.
