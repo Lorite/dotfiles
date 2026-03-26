@@ -153,3 +153,4 @@ export PATH=/home/lori/.opencode/bin:$PATH
 
 # starship
 eval "$(starship init zsh)"
+export PATH="$HOME/.opencode/bin:$PATH"

@@ -42,6 +42,15 @@ backup_file() {
     fi
 }
 
+# Function to backup existing path (file, symlink, or directory)
+backup_path() {
+    local path=$1
+    if [ -e "$path" ] || [ -L "$path" ]; then
+        mv "$path" "${path}.backup"
+        print_warning "Backed up existing $path to ${path}.backup"
+    fi
+}
+
 # Function to create symlink
 create_symlink() {
     local source=$1
@@ -57,6 +66,71 @@ create_symlink() {
     # Create symlink
     ln -sf "$source" "$target"
     print_success "Linked $target"
+}
+
+# Normalize Claude frontmatter keys to improve OpenCode compatibility.
+normalize_frontmatter_for_opencode() {
+    local source_file=$1
+    local target_file=$2
+
+    awk '
+        NR == 1 && $0 == "---" {
+            in_frontmatter = 1
+            print
+            next
+        }
+        in_frontmatter && $0 == "---" {
+            in_frontmatter = 0
+            print
+            next
+        }
+        in_frontmatter {
+            sub(/^argument-hint:/, "argumentHint:")
+            sub(/^user-invocable:/, "userInvocable:")
+            sub(/^tool-restrictions:/, "toolRestrictions:")
+            print
+            next
+        }
+        {
+            print
+        }
+    ' "$source_file" > "$target_file"
+}
+
+# Sync Claude customizations to OpenCode paths using compatibility transforms.
+sync_claude_customizations_for_opencode() {
+    local source_dir=$1
+    local target_dir=$2
+    local label=$3
+    local create_agent_aliases=${4:-false}
+
+    if [ ! -d "$source_dir" ]; then
+        print_warning "No $label found at $source_dir, skipping"
+        return
+    fi
+
+    if [ -L "$target_dir" ]; then
+        backup_path "$target_dir"
+    fi
+
+    mkdir -p "$target_dir"
+
+    find "$source_dir" -type f | while IFS= read -r source_file; do
+        local relative_path="${source_file#$source_dir/}"
+        local target_file="$target_dir/$relative_path"
+        local target_parent
+        target_parent=$(dirname "$target_file")
+
+        mkdir -p "$target_parent"
+        normalize_frontmatter_for_opencode "$source_file" "$target_file"
+
+        if [ "$create_agent_aliases" = "true" ] && [[ "$relative_path" == *.agent.md ]]; then
+            local alias_target="${target_file%.agent.md}.md"
+            cp "$target_file" "$alias_target"
+        fi
+    done
+
+    print_success "Synced $label to $target_dir"
 }
 
 # Check if running on Linux
@@ -224,6 +298,51 @@ else
     print_success "Zsh is already the default shell"
 fi
 
+
+# Install OpenCode
+print_info "Installing OpenCode..."
+OPENCODE_INSTALL_DIR="$HOME/.local/bin"
+mkdir -p "$OPENCODE_INSTALL_DIR"
+if command -v opencode &> /dev/null || [ -x "$HOME/.opencode/bin/opencode" ] || [ -x "$OPENCODE_INSTALL_DIR/opencode" ]; then
+    OPENCODE_PATH=$(command -v opencode 2>/dev/null || true)
+    if [ -z "$OPENCODE_PATH" ] && [ -x "$HOME/.opencode/bin/opencode" ]; then
+        OPENCODE_PATH="$HOME/.opencode/bin/opencode"
+    elif [ -z "$OPENCODE_PATH" ] && [ -x "$OPENCODE_INSTALL_DIR/opencode" ]; then
+        OPENCODE_PATH="$OPENCODE_INSTALL_DIR/opencode"
+    fi
+    print_success "OpenCode already installed (${OPENCODE_PATH})"
+else
+    if curl -fsSL https://opencode.ai/install | bash -s -- -b "$OPENCODE_INSTALL_DIR"; then
+        print_success "OpenCode installed to $OPENCODE_INSTALL_DIR"
+    else
+        print_warning "Install with custom bin dir failed, retrying default OpenCode install location..."
+        curl -fsSL https://opencode.ai/install | bash
+        print_success "OpenCode installed"
+    fi
+fi
+
+# Ensure OpenCode paths are in PATH for zsh
+print_info "Ensuring OpenCode paths are in PATH for zsh..."
+for opencode_path in '$HOME/.local/bin' '$HOME/.opencode/bin'; do
+    if ! grep -Fq "$opencode_path" "$HOME/.zshrc" 2>/dev/null; then
+        echo "export PATH=\"${opencode_path}:\$PATH\"" >> "$HOME/.zshrc"
+        print_success "Added ${opencode_path} to PATH in .zshrc"
+    fi
+done
+
+# Setup OpenCode and Claude config (source of truth: ~/.claude/)
+print_info "Setting up OpenCode and Claude configuration..."
+mkdir -p "$HOME/.claude/agents"
+mkdir -p "$HOME/.claude/skills"
+
+# Create OpenCode config and compatibility copies of Claude agents/skills.
+mkdir -p "$HOME/.config/opencode"
+create_symlink "$DOTFILES_DIR/.config/opencode/opencode.json" "$HOME/.config/opencode/opencode.json"
+sync_claude_customizations_for_opencode "$DOTFILES_DIR/.claude/agents" "$HOME/.config/opencode/agents" "Claude agents" "true"
+sync_claude_customizations_for_opencode "$DOTFILES_DIR/.claude/skills" "$HOME/.config/opencode/skills" "Claude skills"
+create_symlink "$DOTFILES_DIR/.claude/CLAUDE.md" "$HOME/.config/opencode/AGENTS.md"
+
+print_success "OpenCode configured with ~/.claude/ as source of truth"
 echo -e "\n${GREEN}=== Installation Complete ===${NC}"
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "  1. Restart your terminal or run: ${YELLOW}exec zsh${NC}"
