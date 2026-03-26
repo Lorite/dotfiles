@@ -74,6 +74,31 @@ normalize_frontmatter_for_opencode() {
     local target_file=$2
 
     awk '
+        function ltrim(s) { sub(/^[[:space:]]+/, "", s); return s }
+        function rtrim(s) { sub(/[[:space:]]+$/, "", s); return s }
+        function trim(s) { return rtrim(ltrim(s)) }
+        function strip_quotes(s) {
+            s = trim(s)
+            if (s ~ /^".*"$/ || s ~ /^'\''.*'\''$/) {
+                s = substr(s, 2, length(s) - 2)
+            }
+            return s
+        }
+        function emit_tools_map(raw,   cleaned, n, items, i, item) {
+            cleaned = raw
+            gsub(/^[[:space:]]*\[/, "", cleaned)
+            gsub(/\][[:space:]]*$/, "", cleaned)
+
+            print "tools:"
+            n = split(cleaned, items, /,[[:space:]]*/)
+            for (i = 1; i <= n; i++) {
+                item = strip_quotes(items[i])
+                if (item != "") {
+                    printf "  \"%s\": true\n", item
+                }
+            }
+        }
+
         NR == 1 && $0 == "---" {
             in_frontmatter = 1
             print
@@ -88,6 +113,43 @@ normalize_frontmatter_for_opencode() {
             sub(/^argument-hint:/, "argumentHint:")
             sub(/^user-invocable:/, "userInvocable:")
             sub(/^tool-restrictions:/, "toolRestrictions:")
+
+            # Convert Claude-style tools arrays into OpenCode tools records.
+            if (capturing_tools) {
+                tools_buf = tools_buf " " $0
+                if ($0 ~ /\]/) {
+                    emit_tools_map(tools_buf)
+                    tools_buf = ""
+                    capturing_tools = 0
+                }
+                next
+            }
+            if ($0 ~ /^tools:[[:space:]]*\[/) {
+                tools_buf = $0
+                sub(/^tools:[[:space:]]*/, "", tools_buf)
+                if (tools_buf ~ /\]/) {
+                    emit_tools_map(tools_buf)
+                    tools_buf = ""
+                } else {
+                    capturing_tools = 1
+                }
+                next
+            }
+
+            # Some source files use model as an array placeholder, which may be invalid.
+            if (capturing_model_array) {
+                if ($0 ~ /\]/) {
+                    capturing_model_array = 0
+                }
+                next
+            }
+            if ($0 ~ /^model:[[:space:]]*\[/) {
+                if ($0 !~ /\]/) {
+                    capturing_model_array = 1
+                }
+                next
+            }
+
             print
             next
         }
