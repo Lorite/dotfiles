@@ -393,10 +393,12 @@ for opencode_path in '$HOME/.local/bin' '$HOME/.opencode/bin'; do
     fi
 done
 
-# Setup OpenCode and Claude config (source of truth: ~/.claude/)
+# Setup OpenCode and Claude config (source of truth: dotfiles/.claude/)
 print_info "Setting up OpenCode and Claude configuration..."
-mkdir -p "$HOME/.claude/agents"
-mkdir -p "$HOME/.claude/skills"
+mkdir -p "$DOTFILES_DIR/.claude/agents"
+mkdir -p "$DOTFILES_DIR/.claude/skills"
+create_symlink "$DOTFILES_DIR/.claude/agents" "$HOME/.claude/agents"
+create_symlink "$DOTFILES_DIR/.claude/skills" "$HOME/.claude/skills"
 
 # Create OpenCode config and compatibility copies of Claude agents/skills.
 mkdir -p "$HOME/.config/opencode"
@@ -405,7 +407,11 @@ sync_claude_customizations_for_opencode "$DOTFILES_DIR/.claude/agents" "$HOME/.c
 sync_claude_customizations_for_opencode "$DOTFILES_DIR/.claude/skills" "$HOME/.config/opencode/skills" "Claude skills"
 create_symlink "$DOTFILES_DIR/.claude/CLAUDE.md" "$HOME/.config/opencode/AGENTS.md"
 
-print_success "OpenCode configured with ~/.claude/ as source of truth"
+# Setup VS Code global prompt files.
+mkdir -p "$DOTFILES_DIR/.vscode/prompts"
+create_symlink "$DOTFILES_DIR/.vscode/prompts" "$HOME/.config/Code/User/prompts"
+
+print_success "OpenCode and VS Code configured with dotfiles as source of truth"
 echo -e "\n${GREEN}=== Installation Complete ===${NC}"
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "  1. Restart your terminal or run: ${YELLOW}exec zsh${NC}"

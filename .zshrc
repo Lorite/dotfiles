@@ -149,8 +149,12 @@ setopt globdots
 . "$HOME/.local/bin/env"
 
 # opencode
-export PATH=/home/lori/.opencode/bin:$PATH
+export PATH=/home/$USER/.opencode/bin:$PATH
 
 # starship
 eval "$(starship init zsh)"
 export PATH="$HOME/.opencode/bin:$PATH"
+
+# obsidian clipper
+export OBSIDIAN_CLIPPER_HOME="/home/$USER/git/obsidian-clipper/dist"
+export PATH="$OBSIDIAN_CLIPPER_HOME:$PATH"
