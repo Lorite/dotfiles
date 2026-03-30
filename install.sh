@@ -68,6 +68,24 @@ create_symlink() {
     print_success "Linked $target"
 }
 
+# Function to create symlink for any path type (file, symlink, or directory)
+create_symlink_path() {
+    local source=$1
+    local target=$2
+
+    # Create target parent directory if needed
+    local target_dir
+    target_dir=$(dirname "$target")
+    mkdir -p "$target_dir"
+
+    # Backup existing path
+    backup_path "$target"
+
+    # Create symlink
+    ln -s "$source" "$target"
+    print_success "Linked $target"
+}
+
 # Normalize Claude frontmatter keys to improve OpenCode compatibility.
 normalize_frontmatter_for_opencode() {
     local source_file=$1
@@ -393,23 +411,30 @@ for opencode_path in '$HOME/.local/bin' '$HOME/.opencode/bin'; do
     fi
 done
 
-# Setup OpenCode and Claude config (source of truth: dotfiles/.claude/)
-print_info "Setting up OpenCode and Claude configuration..."
+# Setup Copilot, OpenCode, and Claude config.
+print_info "Setting up GitHub Copilot, OpenCode, and Claude configuration..."
+mkdir -p "$DOTFILES_DIR/.copilot/agents"
 mkdir -p "$DOTFILES_DIR/.claude/agents"
 mkdir -p "$DOTFILES_DIR/.claude/skills"
-create_symlink "$DOTFILES_DIR/.claude/agents" "$HOME/.claude/agents"
-create_symlink "$DOTFILES_DIR/.claude/skills" "$HOME/.claude/skills"
+
+# VS Code user-level custom agent location.
+mkdir -p "$HOME/.copilot"
+create_symlink_path "$DOTFILES_DIR/.copilot/agents" "$HOME/.copilot/agents"
+
+# Keep Claude paths compatible with Copilot-structured agent files.
+create_symlink_path "$DOTFILES_DIR/.claude/agents" "$HOME/.claude/agents"
+create_symlink_path "$DOTFILES_DIR/.claude/skills" "$HOME/.claude/skills"
 
 # Create OpenCode config and compatibility copies of Claude agents/skills.
 mkdir -p "$HOME/.config/opencode"
 create_symlink "$DOTFILES_DIR/.config/opencode/opencode.json" "$HOME/.config/opencode/opencode.json"
-sync_claude_customizations_for_opencode "$DOTFILES_DIR/.claude/agents" "$HOME/.config/opencode/agents" "Claude agents" "true"
+sync_claude_customizations_for_opencode "$DOTFILES_DIR/.copilot/agents" "$HOME/.config/opencode/agents" "Copilot agents" "true"
 sync_claude_customizations_for_opencode "$DOTFILES_DIR/.claude/skills" "$HOME/.config/opencode/skills" "Claude skills"
 create_symlink "$DOTFILES_DIR/.claude/CLAUDE.md" "$HOME/.config/opencode/AGENTS.md"
 
 # Setup VS Code global prompt files.
 mkdir -p "$DOTFILES_DIR/.vscode/prompts"
-create_symlink "$DOTFILES_DIR/.vscode/prompts" "$HOME/.config/Code/User/prompts"
+create_symlink_path "$DOTFILES_DIR/.vscode/prompts" "$HOME/.config/Code/User/prompts"
 
 print_success "OpenCode and VS Code configured with dotfiles as source of truth"
 echo -e "\n${GREEN}=== Installation Complete ===${NC}"

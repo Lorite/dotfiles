@@ -4,7 +4,7 @@ This file provides global instructions for Claude Code, OpenCode, and GitHub Cop
 
 ## Agents
 
-Custom agents are located in `~/.claude/agents/`. These agents are symlinked to `~/.config/opencode/agents/` for OpenCode compatibility.
+Custom agents are located in `~/.claude/agents/`.
 
 ## Skills
 
