@@ -18,80 +18,80 @@ echo -e "${BLUE}Installing from: ${DOTFILES_DIR}${NC}\n"
 
 # Function to print colored messages
 print_success() {
-    echo -e "${GREEN}✓${NC} $1"
+	echo -e "${GREEN}✓${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
+	echo -e "${RED}✗${NC} $1"
 }
 
 print_info() {
-    echo -e "${BLUE}→${NC} $1"
+	echo -e "${BLUE}→${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+	echo -e "${YELLOW}⚠${NC} $1"
 }
 
 # Function to backup existing file
 backup_file() {
-    local file=$1
-    if [ -f "$file" ] || [ -L "$file" ]; then
-        mv "$file" "${file}.backup"
-        print_warning "Backed up existing $file to ${file}.backup"
-    fi
+	local file=$1
+	if [ -f "$file" ] || [ -L "$file" ]; then
+		mv "$file" "${file}.backup"
+		print_warning "Backed up existing $file to ${file}.backup"
+	fi
 }
 
 # Function to backup existing path (file, symlink, or directory)
 backup_path() {
-    local path=$1
-    if [ -e "$path" ] || [ -L "$path" ]; then
-        mv "$path" "${path}.backup"
-        print_warning "Backed up existing $path to ${path}.backup"
-    fi
+	local path=$1
+	if [ -e "$path" ] || [ -L "$path" ]; then
+		mv "$path" "${path}.backup"
+		print_warning "Backed up existing $path to ${path}.backup"
+	fi
 }
 
 # Function to create symlink
 create_symlink() {
-    local source=$1
-    local target=$2
-    
-    # Create target directory if needed
-    local target_dir=$(dirname "$target")
-    mkdir -p "$target_dir"
-    
-    # Backup existing file
-    backup_file "$target"
-    
-    # Create symlink
-    ln -sf "$source" "$target"
-    print_success "Linked $target"
+	local source=$1
+	local target=$2
+
+	# Create target directory if needed
+	local target_dir=$(dirname "$target")
+	mkdir -p "$target_dir"
+
+	# Backup existing file
+	backup_file "$target"
+
+	# Create symlink
+	ln -sf "$source" "$target"
+	print_success "Linked $target"
 }
 
 # Function to create symlink for any path type (file, symlink, or directory)
 create_symlink_path() {
-    local source=$1
-    local target=$2
+	local source=$1
+	local target=$2
 
-    # Create target parent directory if needed
-    local target_dir
-    target_dir=$(dirname "$target")
-    mkdir -p "$target_dir"
+	# Create target parent directory if needed
+	local target_dir
+	target_dir=$(dirname "$target")
+	mkdir -p "$target_dir"
 
-    # Backup existing path
-    backup_path "$target"
+	# Backup existing path
+	backup_path "$target"
 
-    # Create symlink
-    ln -s "$source" "$target"
-    print_success "Linked $target"
+	# Create symlink
+	ln -s "$source" "$target"
+	print_success "Linked $target"
 }
 
 # Normalize Claude frontmatter keys to improve OpenCode compatibility.
 normalize_frontmatter_for_opencode() {
-    local source_file=$1
-    local target_file=$2
+	local source_file=$1
+	local target_file=$2
 
-    awk '
+	awk '
         function ltrim(s) { sub(/^[[:space:]]+/, "", s); return s }
         function rtrim(s) { sub(/[[:space:]]+$/, "", s); return s }
         function trim(s) { return rtrim(ltrim(s)) }
@@ -191,49 +191,90 @@ normalize_frontmatter_for_opencode() {
         {
             print
         }
-    ' "$source_file" > "$target_file"
+    ' "$source_file" >"$target_file"
 }
 
-# Sync Claude customizations to OpenCode paths using compatibility transforms.
-sync_claude_customizations_for_opencode() {
-    local source_dir=$1
-    local target_dir=$2
-    local label=$3
-    local create_agent_aliases=${4:-false}
+# Sync Copilot customizations to Claude paths using Claude CLI format.
+sync_copilot_to_claude() {
+	local source_dir=$1
+	local target_dir=$2
+	local label=$3
 
-    if [ ! -d "$source_dir" ]; then
-        print_warning "No $label found at $source_dir, skipping"
-        return
-    fi
+	if [ ! -d "$source_dir" ]; then
+		print_warning "No $label found at $source_dir, skipping"
+		return
+	fi
 
-    if [ -L "$target_dir" ]; then
-        backup_path "$target_dir"
-    fi
+	if [ -L "$target_dir" ]; then
+		backup_path "$target_dir"
+	fi
 
-    mkdir -p "$target_dir"
+	# Use symlink for skills (same format for Claude, Copilot, OpenCode)
+	if [[ "$target_dir" == *"skills" ]]; then
+		ln -sf "$source_dir" "$target_dir"
+		print_success "Linked $label to $target_dir"
+		return
+	fi
 
-    find "$source_dir" -type f | while IFS= read -r source_file; do
-        local relative_path="${source_file#$source_dir/}"
-        local target_file="$target_dir/$relative_path"
-        local target_parent
-        target_parent=$(dirname "$target_file")
+	mkdir -p "$target_dir"
 
-        mkdir -p "$target_parent"
-        normalize_frontmatter_for_opencode "$source_file" "$target_file"
+	find "$source_dir" -type f | while IFS= read -r source_file; do
+		local relative_path="${source_file#$source_dir/}"
+		local target_file="$target_dir/$relative_path"
+		local target_parent
+		target_parent=$(dirname "$target_file")
 
-        if [ "$create_agent_aliases" = "true" ] && [[ "$relative_path" == *.agent.md ]]; then
-            local alias_target="${target_file%.agent.md}.md"
-            cp "$target_file" "$alias_target"
-        fi
-    done
+		mkdir -p "$target_parent"
+		cp "$source_file" "$target_file"
+	done
 
-    print_success "Synced $label to $target_dir"
+	print_success "Synced $label to $target_dir"
+}
+
+# Sync Copilot customizations to OpenCode paths using compatibility transforms.
+sync_copilot_to_opencode() {
+	local source_dir=$1
+	local target_dir=$2
+	local label=$3
+
+	if [ ! -d "$source_dir" ]; then
+		print_warning "No $label found at $source_dir, skipping"
+		return
+	fi
+
+	# Use symlink for skills (same format for Claude, Copilot, OpenCode)
+	if [[ "$target_dir" == *"skills" ]]; then
+		if [ -L "$target_dir" ]; then
+			backup_path "$target_dir"
+		fi
+		ln -sf "$source_dir" "$target_dir"
+		print_success "Linked $label to $target_dir"
+		return
+	fi
+
+	if [ -L "$target_dir" ]; then
+		backup_path "$target_dir"
+	fi
+
+	mkdir -p "$target_dir"
+
+	find "$source_dir" -type f | while IFS= read -r source_file; do
+		local relative_path="${source_file#$source_dir/}"
+		local target_file="$target_dir/$relative_path"
+		local target_parent
+		target_parent=$(dirname "$target_file")
+
+		mkdir -p "$target_parent"
+		normalize_frontmatter_for_opencode "$source_file" "$target_file"
+	done
+
+	print_success "Synced $label to $target_dir"
 }
 
 # Check if running on Linux
 if [[ "$OSTYPE" != "linux-gnu"* ]]; then
-    print_error "This script is designed for Linux only"
-    exit 1
+	print_error "This script is designed for Linux only"
+	exit 1
 fi
 
 # Update package list
@@ -243,32 +284,32 @@ sudo apt-get update -qq
 # Install essential packages
 print_info "Installing essential packages..."
 PACKAGES=(
-    "zsh"
-    "curl"
-    "wget"
-    "git"
-    "tmux"
-    "fzf"
-    "jq"
-    "build-essential"
+	"zsh"
+	"curl"
+	"wget"
+	"git"
+	"tmux"
+	"fzf"
+	"jq"
+	"build-essential"
 )
 
 for package in "${PACKAGES[@]}"; do
-    if ! dpkg -l | grep -q "^ii  $package "; then
-        sudo apt-get install -y "$package"
-        print_success "Installed $package"
-    else
-        print_success "$package already installed"
-    fi
+	if ! dpkg -l | grep -q "^ii  $package "; then
+		sudo apt-get install -y "$package"
+		print_success "Installed $package"
+	else
+		print_success "$package already installed"
+	fi
 done
 
 # Install Oh-My-Zsh
 print_info "Installing Oh-My-Zsh..."
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-    print_success "Oh-My-Zsh installed"
+	RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+	print_success "Oh-My-Zsh installed"
 else
-    print_success "Oh-My-Zsh already installed"
+	print_success "Oh-My-Zsh already installed"
 fi
 
 # Install Zsh plugins
@@ -276,36 +317,36 @@ print_info "Installing Zsh plugins..."
 
 # zsh-autosuggestions
 if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions" ]; then
-    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-    print_success "Installed zsh-autosuggestions"
+	git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+	print_success "Installed zsh-autosuggestions"
 else
-    print_success "zsh-autosuggestions already installed"
+	print_success "zsh-autosuggestions already installed"
 fi
 
 # zsh-syntax-highlighting
 if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting" ]; then
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-    print_success "Installed zsh-syntax-highlighting"
+	git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+	print_success "Installed zsh-syntax-highlighting"
 else
-    print_success "zsh-syntax-highlighting already installed"
+	print_success "zsh-syntax-highlighting already installed"
 fi
 
 # Install Starship
 print_info "Installing Starship..."
-if ! command -v starship &> /dev/null; then
-    curl -sS https://starship.rs/install.sh | sh -s -- -y
-    print_success "Starship installed"
+if ! command -v starship &>/dev/null; then
+	curl -sS https://starship.rs/install.sh | sh -s -- -y
+	print_success "Starship installed"
 else
-    print_success "Starship already installed"
+	print_success "Starship already installed"
 fi
 
 # Install NVM
 print_info "Installing NVM..."
 if [ ! -d "$HOME/.nvm" ]; then
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-    print_success "NVM installed"
+	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+	print_success "NVM installed"
 else
-    print_success "NVM already installed"
+	print_success "NVM already installed"
 fi
 
 # Create symlinks for dotfiles
@@ -322,132 +363,131 @@ VSCODE_PUBLIC_SETTINGS="$DOTFILES_DIR/.config/Code/User/settings.json"
 VSCODE_PRIVATE_SETTINGS="$DOTFILES_DIR/private/vscode-settings.json"
 
 if [ -f "$VSCODE_PRIVATE_SETTINGS" ]; then
-    print_info "Merging public and private VS Code settings..."
-    mkdir -p "$VSCODE_SETTINGS_DIR"
-    
-    # Backup existing settings
-    backup_file "$VSCODE_SETTINGS_DIR/settings.json"
-    
-    # Merge settings using json5 (handles comments in JSON)
-    if command -v json5 &> /dev/null; then
-        # Convert both files to clean JSON, then merge with jq
-        json5 "$VSCODE_PUBLIC_SETTINGS" > /tmp/public.json 2>/dev/null || cp "$VSCODE_PUBLIC_SETTINGS" /tmp/public.json
-        json5 "$VSCODE_PRIVATE_SETTINGS" > /tmp/private.json 2>/dev/null || cp "$VSCODE_PRIVATE_SETTINGS" /tmp/private.json
-        
-        # Check if files are valid and not empty
-        PUBLIC_SIZE=$(jq -r 'if . == {} or . == null then "empty" else "valid" end' /tmp/public.json 2>/dev/null || echo "invalid")
-        PRIVATE_SIZE=$(jq -r 'if . == {} or . == null then "empty" else "valid" end' /tmp/private.json 2>/dev/null || echo "invalid")
-        
-        if [ "$PUBLIC_SIZE" = "valid" ] && [ "$PRIVATE_SIZE" = "valid" ]; then
-            # Both files have content, merge them
-            jq -s '.[0] * .[1]' /tmp/public.json /tmp/private.json > "$VSCODE_SETTINGS_DIR/settings.json"
-            print_success "Merged VS Code settings with private config"
-        elif [ "$PUBLIC_SIZE" = "valid" ]; then
-            # Only public settings are valid
-            cp /tmp/public.json "$VSCODE_SETTINGS_DIR/settings.json"
-            print_success "Using public VS Code settings (private settings empty)"
-        elif [ "$PRIVATE_SIZE" = "valid" ]; then
-            # Only private settings are valid
-            cp /tmp/private.json "$VSCODE_SETTINGS_DIR/settings.json"
-            print_success "Using private VS Code settings"
-        else
-            # Neither file is valid
-            print_warning "No valid VS Code settings found, skipping"
-        fi
-        
-        rm -f /tmp/public.json /tmp/private.json
-    else
-        print_warning "json5 not found, installing via npm..."
-        if command -v npm &> /dev/null; then
-            npm install -g json5
-            # Retry the merge
-            json5 "$VSCODE_PUBLIC_SETTINGS" > /tmp/public.json 2>/dev/null || cp "$VSCODE_PUBLIC_SETTINGS" /tmp/public.json
-            json5 "$VSCODE_PRIVATE_SETTINGS" > /tmp/private.json 2>/dev/null || cp "$VSCODE_PRIVATE_SETTINGS" /tmp/private.json
-            jq -s '.[0] * .[1]' /tmp/public.json /tmp/private.json > "$VSCODE_SETTINGS_DIR/settings.json"
-            rm -f /tmp/public.json /tmp/private.json
-            print_success "Merged VS Code settings with private config"
-        else
-            print_warning "npm not found, using public settings"
-            cp "$VSCODE_PUBLIC_SETTINGS" "$VSCODE_SETTINGS_DIR/settings.json"
-        fi
-    fi
+	print_info "Merging public and private VS Code settings..."
+	mkdir -p "$VSCODE_SETTINGS_DIR"
+
+	# Backup existing settings
+	backup_file "$VSCODE_SETTINGS_DIR/settings.json"
+
+	# Merge settings using json5 (handles comments in JSON)
+	if command -v json5 &>/dev/null; then
+		# Convert both files to clean JSON, then merge with jq
+		json5 "$VSCODE_PUBLIC_SETTINGS" >/tmp/public.json 2>/dev/null || cp "$VSCODE_PUBLIC_SETTINGS" /tmp/public.json
+		json5 "$VSCODE_PRIVATE_SETTINGS" >/tmp/private.json 2>/dev/null || cp "$VSCODE_PRIVATE_SETTINGS" /tmp/private.json
+
+		# Check if files are valid and not empty
+		PUBLIC_SIZE=$(jq -r 'if . == {} or . == null then "empty" else "valid" end' /tmp/public.json 2>/dev/null || echo "invalid")
+		PRIVATE_SIZE=$(jq -r 'if . == {} or . == null then "empty" else "valid" end' /tmp/private.json 2>/dev/null || echo "invalid")
+
+		if [ "$PUBLIC_SIZE" = "valid" ] && [ "$PRIVATE_SIZE" = "valid" ]; then
+			# Both files have content, merge them
+			jq -s '.[0] * .[1]' /tmp/public.json /tmp/private.json >"$VSCODE_SETTINGS_DIR/settings.json"
+			print_success "Merged VS Code settings with private config"
+		elif [ "$PUBLIC_SIZE" = "valid" ]; then
+			# Only public settings are valid
+			cp /tmp/public.json "$VSCODE_SETTINGS_DIR/settings.json"
+			print_success "Using public VS Code settings (private settings empty)"
+		elif [ "$PRIVATE_SIZE" = "valid" ]; then
+			# Only private settings are valid
+			cp /tmp/private.json "$VSCODE_SETTINGS_DIR/settings.json"
+			print_success "Using private VS Code settings"
+		else
+			# Neither file is valid
+			print_warning "No valid VS Code settings found, skipping"
+		fi
+
+		rm -f /tmp/public.json /tmp/private.json
+	else
+		print_warning "json5 not found, installing via npm..."
+		if command -v npm &>/dev/null; then
+			npm install -g json5
+			# Retry the merge
+			json5 "$VSCODE_PUBLIC_SETTINGS" >/tmp/public.json 2>/dev/null || cp "$VSCODE_PUBLIC_SETTINGS" /tmp/public.json
+			json5 "$VSCODE_PRIVATE_SETTINGS" >/tmp/private.json 2>/dev/null || cp "$VSCODE_PRIVATE_SETTINGS" /tmp/private.json
+			jq -s '.[0] * .[1]' /tmp/public.json /tmp/private.json >"$VSCODE_SETTINGS_DIR/settings.json"
+			rm -f /tmp/public.json /tmp/private.json
+			print_success "Merged VS Code settings with private config"
+		else
+			print_warning "npm not found, using public settings"
+			cp "$VSCODE_PUBLIC_SETTINGS" "$VSCODE_SETTINGS_DIR/settings.json"
+		fi
+	fi
 elif [ -f "$VSCODE_PUBLIC_SETTINGS" ]; then
-    create_symlink "$VSCODE_PUBLIC_SETTINGS" "$VSCODE_SETTINGS_DIR/settings.json"
+	create_symlink "$VSCODE_PUBLIC_SETTINGS" "$VSCODE_SETTINGS_DIR/settings.json"
 else
-    print_warning "No VS Code settings found"
+	print_warning "No VS Code settings found"
 fi
 
 # Backup dconf settings
 print_info "Backing up dconf settings..."
-if command -v dconf &> /dev/null; then
-    mkdir -p "$DOTFILES_DIR/private"
-    dconf dump / > "$DOTFILES_DIR/private/dconf-settings.ini"
-    print_success "dconf settings backed up to private/dconf-settings.ini"
+if command -v dconf &>/dev/null; then
+	mkdir -p "$DOTFILES_DIR/private"
+	dconf dump / >"$DOTFILES_DIR/private/dconf-settings.ini"
+	print_success "dconf settings backed up to private/dconf-settings.ini"
 else
-    print_warning "dconf not found, skipping backup"
+	print_warning "dconf not found, skipping backup"
 fi
 
 # Change default shell to zsh
 print_info "Setting Zsh as default shell..."
 if [ "$SHELL" != "$(which zsh)" ]; then
-    chsh -s $(which zsh)
-    print_success "Default shell changed to Zsh (restart required)"
+	chsh -s $(which zsh)
+	print_success "Default shell changed to Zsh (restart required)"
 else
-    print_success "Zsh is already the default shell"
+	print_success "Zsh is already the default shell"
 fi
-
 
 # Install OpenCode
 print_info "Installing OpenCode..."
 OPENCODE_INSTALL_DIR="$HOME/.local/bin"
 mkdir -p "$OPENCODE_INSTALL_DIR"
-if command -v opencode &> /dev/null || [ -x "$HOME/.opencode/bin/opencode" ] || [ -x "$OPENCODE_INSTALL_DIR/opencode" ]; then
-    OPENCODE_PATH=$(command -v opencode 2>/dev/null || true)
-    if [ -z "$OPENCODE_PATH" ] && [ -x "$HOME/.opencode/bin/opencode" ]; then
-        OPENCODE_PATH="$HOME/.opencode/bin/opencode"
-    elif [ -z "$OPENCODE_PATH" ] && [ -x "$OPENCODE_INSTALL_DIR/opencode" ]; then
-        OPENCODE_PATH="$OPENCODE_INSTALL_DIR/opencode"
-    fi
-    print_success "OpenCode already installed (${OPENCODE_PATH})"
+if command -v opencode &>/dev/null || [ -x "$HOME/.opencode/bin/opencode" ] || [ -x "$OPENCODE_INSTALL_DIR/opencode" ]; then
+	OPENCODE_PATH=$(command -v opencode 2>/dev/null || true)
+	if [ -z "$OPENCODE_PATH" ] && [ -x "$HOME/.opencode/bin/opencode" ]; then
+		OPENCODE_PATH="$HOME/.opencode/bin/opencode"
+	elif [ -z "$OPENCODE_PATH" ] && [ -x "$OPENCODE_INSTALL_DIR/opencode" ]; then
+		OPENCODE_PATH="$OPENCODE_INSTALL_DIR/opencode"
+	fi
+	print_success "OpenCode already installed (${OPENCODE_PATH})"
 else
-    if curl -fsSL https://opencode.ai/install | bash -s -- -b "$OPENCODE_INSTALL_DIR"; then
-        print_success "OpenCode installed to $OPENCODE_INSTALL_DIR"
-    else
-        print_warning "Install with custom bin dir failed, retrying default OpenCode install location..."
-        curl -fsSL https://opencode.ai/install | bash
-        print_success "OpenCode installed"
-    fi
+	if curl -fsSL https://opencode.ai/install | bash -s -- -b "$OPENCODE_INSTALL_DIR"; then
+		print_success "OpenCode installed to $OPENCODE_INSTALL_DIR"
+	else
+		print_warning "Install with custom bin dir failed, retrying default OpenCode install location..."
+		curl -fsSL https://opencode.ai/install | bash
+		print_success "OpenCode installed"
+	fi
 fi
 
 # Ensure OpenCode paths are in PATH for zsh
 print_info "Ensuring OpenCode paths are in PATH for zsh..."
 for opencode_path in '$HOME/.local/bin' '$HOME/.opencode/bin'; do
-    if ! grep -Fq "$opencode_path" "$HOME/.zshrc" 2>/dev/null; then
-        echo "export PATH=\"${opencode_path}:\$PATH\"" >> "$HOME/.zshrc"
-        print_success "Added ${opencode_path} to PATH in .zshrc"
-    fi
+	if ! grep -Fq "$opencode_path" "$HOME/.zshrc" 2>/dev/null; then
+		echo "export PATH=\"${opencode_path}:\$PATH\"" >>"$HOME/.zshrc"
+		print_success "Added ${opencode_path} to PATH in .zshrc"
+	fi
 done
 
 # Setup Copilot, OpenCode, and Claude config.
 print_info "Setting up GitHub Copilot, OpenCode, and Claude configuration..."
 mkdir -p "$DOTFILES_DIR/.copilot/agents"
-mkdir -p "$DOTFILES_DIR/.claude/agents"
-mkdir -p "$DOTFILES_DIR/.claude/skills"
+mkdir -p "$DOTFILES_DIR/.copilot/skills"
 
 # VS Code user-level custom agent location.
 mkdir -p "$HOME/.copilot"
 create_symlink_path "$DOTFILES_DIR/.copilot/agents" "$HOME/.copilot/agents"
+create_symlink_path "$DOTFILES_DIR/.copilot/skills" "$HOME/.copilot/skills"
 
-# Keep Claude paths compatible with Copilot-structured agent files.
-create_symlink_path "$DOTFILES_DIR/.claude/agents" "$HOME/.claude/agents"
-create_symlink_path "$DOTFILES_DIR/.claude/skills" "$HOME/.claude/skills"
+# Claude uses transformed copies from .copilot source.
+mkdir -p "$HOME/.claude"
+sync_copilot_to_claude "$DOTFILES_DIR/.copilot/agents" "$HOME/.claude/agents" "Copilot agents"
+sync_copilot_to_claude "$DOTFILES_DIR/.copilot/skills" "$HOME/.claude/skills" "Copilot skills"
 
-# Create OpenCode config and compatibility copies of Claude agents/skills.
+# OpenCode uses transformed copies from .copilot source.
 mkdir -p "$HOME/.config/opencode"
-create_symlink "$DOTFILES_DIR/.config/opencode/opencode.json" "$HOME/.config/opencode/opencode.json"
-sync_claude_customizations_for_opencode "$DOTFILES_DIR/.copilot/agents" "$HOME/.config/opencode/agents" "Copilot agents" "true"
-sync_claude_customizations_for_opencode "$DOTFILES_DIR/.claude/skills" "$HOME/.config/opencode/skills" "Claude skills"
-create_symlink "$DOTFILES_DIR/.claude/CLAUDE.md" "$HOME/.config/opencode/AGENTS.md"
+create_symlink "$DOTFILES_DIR/.copilot/CLAUDE.md" "$HOME/.config/opencode/AGENTS.md"
+sync_copilot_to_opencode "$DOTFILES_DIR/.copilot/agents" "$HOME/.config/opencode/agents" "Copilot agents"
+sync_copilot_to_opencode "$DOTFILES_DIR/.copilot/skills" "$HOME/.config/opencode/skills" "Copilot skills"
 
 # Setup VS Code global prompt files.
 mkdir -p "$DOTFILES_DIR/.vscode/prompts"
