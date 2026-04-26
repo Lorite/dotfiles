@@ -132,7 +132,24 @@ normalize_frontmatter_for_opencode() {
             sub(/^user-invocable:/, "userInvocable:")
             sub(/^tool-restrictions:/, "toolRestrictions:")
 
-            # Convert Claude-style tools arrays into OpenCode tools records.
+            # Convert Claude-style multi-line tools arrays into OpenCode tools records.
+            if (capturing_tools_multiline) {
+                if ($0 ~ /^[[:space:]]+-[[:space:]]/) {
+                    item = $0
+                    sub(/^[[:space:]]+-[[:space:]]/, "", item)
+                    item = strip_quotes(trim(item))
+                    if (item != "") printf "  \"%s\": true\n", item
+                    next
+                }
+                capturing_tools_multiline = 0
+            }
+            if ($0 ~ /^tools:[[:space:]]*$/) {
+                print "tools:"
+                capturing_tools_multiline = 1
+                next
+            }
+
+            # Convert Claude-style inline tools arrays into OpenCode tools records.
             if (capturing_tools) {
                 tools_buf = tools_buf " " $0
                 if ($0 ~ /\]/) {
