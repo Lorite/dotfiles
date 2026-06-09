@@ -520,6 +520,20 @@ else
 	print_warning "No $AGENT_REQS found — skipping agent-tools venv"
 fi
 
+# task-manager: mdbase-tasknotes (mtn) is a standalone CLI over the Obsidian TaskNotes vault.
+print_info "Installing mdbase-tasknotes (mtn) CLI..."
+if command -v npm &>/dev/null; then
+	if command -v mtn &>/dev/null; then
+		print_success "mdbase-tasknotes already installed ($(command -v mtn))"
+	elif npm install -g mdbase-tasknotes >/dev/null 2>&1; then
+		print_success "Installed mdbase-tasknotes (mtn)"
+	else
+		print_warning "Failed to install mdbase-tasknotes — run 'npm i -g mdbase-tasknotes' manually"
+	fi
+else
+	print_warning "npm not found — skipping mdbase-tasknotes (needed by task-manager)"
+fi
+
 echo -e "\n${GREEN}=== Installation Complete ===${NC}"
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "  1. Restart your terminal or run: ${YELLOW}exec zsh${NC}"
