@@ -76,8 +76,8 @@ never full automation. Each new agent/skill is authored in `.copilot/`.
 
 | # | Pipeline stage | Agent / skill | Status |
 |---|----------------|---------------|--------|
-| 1 | Find research papers online | `paper-scout` | planned |
-| 2 | Read papers + Zotero | `paper-reader` | planned |
+| 1 | Find research papers online | `paper-scout` | **built** |
+| 2 | Read papers + Zotero | `paper-reader` | **built** |
 | 3 | GitHub issue → Obsidian task (web clipper) | `issue-to-task` | planned |
 | 4 | Take notes in Obsidian | `ai-brain` (existing; may extend) | exists |
 | 5 | Modify robotics code | `ros2-operator` (existing) | exists |
