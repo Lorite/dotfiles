@@ -44,8 +44,9 @@ and extension tools like `antfu.slidev/*`.
 
 **Every PhD-pipeline agent must carry the Obsidian read-first / log-often rule** — before acting,
 read the corresponding vault note (task / paper / project) for the latest context; log findings and
-decisions back to it frequently via the `obsidian-note` skill. See `.copilot/CLAUDE.md` →
-"Obsidian note sync" for the canonical wording, and copy the rule into any new pipeline agent.
+decisions as you go via the `ai-chat-diary` skill (a dated diary entry in `ai_chats/diary/daily/` +
+the full detail in the linked note(s)). See `.copilot/CLAUDE.md` → "Obsidian note sync" for the
+canonical wording, and copy the rule into any new pipeline agent.
 
 ## Authoring a skill
 

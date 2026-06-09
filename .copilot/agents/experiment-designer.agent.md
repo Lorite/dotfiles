@@ -37,10 +37,10 @@ Repos: robotics `~/git/lorite_ros2_humble_phd` (experiments live here); CLAWAR 2
   (part of) the question, extend it and say so. Flag settled questions before re-running them.
 - Keep transform-chain / frame notation (`T_{map→base}`, `T_{base→cam}`, `T_{cam→drone}`)
   consistent with `main.tex` and existing READMEs.
-- **Obsidian-first context & logging (read-first, log-often).** Beyond gathering inputs, read the
-  driving task note and the Conference Paper project note for the latest status/decisions before
-  designing, and log design rationale, key decisions, and review findings back to that project/task
-  note via the **`obsidian-note`** skill as the design evolves — not only at approval.
+- **Obsidian-first context & logging.** Beyond gathering inputs, read the driving task note and the
+  Conference Paper project note for the latest status/decisions before designing. Log design
+  rationale, decisions, and review findings as you go via the **`ai-chat-diary`** skill — a dated
+  diary entry plus the detail in that project/task note — not only at approval.
 
 ## Inputs to synthesize (gather all that apply; degrade gracefully if a source is absent)
 1. **Papers read** — paper-reader notes at `$PAPER_SCOUT_HOME/notes/` (default

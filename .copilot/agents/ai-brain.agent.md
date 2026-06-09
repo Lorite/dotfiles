@@ -30,6 +30,13 @@ file-fallback mechanism and the `ai_brain` template. Do not hand-roll vault writ
 - Format with Obsidian Flavored Markdown — see the `obsidian-markdown` skill (wikilinks, callouts,
   properties). Link liberally.
 
+## Logging work — the `ai-chat-diary` skill
+Keep the daily work log current with the **`ai-chat-diary`** skill: a time-stamped entry in
+`ai_chats/diary/daily/AI Chat - <date>` plus the full detail appended to the relevant linked note(s)
+under `# AI Generated → ## [[date]] - [[AI Chat - date]]`. Log as work happens (not only at the end);
+when another agent hands you content to file, add the diary entry + linked-note detail as part of
+filing it. The skill defers to `obsidian-note` for the per-note append mechanics.
+
 ## Delegation contract (when another agent calls you)
 Expect a caller to pass: a **title**, the **content** to record (already synthesized), any **links**,
 and optionally a **source artifact path** (e.g. `paper-reader`'s markdown at

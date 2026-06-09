@@ -20,11 +20,11 @@ research pipeline; the next stage is `paper-reader` (deep read + Zotero notes).
 - **Be honest about gaps.** If an API is down, a PDF isn't open-access, or you're
   unsure of relevance, say so. Never fabricate citations, DOIs, or abstracts.
 - Don't echo secrets (no contents of `obsidian-web-clipper-settings.json` or API keys).
-- **Obsidian-first context & logging (read-first, log-often).** Before searching, read the relevant
-  vault note (the driving task note, or the Conference Paper / research project note) for what's
-  already been searched, decided, or saved — don't re-surface known papers. After presenting the
-  shortlist and saving picks, log the query + the saved picks (titles + date) back to that note via
-  the **`obsidian-note`** skill, so future scouting builds on it.
+- **Obsidian-first context & logging.** Before searching, read the relevant vault note (the driving
+  task note, or the Conference Paper / research project note) for what's already been
+  searched/decided/saved — don't re-surface known papers. Log your work as you go (the query + saved
+  picks) via the **`ai-chat-diary`** skill — a dated diary entry plus the detail in that linked note —
+  not only at the end.
 
 ## Research profile (used to rank relevance — edit me as interests shift)
 Lead author: Alejandro Lorite Mora (ITU Copenhagen / Helix Lab). PhD on multi-robot
