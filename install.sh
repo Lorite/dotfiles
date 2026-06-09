@@ -292,6 +292,8 @@ PACKAGES=(
 	"fzf"
 	"jq"
 	"build-essential"
+	"python3-venv"
+	"python3-pip"
 )
 
 for package in "${PACKAGES[@]}"; do
@@ -494,6 +496,30 @@ mkdir -p "$DOTFILES_DIR/.vscode/prompts"
 create_symlink_path "$DOTFILES_DIR/.vscode/prompts" "$HOME/.config/Code/User/prompts"
 
 print_success "OpenCode and VS Code configured with dotfiles as source of truth"
+
+# Setup shared Python venv for agent tooling (paper-scout, and future agents).
+print_info "Setting up agent-tools Python venv..."
+AGENT_VENV="$HOME/.local/share/dotfiles-agents/venv"
+AGENT_REQS="$DOTFILES_DIR/tools/requirements.txt"
+if [ -f "$AGENT_REQS" ]; then
+	if [ ! -d "$AGENT_VENV" ]; then
+		python3 -m venv "$AGENT_VENV"
+		print_success "Created agent-tools venv at $AGENT_VENV"
+	fi
+	"$AGENT_VENV/bin/pip" install -q --upgrade pip >/dev/null 2>&1 || true
+	if "$AGENT_VENV/bin/pip" install -q -r "$AGENT_REQS"; then
+		print_success "Installed agent-tools Python deps (tools/requirements.txt)"
+	else
+		print_warning "Failed to install some agent-tools Python deps"
+	fi
+	# paper-scout drives system Google Chrome (Playwright channel=chrome); no browser download.
+	if ! command -v google-chrome &>/dev/null && ! command -v google-chrome-stable &>/dev/null; then
+		print_warning "Google Chrome not found — paper-scout PDF fetch needs it (https://www.google.com/chrome/)"
+	fi
+else
+	print_warning "No $AGENT_REQS found — skipping agent-tools venv"
+fi
+
 echo -e "\n${GREEN}=== Installation Complete ===${NC}"
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "  1. Restart your terminal or run: ${YELLOW}exec zsh${NC}"

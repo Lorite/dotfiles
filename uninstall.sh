@@ -83,6 +83,15 @@ if [ $backup_count -eq 0 ]; then
     print_success "No additional backup files found"
 fi
 
+# Remove the shared agent-tools venv (rebuilt by install.sh from tools/requirements.txt).
+AGENT_VENV="$HOME/.local/share/dotfiles-agents"
+if [ -d "$AGENT_VENV" ]; then
+    rm -rf "$AGENT_VENV"
+    print_success "Removed agent-tools venv ($AGENT_VENV)"
+fi
+# Note: paper-scout runtime data (login profile + downloaded PDFs) lives in
+# ~/.config/paper-scout (or $PAPER_SCOUT_HOME) and is left in place. Remove manually if desired.
+
 # Note about shell
 if [ "$SHELL" = "$(which zsh)" ]; then
     echo ""

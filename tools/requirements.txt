@@ -1,0 +1,7 @@
+# Python dependencies for dotfiles agent tooling (shared venv).
+# Built by install.sh into ~/.local/share/dotfiles-agents/venv ; removed by uninstall.sh.
+#
+# paper-scout/fetch_attach.py: drives system Google Chrome via Playwright
+# (channel="chrome") to fetch paywalled PDFs through the institutional proxy.
+# No browser download is needed (bundled Chromium is unsupported on some distros).
+playwright>=1.40
