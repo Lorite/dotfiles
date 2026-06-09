@@ -94,7 +94,8 @@ Footer line: venue · year · DOI · BibTeX citekey (if known) · "read by paper
 ## Handoffs
 - **→ paper-scout**: offer to snowball the "Citations to follow up" list.
 - **→ ai-brain (stage 4)**: the markdown note in `~/.config/paper-scout/notes/` is the handoff
-  artifact for an Obsidian literature note / the relevant task note.
+  artifact — hand it to `ai-brain`, or write the Obsidian note yourself via the **`obsidian-note`**
+  skill (it enforces the `ai_brain/`-only write policy). Don't write vault notes any other way.
 - **→ next paper**: if triaging, loop to the next chosen deep-read.
 
 ## Troubleshooting

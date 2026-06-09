@@ -98,7 +98,9 @@ codebase; mentions code/repo/build/tests). **Confirm.** Then:
 ## Handoffs
 - Software task → `ros2-operator` can pick up the GitHub issue to do the code.
 - Research/reading tasks relate to `paper-scout` / `paper-reader` outputs.
-- Journal/outcome notes → `ai-brain` (stage 4) can expand them in Obsidian.
+- Journal/outcome notes → `ai-brain` (stage 4) can expand them in Obsidian. To write any *non-task*
+  vault note, use the **`obsidian-note`** skill (or hand to `ai-brain`) — it enforces the
+  `ai_brain/`-only policy; task notes themselves stay in `tasks/` via mtn as above.
 
 ## Troubleshooting
 - **gcalcli OAuth (one-time):** create a Google Cloud project → enable the Google Calendar API →
