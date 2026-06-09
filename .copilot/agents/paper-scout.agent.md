@@ -107,7 +107,13 @@ created via any API** — the user must create "Scout Inbox" once by hand.
 - Dedup: `GET /api/users/0/items?q=<doi>&qmode=everything&itemType=-attachment&format=json`,
   then **verify exact match** (q= tokenizes DOIs → false positives):
   `jq '[.[].data.DOI // empty | ascii_downcase] | index("<doi>"|ascii_downcase) != null'`.
-  Skip ("already in library") only on an exact DOI (or exact normalized-title) match.
+  Exact DOI (or exact normalized-title) match = "already in library".
+- **Already in library → add the existing item to Scout Inbox** (do NOT re-create a
+  duplicate with a new PDF). Neither the read-only local API nor the connector can file an
+  existing item into a collection, so use the Web API helper (needs a one-time read/write
+  key — see below): `python tools/paper-scout/add_to_collection.py --doi <doi> <ScoutInboxKey>`.
+  Get `<ScoutInboxKey>` (the Local API collection key, e.g. `XNRSYTGJ`) from
+  `GET /api/users/0/collections`. The change syncs to local Zotero in seconds.
 
 **Writes / saving (Connector)** — only for user-approved picks:
 1. **Find the collection id**: `POST /connector/getSelectedCollection {}` returns the
@@ -155,6 +161,13 @@ header) → Zotero stores the PDF and its recognizer (`canRecognize:true`) makes
 
 **IEEE institutional access (ITU EZproxy/OCLC)**: proxied article URL is
 `https://ieeexplore-ieee-org.kb-itu.idm.oclc.org/document/<articleNumber>` (login required).
+
+## Zotero Web API key (for "add existing item to collection")
+`add_to_collection.py` needs a read/write key (the only way to file an existing item into a
+collection — local API is read-only, connector only creates). One-time:
+`https://www.zotero.org/settings/keys` → new key, **allow write access** → store gitignored:
+`printf '%s' '<KEY>' > ~/.config/paper-scout/zotero-api-key && chmod 600 …`. User id is
+auto-detected from the local API; collection keys are the same local/web (synced account).
 
 ## Troubleshooting
 - S2 429 / empty: back off and retry; cross-check with OpenAlex.
