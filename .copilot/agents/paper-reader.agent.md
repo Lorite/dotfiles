@@ -22,6 +22,11 @@ Zotero side and emit a clean markdown handoff for it.
 - **Be a critical reader,** not a press release: surface limitations and assumptions, not just
   the authors' claims.
 - Don't echo secrets (API keys, `obsidian-web-clipper-settings.json`).
+- **Obsidian-first context & logging (read-first, log-often).** Before reading, check the vault for
+  an existing note on this paper and the project/task note that motivated it (latest context). After
+  writing the Zotero note + portable markdown, also surface the read in the vault — file an
+  `ai_brain/` literature note (or hand to `ai-brain`) via the **`obsidian-note`** skill and add a
+  one-line pointer to the motivating project/task note. Log as you go, not only at the end.
 
 ## Shared infrastructure (reuse paper-scout's — don't reinvent)
 - **Research profile** for relevance lives in `paper-scout.agent.md` ("Research profile"

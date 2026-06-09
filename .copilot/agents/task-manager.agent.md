@@ -26,6 +26,10 @@ user's two-note pattern; **all other** tasks are TaskNotes-only.
 - Be honest about calendar/issue failures; never fabricate task or calendar data. Don't echo
   secrets. The vault is manually managed — this agent writes only `tasks/` and
   `media/github/github_issues/`; don't touch other notes without asking.
+- **Obsidian-first context & logging (read-first, log-often).** Before acting on a task, read its
+  note's latest `# 📓 Journal / Work Log` for current status and decisions. Log progress and
+  decisions back to the task note's `## [[date]] → ### AI generated` journal entry as you go
+  (newest at the top), not just at completion — via direct edit / the **`obsidian-note`** skill.
 
 ## Environment
 - **Vault / mdbase collection root:** `~/git/lorite-obsidian-notes` (has `mdbase.yaml` + `_types/`,

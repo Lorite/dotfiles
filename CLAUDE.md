@@ -42,6 +42,11 @@ Tool namespaces follow the Copilot/VS Code set: `vscode`, `execute`, `read`, `ed
 `search`, `web`, `agent`, `todo`, `time/*`, `brave-search/*`, `google-calendar/*`,
 and extension tools like `antfu.slidev/*`.
 
+**Every PhD-pipeline agent must carry the Obsidian read-first / log-often rule** — before acting,
+read the corresponding vault note (task / paper / project) for the latest context; log findings and
+decisions back to it frequently via the `obsidian-note` skill. See `.copilot/CLAUDE.md` →
+"Obsidian note sync" for the canonical wording, and copy the rule into any new pipeline agent.
+
 ## Authoring a skill
 
 `.copilot/skills/<name>/SKILL.md` with frontmatter `name`, `description`,
@@ -81,7 +86,7 @@ never full automation. Each new agent/skill is authored in `.copilot/`.
 | 3 | Task manager: TaskNotes + Calendar + GitHub issues | `task-manager` | **built** |
 | 4 | Take notes in Obsidian | `ai-brain` (existing; may extend) | exists |
 | 5 | Modify robotics code | `ros2-operator` (existing) | exists |
-| 6 | Design experiments | `experiment-designer` | planned |
+| 6 | Design experiments | `experiment-designer` | **built** |
 | 7 | Write experiment code | `ros2-operator` / `experiment-coder` | partial |
 | 8 | Check data + make plots | `data-analyst` | planned |
 | 9 | Write the LaTeX paper/article | `paper-writer` | planned |
