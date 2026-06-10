@@ -74,6 +74,11 @@ for multi-step, semi-autonomous work and orchestration).
 - **Zotero** (`/usr/bin/zotero`): reference manager feeding the paper's `references.bib`.
 - **gh CLI**: GitHub issues/PRs on the robotics repo.
 - **Slidev**: `slidev-theme-lorite-phd` theme for presentations.
+- **SimpleTimeTracker** (Android, via an **Automate** webhook): live work-session timing.
+  `tools/lorite/simple_time_tracker.py start|stop` sends `start_action`/`stop_action` (the
+  prospective complement to the vault's retrospective `daily_time_tracker.py`, which sends
+  `add_action` blocks). Webhook URL is a secret in `<vault>/.secrets/automate_webhook_url.txt`
+  (or `$AUTOMATE_WEBHOOK_URL`) — never echo it.
 
 ## Planned: PhD research-pipeline agents
 
@@ -92,6 +97,17 @@ never full automation. Each new agent/skill is authored in `.copilot/`.
 | 8 | Check data + make plots | `lorite-data-analyst` | **built** |
 | 9 | Write the LaTeX paper/article | `lorite-paper-writer` | planned |
 | 10 | Build the Slidev presentation | `lorite-slidev-presentation-*` (existing) | exists |
+
+## Default session mode (`/lorite`)
+
+A PhD chat is usually work on **one task with a corresponding Obsidian note**. The base session
+isn't a pipeline agent, so it doesn't inherit the read-first / log-often rule automatically — the
+**`lorite` skill** is how it opts in. Run `/lorite` at the start of a session (or when switching
+tasks): it pins the work to a `tasks/` note (deducing it from the task list when none is given),
+**reads that note first**, starts a **live SimpleTimeTracker** timer
+(`tools/lorite/simple_time_tracker.py`), commits to **logging as we go** via `lorite-ai-chat-diary`,
+and **routes** the work to the right `lorite-*` agent. `/lorite stop` ends the timer and writes the
+closing log. Prefer this over ad-hoc work whenever the chat maps to a PhD task.
 
 ## Conventions
 
