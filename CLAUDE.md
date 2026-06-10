@@ -96,6 +96,7 @@ never full automation. Each new agent/skill is authored in `.copilot/`.
 ## Conventions
 
 - Match each target repo's own `CLAUDE.md`/`AGENTS.md` conventions when working there.
-- Git: feature branches over committing to `main`; conventional commits
-  (`type(scope): description`); run lint/format before committing when available.
+- Git: commit and push directly to `main` (no feature branches on this repo);
+  conventional commits (`type(scope): description`); run lint/format before
+  committing when available.
 - Shell scripts: 4-space indentation; keep lines under 120 chars.
