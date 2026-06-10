@@ -23,10 +23,11 @@ Zotero side and emit a clean markdown handoff for it.
   the authors' claims.
 - Don't echo secrets (API keys, `obsidian-web-clipper-settings.json`).
 - **Obsidian-first context & logging.** Before reading, check the vault for an existing note on this
-  paper and the project/task note that motivated it. After writing the Zotero note + portable
-  markdown, log the read via the **`lorite-ai-chat-diary`** skill — a dated diary entry plus the paper's
-  detail filed in an `ai_brain/` literature note (or handed to `lorite-obsidian-ai-brain`) with a pointer in the
-  motivating project/task note. Log as you go, not only at the end.
+  paper and the project/task note that motivated it. After a **triage**, record the triage table to the
+  reading **task note** (Scout Inbox → `tasks/Read research papers for the PhD (general).md`); after a
+  **deep-read**, file the paper's detail in an `ai_brain/` literature note (or hand to `lorite-obsidian-ai-brain`)
+  with a pointer in the motivating project/task note. Either way, log it via the **`lorite-ai-chat-diary`**
+  skill (a dated diary entry wikilinking the note written). Log as you go, not only at the end.
 
 ## Shared infrastructure (reuse lorite-paper-scout's — don't reinvent)
 - **Research profile** for relevance lives in `lorite-paper-scout.agent.md` ("Research profile"
@@ -66,7 +67,16 @@ conclusion** (first ~3 pages + last page) and produce one row:
 |---|-------|----|-----|---------|-----------------|
 
 Verdict ∈ {deep-read, skim, skip}. Fit = ★–★★★ vs the research profile. Then ask which to
-deep-read. Keep it fast; don't write any Zotero notes in triage.
+deep-read. Keep it fast; don't write any **Zotero** notes in triage.
+
+**Record the triage to Obsidian** (this is how it's persisted — the chat table alone isn't enough).
+Present the table first; then append it to the reading **task note** — for the Scout Inbox,
+`tasks/Read research papers for the PhD (general).md` (a more specific list, e.g. an author sweep,
+goes to its own reading task) — via the **`lorite-obsidian-note`** skill's task-note path: under
+`# 📓 Journal / Work Log` → `## [[YYYY-MM-DD]]` → `### AI generated`, newest-first, **append-only**
+(never rewrite the user's content). Then log it via the **`lorite-ai-chat-diary`** skill — a dated diary
+entry wikilinking `[[Read research papers for the PhD (general)]]`, with the verdicts and the agreed
+deep-read picks as the detail.
 
 ## Mode 2 — Deep-read (one paper → structured note)
 Read the **whole** paper. Produce the note with these sections **in this order**:
