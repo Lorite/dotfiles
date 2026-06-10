@@ -44,7 +44,7 @@ and extension tools like `antfu.slidev/*`.
 
 **Every PhD-pipeline agent must carry the Obsidian read-first / log-often rule** — before acting,
 read the corresponding vault note (task / paper / project) for the latest context; log findings and
-decisions as you go via the `ai-chat-diary` skill (a dated diary entry in `ai_chats/diary/daily/` +
+decisions as you go via the `lorite-ai-chat-diary` skill (a dated diary entry in `ai_chats/diary/daily/` +
 the full detail in the linked note(s)). See `.copilot/CLAUDE.md` → "Obsidian note sync" for the
 canonical wording, and copy the rule into any new pipeline agent.
 
@@ -82,16 +82,16 @@ never full automation. Each new agent/skill is authored in `.copilot/`.
 
 | # | Pipeline stage | Agent / skill | Status |
 |---|----------------|---------------|--------|
-| 1 | Find research papers online | `paper-scout` | **built** |
-| 2 | Read papers + Zotero | `paper-reader` | **built** |
-| 3 | Task manager: TaskNotes + Calendar + GitHub issues | `task-manager` | **built** |
-| 4 | Take notes in Obsidian | `ai-brain` (existing; may extend) | exists |
-| 5 | Modify robotics code | `ros2-operator` (existing) | exists |
-| 6 | Design experiments | `experiment-designer` | **built** |
-| 7 | Write experiment code | `ros2-operator` / `experiment-coder` | partial |
-| 8 | Check data + make plots | `data-analyst` | planned |
-| 9 | Write the LaTeX paper/article | `paper-writer` | planned |
-| 10 | Build the Slidev presentation | `slidev-presentation-*` (existing) | exists |
+| 1 | Find research papers online | `lorite-paper-scout` | **built** |
+| 2 | Read papers + Zotero | `lorite-paper-reader` | **built** |
+| 3 | Task manager: TaskNotes + Calendar + GitHub issues | `lorite-task-manager` | **built** |
+| 4 | Take notes in Obsidian | `lorite-obsidian-ai-brain` (existing; may extend) | exists |
+| 5 | Modify robotics code | `lorite-ros2-operator` (existing) | exists |
+| 6 | Design experiments | `lorite-experiment-designer` | **built** |
+| 7 | Write experiment code | `lorite-ros2-operator` / `lorite-experiment-coder` | partial |
+| 8 | Check data + make plots | `lorite-data-analyst` | planned |
+| 9 | Write the LaTeX paper/article | `lorite-paper-writer` | planned |
+| 10 | Build the Slidev presentation | `lorite-slidev-presentation-*` (existing) | exists |
 
 ## Conventions
 

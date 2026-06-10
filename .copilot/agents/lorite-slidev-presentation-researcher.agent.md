@@ -1,5 +1,5 @@
 ---
-name: slidev-presentation-researcher
+name: lorite-slidev-presentation-researcher
 description: Extract and synthesize paper content into a structured presentation brief for Slidev decks.
 argument-hint: "Research this paper and produce a presentation brief"
 user-invocable: false

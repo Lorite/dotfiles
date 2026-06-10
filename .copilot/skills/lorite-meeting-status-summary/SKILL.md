@@ -1,5 +1,5 @@
 ---
-name: meeting-status-summary
+name: lorite-meeting-status-summary
 description: Create a meeting update in Past/Present/Future + Actions format by combining Google Calendar context (date range + attendees) with vault info (Bases first, then Obsidian CLI search).
 argument-hint: "meeting=<title or id> start=<YYYY-MM-DD> end=<YYYY-MM-DD>"
 ---

@@ -1,14 +1,14 @@
 ---
-name: ai-chat-diary
-description: Log the current work to the daily Obsidian AI-chat diary (ai_chats/diary/daily/AI Chat - yyyy-MM-dd) — a lightweight time-stamped entry with wikilinks — and write the full detail into each linked note under a "# AI Generated → ## [[date]] - [[AI Chat - date]]" section. The shared work-logging procedure used by ai-brain, the pipeline agents, and the user.
+name: lorite-ai-chat-diary
+description: Log the current work to the daily Obsidian AI-chat diary (ai_chats/diary/daily/AI Chat - yyyy-MM-dd) — a lightweight time-stamped entry with wikilinks — and write the full detail into each linked note under a "# AI Generated → ## [[date]] - [[AI Chat - date]]" section. The shared work-logging procedure used by lorite-obsidian-ai-brain, the pipeline agents, and the user.
 argument-hint: "<short summary of what was done> + which notes to link (task / paper / project)"
 ---
 
-# ai-chat-diary — log work to the daily AI-chat diary
+# lorite-ai-chat-diary — log work to the daily AI-chat diary
 
 The **single, canonical way** to record what was worked on, so any later session can reconstruct
-context fast. Used by `ai-brain`, every PhD-pipeline agent (`paper-scout`, `paper-reader`,
-`task-manager`, `experiment-designer`, …), and the user directly. Two parts: a lightweight **diary
+context fast. Used by `lorite-obsidian-ai-brain`, every PhD-pipeline agent (`lorite-paper-scout`, `lorite-paper-reader`,
+`lorite-task-manager`, `lorite-experiment-designer`, …), and the user directly. Two parts: a lightweight **diary
 entry** (the index) and the **full detail in the linked note(s)**.
 
 Vault: `~/git/lorite-obsidian-notes`. Dates are `yyyy-MM-dd`, times `HH:mm` (current local time — get
@@ -22,8 +22,8 @@ note) and after each substantive exchange or finished piece of work.
 - The `ai_chats/diary/daily/` folder is **AI-writable** (explicit user grant) — diary notes may be
   created and appended freely.
 - In **every other note**, only **append** under `# AI Generated`; never rewrite hand-written
-  content. Defer to the **`obsidian-note`** skill for the per-note append mechanics and the
-  **`obsidian-markdown`** skill for syntax (wikilinks, callouts).
+  content. Defer to the **`lorite-obsidian-note`** skill for the per-note append mechanics and the
+  **`lorite-obsidian-markdown`** skill for syntax (wikilinks, callouts).
 - Never write secrets.
 
 ## Part 1 — the daily diary note (lightweight index)
@@ -58,13 +58,13 @@ append at the END the same detail you gave the user in chat:
 ```
 - If the note **already has** a `# AI Generated` H1, add **only** the
   `## [[<date>]] - [[AI Chat - <date>]]` subsection under it (don't duplicate the H1).
-- For a brand-new `ai_brain/` note, the detail can be the note body itself (use the `obsidian-note`
+- For a brand-new `ai_brain/` note, the detail can be the note body itself (use the `lorite-obsidian-note`
   skill's `ai_brain` template) and the diary entry just links to it.
 - **Diary = index; linked notes = full detail.** Don't put the long detail in the diary note; the
   linked note should stand on its own without re-reading the chat.
 
 ## Mechanism
-CLI-first / file-fallback, exactly like `obsidian-note`: Obsidian CLI when the desktop app is running
+CLI-first / file-fallback, exactly like `lorite-obsidian-note`: Obsidian CLI when the desktop app is running
 (use direct file edits for positioned inserts), direct file-write when it isn't.
 
 ## Output

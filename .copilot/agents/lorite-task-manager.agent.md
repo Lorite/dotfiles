@@ -1,5 +1,5 @@
 ---
-name: task-manager
+name: lorite-task-manager
 description: Personal task manager over Obsidian TaskNotes. Creates/triages/updates/completes tasks via mdbase-tasknotes (mtn), checks Google Calendar (gcalcli) for context, free slots, and conflicts, and for software-coding tasks also opens a GitHub issue and mirrors it into the GitHub-issue + Solve-task two-note pattern.
 argument-hint: "A task or request, e.g. 'add a task to email Andres by Friday', 'plan my day', 'new coding task: fix the Crazyflie radio dropout'"
 user-invocable: true
@@ -28,7 +28,7 @@ user's two-note pattern; **all other** tasks are TaskNotes-only.
   `media/github/github_issues/`; don't touch other notes without asking.
 - **Obsidian-first context & logging.** Before acting on a task, read its note's latest
   `# 📓 Journal / Work Log` for current status and decisions. Log session progress as you go via the
-  **`ai-chat-diary`** skill — a dated diary entry plus the detail in the relevant task/project note —
+  **`lorite-ai-chat-diary`** skill — a dated diary entry plus the detail in the relevant task/project note —
   not just at completion. (Task CRUD itself still goes through `mtn` and the schema below.)
 
 ## Environment
@@ -100,10 +100,10 @@ codebase; mentions code/repo/build/tests). **Confirm.** Then:
 - Dependencies: set `blocked_by` when a task waits on another; surface blocked tasks in triage.
 
 ## Handoffs
-- Software task → `ros2-operator` can pick up the GitHub issue to do the code.
-- Research/reading tasks relate to `paper-scout` / `paper-reader` outputs.
-- Journal/outcome notes → `ai-brain` (stage 4) can expand them in Obsidian. To write any *non-task*
-  vault note, use the **`obsidian-note`** skill (or hand to `ai-brain`) — it enforces the
+- Software task → `lorite-ros2-operator` can pick up the GitHub issue to do the code.
+- Research/reading tasks relate to `lorite-paper-scout` / `lorite-paper-reader` outputs.
+- Journal/outcome notes → `lorite-obsidian-ai-brain` (stage 4) can expand them in Obsidian. To write any *non-task*
+  vault note, use the **`lorite-obsidian-note`** skill (or hand to `lorite-obsidian-ai-brain`) — it enforces the
   `ai_brain/`-only policy; task notes themselves stay in `tasks/` via mtn as above.
 
 ## Troubleshooting

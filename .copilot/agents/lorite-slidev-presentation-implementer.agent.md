@@ -1,5 +1,5 @@
 ---
-name: slidev-presentation-implementer
+name: lorite-slidev-presentation-implementer
 description: Convert a research brief into a visual-first Slidev deck using the lorite PhD theme and layouts.
 argument-hint: "Implement this brief into slides.md"
 user-invocable: false

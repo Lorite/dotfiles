@@ -1,5 +1,5 @@
 ---
-name: meeting-prep
+name: lorite-meeting-prep
 description: Prepare for a meeting by collecting recent work updates and tasks between previous/next meeting dates (Calendar if available) using Bases first (recently edited/created work notes).
 argument-hint: "meeting=<title or id> start=<YYYY-MM-DD> end=<YYYY-MM-DD>"
 ---

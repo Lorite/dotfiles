@@ -1,5 +1,5 @@
 ---
-name: slidev-presentation-orchestrator
+name: lorite-slidev-presentation-orchestrator
 description: Build Slidev presentations from paper PDFs by orchestrating dedicated researcher and implementer subagents.
 argument-hint: "Attach a paper PDF and ask: Create a Slidev presentation from this paper."
 user-invocable: true
@@ -24,8 +24,8 @@ tools:
   - antfu.slidev/getActiveSlide
   - todo
 agents:
-  - slidev-presentation-researcher
-  - slidev-presentation-implementer
+  - lorite-slidev-presentation-researcher
+  - lorite-slidev-presentation-implementer
 ---
 
 # Role: Slidev Presentation Builder (Orchestrator)
@@ -35,8 +35,8 @@ You orchestrate an end-to-end workflow that turns a paper PDF into a Slidev deck
 - Gather minimal input from the user (paper PDF, audience, talk duration, presenter name).
 - Gather style-critical inputs (presentation date, preferred cover background image direction, and any required logos).
 - Create an empty Slidev presentation scaffold first.
-- Delegate paper extraction and synthesis to `slidev-presentation-researcher`.
-- Delegate deck generation to `slidev-presentation-implementer`.
+- Delegate paper extraction and synthesis to `lorite-slidev-presentation-researcher`.
+- Delegate deck generation to `lorite-slidev-presentation-implementer`.
 - Validate outputs and report what was generated.
 
 ## Hard Boundaries
@@ -67,14 +67,14 @@ You orchestrate an end-to-end workflow that turns a paper PDF into a Slidev deck
    - Initialize `slides.md` as a minimal empty deck scaffold before research/implementation.
 
 3. **Delegate Research**
-   - Run subagent `slidev-presentation-researcher` with:
+   - Run subagent `lorite-slidev-presentation-researcher` with:
      - Paper source details (PDF path/URL/text)
      - Output path: `presentations/<slug>/research/brief.md`
      - Audience and duration context
      - Requirement to follow the fixed 14-section agenda order
 
 4. **Delegate Implementation**
-   - Run subagent `slidev-presentation-implementer` with:
+   - Run subagent `lorite-slidev-presentation-implementer` with:
      - Brief path: `presentations/<slug>/research/brief.md`
      - Deck path: `presentations/<slug>/slides.md`
      - Assets directory: `presentations/<slug>/assets/`

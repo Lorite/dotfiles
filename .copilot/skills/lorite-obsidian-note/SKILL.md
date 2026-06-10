@@ -1,15 +1,15 @@
 ---
-name: obsidian-note
-description: Safely create or append an Obsidian vault note following the AI-write policy (AI writes only inside ai_brain/; outside it, append under an "AI Generated" heading and never rewrite existing content) and Obsidian Flavored Markdown conventions. The shared note-writing procedure used by ai-brain, other pipeline agents, and you directly. Works via the Obsidian CLI when the app is running, with a direct file-write fallback when it isn't.
+name: lorite-obsidian-note
+description: Safely create or append an Obsidian vault note following the AI-write policy (AI writes only inside ai_brain/; outside it, append under an "AI Generated" heading and never rewrite existing content) and Obsidian Flavored Markdown conventions. The shared note-writing procedure used by lorite-obsidian-ai-brain, other pipeline agents, and you directly. Works via the Obsidian CLI when the app is running, with a direct file-write fallback when it isn't.
 argument-hint: "title=<note title> [content=<markdown>] [target=ai_brain|<path-outside-ai_brain>] [links=[[A]],[[B]]]"
 ---
 
-# obsidian-note — the safe vault-write procedure
+# lorite-obsidian-note — the safe vault-write procedure
 
 This is the **single, canonical way** to write notes into the Obsidian vault
-(`~/git/lorite-obsidian-notes`). `ai-brain` and any other agent that needs to write a note should
+(`~/git/lorite-obsidian-notes`). `lorite-obsidian-ai-brain` and any other agent that needs to write a note should
 follow this exact procedure so scope and formatting stay consistent. Reading/querying the vault is
-out of scope here — use the `obsidian-bases` skill (Bases) and `obsidian` CLI search for that.
+out of scope here — use the `lorite-obsidian-bases` skill (Bases) and `obsidian` CLI search for that.
 
 ## The write policy (never violate)
 - **AI writes only inside `ai_brain/`.** The default action is to create/append an `ai_brain/` note.
@@ -28,7 +28,7 @@ out of scope here — use the `obsidian-bases` skill (Bases) and `obsidian` CLI 
 - `target` — `ai_brain` (default → new `ai_brain/` note) **or** an exact path to an existing note
   outside `ai_brain/` (→ the `# AI Generated` append path).
 - `links` — wikilinks to related notes/sources to include.
-- `source` — optional path to a source artifact to summarize/link (e.g. a paper-reader markdown at
+- `source` — optional path to a source artifact to summarize/link (e.g. a lorite-paper-reader markdown at
   `~/.config/paper-scout/notes/<x>.md`). Read it, then write the note; **link**, don't dump verbatim.
 
 ## Mechanism: CLI-first, file-fallback
@@ -42,7 +42,7 @@ errors, the app isn't running → use the file fallback (step 2). Canonical CLI 
 
 **2. File fallback** (app/CLI unavailable, e.g. headless/container). Write the markdown file directly
 under `~/git/lorite-obsidian-notes/`, following Obsidian Flavored Markdown (see the
-`obsidian-markdown` skill for wikilinks/callouts/properties).
+`lorite-obsidian-markdown` skill for wikilinks/callouts/properties).
 - New `ai_brain` note → write `ai_brain/YYYY-MM-DD AI Brain - <Title>.md` using the template below.
 - Append outside `ai_brain/` → read the target file, append the `# AI Generated` block at the end,
   write back unchanged otherwise.
@@ -105,7 +105,7 @@ the end of the file, which is the wrong place.
 
 ## Conventions
 - Use wikilinks `[[Note]]` for everything linkable; link liberally. Use callouts/properties per the
-  `obsidian-markdown` skill. Put sources under `## Sources` (CLI/Bases/Web).
+  `lorite-obsidian-markdown` skill. Put sources under `## Sources` (CLI/Bases/Web).
 - Keep titles human-readable and filesystem-safe; date prefix `YYYY-MM-DD` for `ai_brain` notes.
 
 ## Output

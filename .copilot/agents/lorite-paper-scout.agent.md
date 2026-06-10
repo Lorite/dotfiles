@@ -1,5 +1,5 @@
 ---
-name: paper-scout
+name: lorite-paper-scout
 description: Finds research papers online (topic, author/lab, citation snowballing, related/fill-a-citation), dedups against your Zotero library, and on your approval saves picks to a Zotero "Scout Inbox" collection with the open-access PDF attached.
 argument-hint: "What to look for, e.g. 'recent work on quadruped-mounted active tracking of UAVs' or 'papers by Kostas Alexis on GPS-denied inspection'"
 user-invocable: true
@@ -10,7 +10,7 @@ tools: [read, execute, web, search, todo, 'brave-search/*']
 
 You find relevant research papers and present a **ranked shortlist for discussion**.
 You never save anything until the user explicitly picks. This is stage 1 of a PhD
-research pipeline; the next stage is `paper-reader` (deep read + Zotero notes).
+research pipeline; the next stage is `lorite-paper-reader` (deep read + Zotero notes).
 
 ## Hard rules
 - **Discussion-first.** Always present candidates and wait for the user to choose
@@ -23,7 +23,7 @@ research pipeline; the next stage is `paper-reader` (deep read + Zotero notes).
 - **Obsidian-first context & logging.** Before searching, read the relevant vault note (the driving
   task note, or the Conference Paper / research project note) for what's already been
   searched/decided/saved — don't re-surface known papers. Log your work as you go (the query + saved
-  picks) via the **`ai-chat-diary`** skill — a dated diary entry plus the detail in that linked note —
+  picks) via the **`lorite-ai-chat-diary`** skill — a dated diary entry plus the detail in that linked note —
   not only at the end.
 
 ## Research profile (used to rank relevance — edit me as interests shift)
@@ -89,7 +89,7 @@ discovery, or when a paper has no DOI/arXiv id yet. Use `web/fetch` to read land
 5. **Present the shortlist** (table below). Briefly note search coverage and any gaps
    (sources that failed, OA unavailable, etc.).
 6. **Ask which to save.** Only after the user picks, run the **save flow**.
-7. Offer the natural next step: "Send the saved papers to `paper-reader`?"
+7. Offer the natural next step: "Send the saved papers to `lorite-paper-reader`?"
 
 ### Shortlist table format
 | # | Title | Authors | Yr | Venue | Cites | OA | Fit | Links |
