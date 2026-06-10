@@ -86,9 +86,9 @@ never full automation. Each new agent/skill is authored in `.copilot/`.
 | 2 | Read papers + Zotero | `lorite-paper-reader` | **built** |
 | 3 | Task manager: TaskNotes + Calendar + GitHub issues | `lorite-task-manager` | **built** |
 | 4 | Take notes in Obsidian | `lorite-obsidian-ai-brain` (existing; may extend) | exists |
-| 5 | Modify robotics code | `lorite-ros2-operator` (existing) | exists |
+| 5 | Modify robotics code | `lorite-ros2-operator` | **built** |
 | 6 | Design experiments | `lorite-experiment-designer` | **built** |
-| 7 | Write experiment code | `lorite-ros2-operator` / `lorite-experiment-coder` | partial |
+| 7 | Write experiment code + run trials | `lorite-experiment-coder` (runs) / `lorite-ros2-operator` (deep nodes) | **built** |
 | 8 | Check data + make plots | `lorite-data-analyst` | **built** |
 | 9 | Write the LaTeX paper/article | `lorite-paper-writer` | planned |
 | 10 | Build the Slidev presentation | `lorite-slidev-presentation-*` (existing) | exists |
