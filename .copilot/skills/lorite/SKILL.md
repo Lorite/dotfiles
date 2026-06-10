@@ -52,13 +52,15 @@ python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py start \
 
 - `--comment` is the task-note **basename** (no `.md`, no `[[ ]]`) — the vault renders it as a
   `[[wikilink]]`, matching `daily_time_tracker.py`.
-- For non-task work use a different `--activity` (e.g. `Coding`, `Reading`, `Writing`) with a
+- For non-task work use a different `--activity` (e.g. `Code`, `Read`, `Write`, `Meeting`) with a
   free-text `--comment`.
-- Add `--dry-run` to show the payload first if you want to confirm before sending.
-- The webhook URL is resolved from `$AUTOMATE_WEBHOOK_URL` or
-  `<vault>/.secrets/automate_webhook_url.txt`; it's a **secret — never print or echo it**.
-- If the webhook is unreachable, **don't block the work** — tell the user the timer didn't start
-  and continue (they can start it on the phone).
+- Add `--dry-run` to show the envelope first (the secret is redacted) before sending.
+- Transport = **LlamaLab Automate Cloud Messaging** (`POST https://llamalab.com/automate/cloud/message`),
+  not a per-flow webhook. Config comes from env (or `<vault>/.secrets/automate.env`):
+  `AUTOMATE_ANDROID_APP_SECRET` (**secret — never print**), `AUTOMATE_ANDROID_APP_TO`,
+  `AUTOMATE_ANDROID_APP_DEVICE`. The Automate flow branches on `payload.action` (`start`/`stop`).
+- If config is missing or the endpoint is unreachable the script exits non-zero with a clear
+  message — **don't block the work**, tell the user the timer didn't start and continue.
 
 ### 4. Hold the log-often contract (the whole session)
 For the rest of the session, log **as you work, not only at the end**, via the
@@ -104,8 +106,9 @@ otherwise do the work inline and keep logging.
 - **Bases need the Obsidian app running** for the CLI; if it's down, fall back to reading
   `tasks/*.md` frontmatter directly and say so.
 - **This is the live, prospective complement** to the vault's retrospective
-  `scripts/daily_time_tracker.py` (which buckets a day's activity into finished blocks). Both POST
-  to the same Automate webhook; this one sends `start_action` / `stop_action`, that one sends
-  `add_action`. The Automate flow branches on the `payload` field.
+  `scripts/daily_time_tracker.py` (which buckets a day's activity into finished blocks). Both go
+  through the same Automate flow; this skill's `start`/`stop` run the timer live, while
+  `add_record` (and the vault script) back-fill finished blocks. The flow branches on
+  `payload.action`.
 - **Degrade gracefully** — missing timer, missing task, or app down should never block the actual
   PhD work; note the gap and carry on.

@@ -74,11 +74,13 @@ for multi-step, semi-autonomous work and orchestration).
 - **Zotero** (`/usr/bin/zotero`): reference manager feeding the paper's `references.bib`.
 - **gh CLI**: GitHub issues/PRs on the robotics repo.
 - **Slidev**: `slidev-theme-lorite-phd` theme for presentations.
-- **SimpleTimeTracker** (Android, via an **Automate** webhook): live work-session timing.
-  `tools/lorite/simple_time_tracker.py start|stop` sends `start_action`/`stop_action` (the
-  prospective complement to the vault's retrospective `daily_time_tracker.py`, which sends
-  `add_action` blocks). Webhook URL is a secret in `<vault>/.secrets/automate_webhook_url.txt`
-  (or `$AUTOMATE_WEBHOOK_URL`) — never echo it.
+- **SimpleTimeTracker** (Android, via **LlamaLab Automate Cloud Messaging**): live work-session
+  timing. `tools/lorite/simple_time_tracker.py start|stop|add_record` POSTs to
+  `https://llamalab.com/automate/cloud/message` an envelope `{secret,to,device,priority,payload}`
+  where `payload.action` ∈ `start`/`stop`/`add_record` (`start`/`stop` = live timer, the
+  prospective complement to the vault's retrospective `daily_time_tracker.py` blocks). Config from
+  env `AUTOMATE_ANDROID_APP_{SECRET,TO,DEVICE}` (or `<vault>/.secrets/automate.env`) — never echo
+  the secret.
 
 ## Planned: PhD research-pipeline agents
 
