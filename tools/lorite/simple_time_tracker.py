@@ -80,6 +80,12 @@ def resolve_webhook_url() -> str:
     if not url:
         _err(f"{secret_file} is empty.")
         raise SystemExit(2)
+    if not url.startswith(("http://", "https://")):
+        _err(
+            f"{secret_file} is not a real URL yet (looks like a placeholder). "
+            "Fill in the Automate webhook URL or set $AUTOMATE_WEBHOOK_URL."
+        )
+        raise SystemExit(2)
     return url
 
 
