@@ -89,7 +89,7 @@ never full automation. Each new agent/skill is authored in `.copilot/`.
 | 5 | Modify robotics code | `lorite-ros2-operator` (existing) | exists |
 | 6 | Design experiments | `lorite-experiment-designer` | **built** |
 | 7 | Write experiment code | `lorite-ros2-operator` / `lorite-experiment-coder` | partial |
-| 8 | Check data + make plots | `lorite-data-analyst` | planned |
+| 8 | Check data + make plots | `lorite-data-analyst` | **built** |
 | 9 | Write the LaTeX paper/article | `lorite-paper-writer` | planned |
 | 10 | Build the Slidev presentation | `lorite-slidev-presentation-*` (existing) | exists |
 
