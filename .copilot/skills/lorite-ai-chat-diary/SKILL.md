@@ -1,6 +1,6 @@
 ---
 name: lorite-ai-chat-diary
-description: Log the current work to the daily Obsidian AI-chat diary (ai_chats/diary/daily/AI Chat - yyyy-MM-dd) — a lightweight time-stamped entry with wikilinks — and write the full detail into each linked note under a "# AI Generated → ## [[date]] - [[AI Chat - date]]" section. The shared work-logging procedure used by lorite-obsidian-ai-brain, the pipeline agents, and the user.
+description: Log the current work to the daily Obsidian AI-chat diary (ai_chats/diary/daily/AI Chat - yyyy-MM-dd) — a lightweight time-stamped entry with wikilinks — and write the full detail into each linked note where its type dictates (task notes → a dated "### AI generated" entry inside their "# 📓 Journal / Work Log"; other notes → a "# AI Generated" section). The shared work-logging procedure used by lorite-obsidian-ai-brain, the pipeline agents, and the user.
 argument-hint: "<short summary of what was done> + which notes to link (task / paper / project)"
 ---
 
@@ -21,8 +21,10 @@ note) and after each substantive exchange or finished piece of work.
 ## Write policy (never violate)
 - The `ai_chats/diary/daily/` folder is **AI-writable** (explicit user grant) — diary notes may be
   created and appended freely.
-- In **every other note**, only **append** under `# AI Generated`; never rewrite hand-written
-  content. Defer to the **`lorite-obsidian-note`** skill for the per-note append mechanics and the
+- In **every other note**, only **append**, never rewrite hand-written content — and **where** the
+  append goes is note-type-specific (see Part 2): **task notes** get a dated `### AI generated` entry
+  inside their `# 📓 Journal / Work Log`; **all other notes** get a top-level `# AI Generated`
+  section. Defer to the **`lorite-obsidian-note`** skill for the per-note append mechanics and the
   **`lorite-obsidian-markdown`** skill for syntax (wikilinks, callouts).
 - Never write secrets.
 
@@ -47,19 +49,36 @@ Path: `ai_chats/diary/daily/AI Chat - <yyyy-MM-dd>.md`.
    Multi-line CLI `append` is flaky → **edit the file directly** to insert the entry (create-then-edit).
 
 ## Part 2 — full detail in each linked note
-For every note wikilinked in the entry (a task note, a paper's literature note, the project note),
-append at the END the same detail you gave the user in chat:
-```
-# AI Generated
+For every note wikilinked in the entry, file the same detail you gave the user in chat. **Where it
+lands depends on the note type** — defer to the `lorite-obsidian-note` skill for the exact mechanics:
 
-## [[<yyyy-MM-dd>]] - [[AI Chat - <yyyy-MM-dd>]]
+- **Task notes** (`type: task`, in `tasks/`): the detail *is* a work-log entry, so it goes **inside
+  the note's existing `# 📓 Journal / Work Log` section**, not in a separate top-level section. Add a
+  dated entry at the **top** of that section (newest-first), leaving existing entries intact:
+  ```
+  ## [[<yyyy-MM-dd>]]
 
-<full detail: what was done, decisions, findings, exact numbers, next steps — wikilink liberally>
-```
-- If the note **already has** a `# AI Generated` H1, add **only** the
-  `## [[<date>]] - [[AI Chat - <date>]]` subsection under it (don't duplicate the H1).
-- For a brand-new `ai_brain/` note, the detail can be the note body itself (use the `lorite-obsidian-note`
-  skill's `ai_brain` template) and the diary entry just links to it.
+  ### AI generated
+
+  <full detail; link the diary with [[AI Chat - <yyyy-MM-dd>]] and wikilink liberally>
+  ```
+  Demote any sub-headings in the detail to `####`+ so they nest under `### AI generated`. Use a
+  **direct file edit** for this positioned insert — the CLI `append` only writes to the end of the
+  file, which is the wrong place here.
+
+- **Any other note** (project note, paper literature note, etc.): append at the **END**:
+  ```
+  # AI Generated
+
+  ## [[<yyyy-MM-dd>]] - [[AI Chat - <yyyy-MM-dd>]]
+
+  <full detail: what was done, decisions, findings, exact numbers, next steps — wikilink liberally>
+  ```
+  If the note **already has** a `# AI Generated` H1, add **only** the
+  `## [[<date>]] - [[AI Chat - <date>]]` subsection under it (don't duplicate the H1). For a brand-new
+  `ai_brain/` note, the detail can be the note body itself (use the `lorite-obsidian-note` skill's
+  `ai_brain` template) and the diary entry just links to it.
+
 - **Diary = index; linked notes = full detail.** Don't put the long detail in the diary note; the
   linked note should stand on its own without re-reading the chat.
 

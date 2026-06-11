@@ -23,9 +23,10 @@ running log** — read-first, log-often:
   re-derive context the note already has, and don't redo work it shows is already done.
 - **Log to it frequently.** Record findings, decisions, and progress as you go (not only at the end)
   via the **`lorite-ai-chat-diary`** skill — it writes a dated entry in `ai_chats/diary/daily/AI Chat -
-  <date>` and files the full detail in the linked note(s) under `# AI Generated → ## [[date]] -
-  [[AI Chat - date]]`, on top of the `lorite-obsidian-note` safe-write policy (`ai_brain/`-only writes;
-  elsewhere append-only under `# AI Generated`; never rewrite hand-written content).
+  <date>` and files the full detail in the linked note(s) where their type dictates (task notes → a
+  dated `### AI generated` entry inside `# 📓 Journal / Work Log`; other notes → a `# AI Generated`
+  section), on top of the `lorite-obsidian-note` safe-write policy (`ai_brain/`-only writes; elsewhere
+  append-only, never rewriting hand-written content).
 - **"Corresponding note"**, in order: the task note (`tasks/`, `type: task`) driving the work; else
   the paper's literature note; else the project note (e.g. the Conference Paper project). When
   unsure, ask, or default to an `ai_brain/` note that wikilinks to the others.
