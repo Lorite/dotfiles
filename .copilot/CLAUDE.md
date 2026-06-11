@@ -21,6 +21,10 @@ running log** — read-first, log-often:
   task / paper / experiment / project; it holds the latest human + AI context (status, decisions,
   prior findings). Locate it via the `lorite-obsidian-bases` skill (Bases) and `obsidian` CLI search. Don't
   re-derive context the note already has, and don't redo work it shows is already done.
+  Use efficient CLI read patterns:
+  - `obsidian outline path="..."` — structure before committing to a full `read`; the heading tree shows which section matters.
+  - `obsidian search:context query="..." path="..."` — finds content and returns matching lines + context in one call; prefer over `search` (paths only) followed by `read`.
+  - `obsidian property:read name=<field> path="..."` — single frontmatter field (e.g. `status`, `type`, `projects`) without reading the whole file.
 - **Log to it frequently.** Record findings, decisions, and progress as you go (not only at the end)
   via the **`lorite-ai-chat-diary`** skill — it writes a dated entry in `ai_chats/diary/daily/AI Chat -
   <date>` and files the full detail in the linked note(s) where their type dictates (task notes → a

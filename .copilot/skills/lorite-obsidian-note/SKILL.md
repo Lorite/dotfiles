@@ -38,7 +38,9 @@ errors, the app isn't running → use the file fallback (step 2). Canonical CLI 
 - New `ai_brain` note: `obsidian create path="ai_brain/YYYY-MM-DD AI Brain - <Title>.md" template=ai_brain`
 - Append: `obsidian append path="..." content="..."`  (multi-line is flaky — prefer small appends,
   or create then edit)
-- Read/search: `obsidian read path="..."` · `obsidian search query="..." path="..."`
+- Structure first: `obsidian outline path="..."` — call before `read` for any note longer than ~1 screen; heading tree shows which section to read.
+- Read/search: `obsidian read path="..."` · `obsidian search:context query="..." path="..."` (matching lines + context in one call; prefer over `search` + `read`) · `obsidian search query="..."` (file paths only)
+- Single field: `obsidian property:read name=<field> path="..."` — fast path for one frontmatter value (e.g. `status`, `type`, `projects`) without reading the whole file.
 
 **2. File fallback** (app/CLI unavailable, e.g. headless/container). Write the markdown file directly
 under `~/git/lorite-obsidian-notes/`, following Obsidian Flavored Markdown (see the
