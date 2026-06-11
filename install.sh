@@ -534,6 +534,71 @@ else
 	print_warning "npm not found — skipping mdbase-tasknotes (needed by task-manager)"
 fi
 
+# Install uv (Python package manager, needed for mcp-libre Python 3.12 venv).
+print_info "Installing uv (Python package manager)..."
+if command -v uv &>/dev/null; then
+	print_success "uv already installed ($(uv --version))"
+else
+	if curl -LsSf https://astral.sh/uv/install.sh | sh; then
+		export PATH="$HOME/.local/bin:$PATH"
+		print_success "uv installed"
+	else
+		print_warning "Failed to install uv — mcp-libre setup will be skipped"
+	fi
+fi
+
+# Install mcp-libre (LibreOffice MCP server used by lorite-recurring-meeting-docx skill).
+print_info "Installing mcp-libre (LibreOffice MCP server)..."
+MCP_LIBRE_DIR="$HOME/.local/lib/mcp-libre"
+if ! command -v libreoffice &>/dev/null; then
+	print_warning "LibreOffice not found — skipping mcp-libre (install LibreOffice, then re-run install.sh)"
+elif ! command -v uv &>/dev/null; then
+	print_warning "uv not found — skipping mcp-libre setup"
+else
+	# Clone
+	if [ ! -d "$MCP_LIBRE_DIR" ]; then
+		git clone https://github.com/jwingnut/mcp-libre.git "$MCP_LIBRE_DIR"
+		print_success "Cloned mcp-libre to $MCP_LIBRE_DIR"
+	else
+		print_success "mcp-libre already cloned at $MCP_LIBRE_DIR"
+	fi
+
+	# Build and install the LibreOffice .oxt extension
+	if unopkg list 2>/dev/null | grep -q "org.mcp.libreoffice"; then
+		print_success "mcp-libre LibreOffice extension already installed"
+	else
+		(cd "$MCP_LIBRE_DIR/plugin" && bash build.sh >/dev/null 2>&1)
+		if unopkg add "$MCP_LIBRE_DIR/build/libreoffice-mcp-extension-1.0.0.oxt" 2>/dev/null; then
+			print_success "mcp-libre LibreOffice extension installed"
+		else
+			print_warning "Failed to install mcp-libre .oxt — try: unopkg add $MCP_LIBRE_DIR/build/libreoffice-mcp-extension-1.0.0.oxt"
+		fi
+	fi
+
+	# Create Python 3.12 venv with fastmcp + httpx (the FastMCP bridge for Claude Code)
+	if [ ! -d "$MCP_LIBRE_DIR/.venv" ]; then
+		uv venv --python 3.12 "$MCP_LIBRE_DIR/.venv" >/dev/null 2>&1
+		uv pip install --python "$MCP_LIBRE_DIR/.venv/bin/python" fastmcp httpx >/dev/null 2>&1
+		print_success "mcp-libre Python 3.12 venv created"
+	else
+		print_success "mcp-libre Python venv already exists"
+	fi
+
+	# Register the FastMCP bridge with Claude Code at user scope
+	if command -v claude &>/dev/null; then
+		if claude mcp list 2>/dev/null | grep -q "^libreoffice:"; then
+			print_success "mcp-libre already registered with Claude Code"
+		elif claude mcp add --scope user libreoffice -- \
+			"$MCP_LIBRE_DIR/.venv/bin/fastmcp" run "$MCP_LIBRE_DIR/libreoffice_mcp_server.py" 2>/dev/null; then
+			print_success "mcp-libre registered with Claude Code (user scope)"
+		else
+			print_warning "Failed to register mcp-libre with Claude Code — run manually: claude mcp add --scope user libreoffice -- $MCP_LIBRE_DIR/.venv/bin/fastmcp run $MCP_LIBRE_DIR/libreoffice_mcp_server.py"
+		fi
+	else
+		print_warning "claude CLI not found — skipping Claude Code MCP registration (re-run install.sh after installing Claude Code)"
+	fi
+fi
+
 echo -e "\n${GREEN}=== Installation Complete ===${NC}"
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "  1. Restart your terminal or run: ${YELLOW}exec zsh${NC}"
