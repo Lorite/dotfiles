@@ -81,6 +81,15 @@ for multi-step, semi-autonomous work and orchestration).
   prospective complement to the vault's retrospective `daily_time_tracker.py` blocks). Config from
   env `AUTOMATE_ANDROID_APP_{SECRET,TO,DEVICE}` (or `<vault>/.secrets/automate.env`) — never echo
   the secret.
+- **Dev-container execution model**: the robotics (`lorite_ros2_humble_phd`) and CLAWAR paper repos
+  each run inside a **Docker Dev Container**, but the Obsidian vault + dotfiles live on the host.
+  So **run Claude/the editor on the host** (not "Reopen in Container") — the repo source is
+  bind-mounted, so host edits are already live inside; only *running* the toolchain needs the
+  container. Two thin host wrappers shell in (via `docker exec` / `devcontainer exec`, bringing the
+  container up if down): `tools/lorite/in-ros2.sh <cmd>` (ROS 2 — colcon/ros2/gz; container
+  `ros2_humble_dev`) and `tools/lorite/in-tex.sh <cmd>` (texlive — latexmk/chktex). No args → an
+  interactive shell. The `lorite-ros2-operator`, `lorite-experiment-coder`, and `lorite-data-analyst`
+  agents call `in-ros2.sh`; `lorite-paper-writer` calls `in-tex.sh`.
 
 ## Planned: PhD research-pipeline agents
 

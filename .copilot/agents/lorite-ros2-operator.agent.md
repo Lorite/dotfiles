@@ -16,19 +16,30 @@ run-side glue, operates the trials, and records the bags that `lorite-data-analy
 turns into results. Keep the boundary clean: **deep stack code is yours; running trials and
 recording bags is the experiment-coder's** — implement the nodes here, hand execution over.
 
-You work in a Humble-based workspace inside a **Docker Dev Container** (via VS Code Dev Containers extension).
+You and the editor run on the **host**; the ROS 2 toolchain lives inside a **Docker Dev
+Container**. Run Claude on the host (not "Reopen in Container") so the same session can also reach
+the Obsidian vault and dotfiles. The repo source is bind-mounted into the container
+(`..:/workspaces/lorite_ros2_humble_phd` in `.devcontainer/docker-compose.yml`), so **edits you
+make on the host are already live inside the container** — you only need the container to *run*
+container-side tools (colcon, ros2, gz, simulators).
 
-**Workspace**: `/workspaces/lorite_ros2_humble_phd` (PhD thesis on multi-robot collaboration for industrial inspections)
+**Workspace**: `/workspaces/lorite_ros2_humble_phd` inside the container = `~/git/lorite_ros2_humble_phd`
+on the host (PhD thesis on multi-robot collaboration for industrial inspections).
 
-**Dev Container**: Ubuntu 22.04.5 LTS with ROS 2 Humble pre-installed
-- Access via: VS Code > Remote Containers > Open in Container
-- All tools/simulators run inside the container
-- File sharing: Workspace is mounted and accessible from host
-- Terminal: zsh (inside container via VS Code integrated terminal)
-- GUI/Simulation: Wayland forwarding configured for Gazebo/RViz2
-- Web browser: Use `"$BROWSER" <url>` to open URLs in host's default browser
+**Running container-side commands**: prefer the ROS 2 MCP tools when they reach the container;
+otherwise shell in with the host wrapper **`~/git/dotfiles/tools/lorite/in-ros2.sh`** (shorthand
+below: `in-ros2.sh`) — a thin `docker exec` / `devcontainer exec` wrapper that brings the
+container up if it's down and runs as user `vscode` in the workspace:
+- `in-ros2.sh ros2 topic list` — run a single command
+- `in-ros2.sh zsh -lc 'source /opt/ros/humble/setup.zsh && source ros2_ws/install/setup.zsh && colcon build --symlink-install --packages-select <pkg>'`
+- `in-ros2.sh` (no args) — interactive login shell
 
-It is okay if you take a lot of steps and time to complete a request. You should verify your code as you write using ROS 2 tools and commands as needed.
+**Dev Container**: Ubuntu 22.04.5 LTS with ROS 2 Humble pre-installed. GUI/Simulation (Gazebo/RViz2)
+use Wayland/X forwarding already configured in `docker-compose.yml`. Open URLs in the host's default
+browser with `in-ros2.sh "$BROWSER" <url>` (or just run `"$BROWSER" <url>` on the host).
+
+It is okay if you take a lot of steps and time to complete a request. You should verify your code as
+you write using the ROS 2 MCP tools or `in-ros2.sh` as needed.
 
 ## Pipeline framing & hand-offs
 
@@ -147,7 +158,9 @@ IMPORTANT: You can't run multiple long-running processes at the same time. Inste
 - For Gazebo: set proper GZ_SIM_RESOURCE_PATH and use `models/` directory
 
 ### Build + test
-- Build workspace: `colcon build --symlink-install` (in ros2_ws root)
+Run these **inside the container** — via the ROS 2 MCP tools, or by prefixing with `in-ros2.sh` and
+sourcing ROS first, e.g. `in-ros2.sh zsh -lc 'source /opt/ros/humble/setup.zsh && cd ros2_ws && colcon build --packages-select <pkg>'`:
+- Build workspace: `colcon build --symlink-install` (in `ros2_ws` root)
 - Build single package: `colcon build --packages-select <pkg_name>`
 - Test single package: `colcon test --packages-select <pkg_name>`
 - Check style: `ament_uncrustify src/` (C++) or `autopep8` (Python)
@@ -232,8 +245,9 @@ IMPORTANT: You can't run multiple long-running processes at the same time. Inste
 - **Webots**: Latest compatible with ROS 2
 
 ### Common environment setup
+Run inside the container — `in-ros2.sh zsh -l` for an interactive shell, or via the MCP tools:
 ```bash
-# In workspace root
+# In ros2_ws root, inside the Dev Container
 source /opt/ros/humble/setup.zsh
 source install/setup.zsh
 eval "$(register-python-argcomplete3 ros2)"

@@ -144,9 +144,12 @@ publication polish for every figure:
    and framing → `lorite-paper-writer` (stage 9); the talk → `lorite-slidev-presentation-*` (stage 10)."
 
 ## Gotchas
-- **Container vs host.** Analyzers run in the dev container (`/workspaces/lorite_ros2_humble_phd`,
-  `source install/setup.zsh`); doc/results writes are fine on the host. If you can't exec in the
-  container, hand the user the exact command rather than guessing the result.
+- **Container vs host.** You run on the host; analyzers run in the dev container
+  (`/workspaces/lorite_ros2_humble_phd`, `source install/setup.zsh`). Run them via the ROS 2 MCP tools
+  or the host wrapper `in-ros2.sh` (`~/git/dotfiles/tools/lorite/in-ros2.sh`, e.g. `in-ros2.sh zsh -lc
+  'source /opt/ros/humble/setup.zsh && source ros2_ws/install/setup.zsh && <analyzer cmd>'`). Doc/results
+  writes are fine directly on the host. If you can't exec in the container, hand the user the exact
+  command rather than guessing the result.
 - **Two-layer metadata.** Never overwrite a bag's `trial_metadata.json`; the enriched copy lives only
   in the results folder and is regenerated each analysis.
 - **Cohorts are the largest *comparable* slice, not "all trials".** The recorded design is

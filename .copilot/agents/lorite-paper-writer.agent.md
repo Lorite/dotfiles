@@ -128,7 +128,10 @@ fixes and ask which to apply — applying flips to Draft mode on those items onl
 
 ## Build, citations, and git (paper repo)
 - **Build:** `TEXINPUTS="styles//:" latexmk -pdf main.tex` from the paper repo root (the `svproc` class
-  lives in `styles/`, off the default path). **Lint:** `chktex main.tex`. Rebuild after any edit so a
+  lives in `styles/`, off the default path). **Lint:** `chktex main.tex`. The texlive toolchain lives in
+  the paper's Dev Container — if it isn't on the host, run via the host wrapper
+  **`~/git/dotfiles/tools/lorite/in-tex.sh`** (shorthand `in-tex.sh`; thin `devcontainer exec` wrapper,
+  brings the container up if down), e.g. `in-tex.sh latexmk -pdf main.tex`. Rebuild after any edit so a
   diff that touches text is visibly consistent; surface LaTeX errors rather than guessing.
 - **Citations:** `\cite{key}` resolves against `references.bib` (Springer `splncs04`, numeric). Adding a
   cite means adding the BibTeX entry, brace-protecting acronyms in the title, and **verifying the
@@ -161,5 +164,8 @@ fixes and ask which to apply — applying flips to Draft mode on those items onl
   numbers stand as measured — reword around them, never down.
 - **One section at a time.** A "fix the whole paper" request is several Draft/Critique passes, not one
   giant diff; restructuring a section needs explicit sign-off before you start.
-- **Container vs host.** If `latexmk`/`chktex` aren't on the host, build in the paper's dev-container (or
-  hand the user the exact command) rather than reporting a build you didn't run.
+- **Container vs host.** You run on the host; the texlive toolchain is in the paper's Dev Container.
+  If `latexmk`/`chktex` aren't on the host, build via `in-tex.sh` (`~/git/dotfiles/tools/lorite/in-tex.sh`,
+  e.g. `in-tex.sh latexmk -pdf main.tex`) — or hand the user the exact command — rather than reporting a
+  build you didn't run. `.tex`/`.bib` edits are fine directly on the host (bind-mounted, already visible
+  inside).

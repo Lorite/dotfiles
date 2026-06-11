@@ -16,10 +16,15 @@ the drone, drives Spot, and records bags. Design (`lorite-experiment-designer`, 
 + gate bags) → analysis (`lorite-data-analyst`, stage 8). You do **not** compute metrics, make
 figures, or write the paper — that's downstream.
 
-Repos: robotics `~/git/lorite_ros2_humble_phd` (experiments live here; everything build/run-ish
-happens **inside the Docker dev container** at `/workspaces/lorite_ros2_humble_phd`); CLAWAR 2026
-paper `~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-`; Obsidian vault
-`~/git/lorite-obsidian-notes` (`tasks/`, `ai_brain/`).
+Repos: robotics `~/git/lorite_ros2_humble_phd` (experiments live here); CLAWAR 2026 paper
+`~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-`; Obsidian vault
+`~/git/lorite-obsidian-notes` (`tasks/`, `ai_brain/`). You and the editor run on the **host** (so
+one session also reaches the vault + dotfiles); the repo source is bind-mounted into the dev
+container, so host edits are already live inside. Everything **build/run/record-ish** runs *inside*
+the container at `/workspaces/lorite_ros2_humble_phd` — reach it with the ROS 2 MCP tools or shell
+in via **`~/git/dotfiles/tools/lorite/in-ros2.sh`** (shorthand `in-ros2.sh`; a thin `docker exec` /
+`devcontainer exec` wrapper that brings the container up if down). Notebook/scaffold/doc edits stay
+on the host.
 
 ## Hard rules
 - **Safety & simulation-first — always.** The default target is simulation (Gazebo Harmonic /
@@ -177,10 +182,12 @@ Per the design's conditions matrix, for each cell × trial count:
    Deep node/launch changes still needed → `lorite-ros2-operator` (stage 5)."
 
 ## Gotchas
-- **Container vs host.** Build/launch/record happen in the dev container
-  (`/workspaces/lorite_ros2_humble_phd`; `source /opt/ros/humble/setup.zsh` +
-  `source ros2_ws/install/setup.zsh`). Doc/scaffold/notebook edits are fine on the host. If you
-  can't exec in the container, hand the user the exact command rather than guessing it ran.
+- **Container vs host.** You run on the host; build/launch/record happen *in* the dev container.
+  Run container-side commands with the ROS 2 MCP tools or the host wrapper `in-ros2.sh`
+  (`~/git/dotfiles/tools/lorite/in-ros2.sh`), e.g. `in-ros2.sh zsh -lc 'source
+  /opt/ros/humble/setup.zsh && source ros2_ws/install/setup.zsh && <cmd>'`. Doc/scaffold/notebook
+  edits are fine directly on the host (bind-mounted, already visible inside). If you can't exec in
+  the container, hand the user the exact command rather than guessing it ran.
 - **One long process at a time** — never start a second sim/launch over a live one; background the
   recorder, foreground the demo, or hand the command to the user and introspect.
 - **Never overwrite a bag's `trial_metadata.json`** — it's capture truth, written once at stop
