@@ -57,15 +57,25 @@ host backend with `COWORK_VM_BACKEND=host`** (values `host|bwrap|kvm`), set in t
 Claude Desktop launch** (the launcher cleans up the old cowork daemon, so a normal relaunch re-inits
 the backend); revert by deleting the two files. With `host`, the stale-VM isolation is gone —
 **verified 2026-06-12 23:37**: a *clean* spawn now reads a just-written host file and lands durable
-writes on the live vault + reaches live Zotero (`200`), all cross-checked from the host. **But
-spawning is still flaky / non-deterministic** — in the same session `lorite-paper-reader` spawned
-twice and failed both times with *distinct* tool-bridge errors (run 1: corrupted Bash output — empty
-`cat` on a non-empty file, garbled words, wrong/stale sizes; run 2: `<class 'AssertionError'>` on
-every Bash call + the Read tool scoped to the project root), while a `general-purpose` spawn the
-same minute was perfectly clean. So the remaining instability is in the **spawn/tool-bridge layer,
-not the (now-fixed) VM filesystem**. **Operating rule: keep running pipeline agents that must touch
-the live vault/Zotero INLINE in the main session (rock-solid); treat spawning as best-effort until
-the flakiness is resolved.** (More-isolated alternative: keep the VM and virtiofs-mount specific `$HOME` dirs via
+writes on the live vault + reaches live Zotero (`200`), all cross-checked from the host. **A second,
+independent root cause then surfaced — and is now also fixed.** After the VM fix, spawned *custom
+pipeline* agents still came back with `tool_uses: 0` (their tool calls rendered as inert text, often
+with hallucinated output), while `general-purpose` (`tools: *`) spawned cleanly. Root cause: pipeline
+agents are authored in the **Copilot/VS-Code tool namespace** (lowercase `read`/`execute`/… + globs
+like `zotero/*`), but Claude Code's tools are **PascalCase** (`Bash`/`Read`/…) and MCP tools are
+`mcp__<server>__*`; `sync_copilot_to_claude` used to `cp` the frontmatter **verbatim**, so a spawned
+subagent's `tools:` allowlist matched **nothing** → empty registry → no tool could fire. The main
+session is immune (inline work uses the live tools, not the frontmatter filter) — exactly why "inline
+worked, spawning didn't". **Fix: `normalize_frontmatter_for_claude()` in `install.sh`** translates the
+Copilot tool names to Claude's on the sync path (full mapping in the Claude-normalization note below);
+agent defs are **cached at session start**, so it only takes effect in a **fresh session**. **Verified
+2026-06-13** in a clean session: `lorite-slidev-presentation-implementer` (built-ins) → `tool_uses: 1`,
+real host; `lorite-paper-reader` (built-ins + `mcp__zotero`) → `tool_uses: 2`, real host, and
+`zotero_list_libraries` returned the **live** library — so the known Claude bug #1885/#25200 (a
+`tools:` allowlist stripping inherited MCP tools) **does not bite here**: explicit scoping and MCP
+access coexist. **Operating rule (relaxed): spawning custom pipeline agents is now reliable** (with
+`COWORK_VM_BACKEND=host` live + the translated `tools:`) — run them inline *or* spawned; inline stays a
+safe default but is no longer required for vault/Zotero-touching agents. (More-isolated alternative: keep the VM and virtiofs-mount specific `$HOME` dirs via
 `additionalBinds` in `~/.config/Claude/claude_desktop_linux_config.json` — but that can't restore
 localhost-service reachability, so Zotero stays unreachable from subagents.)
 
@@ -73,6 +83,15 @@ OpenCode normalization (`normalize_frontmatter_for_opencode` in `install.sh`):
 `argument-hint→argumentHint`, `user-invocable→userInvocable`,
 `tool-restrictions→toolRestrictions`, `tools:` arrays → `tools: {name: true}` map,
 and `model:` array placeholders are dropped.
+
+Claude normalization (`normalize_frontmatter_for_claude` in `install.sh`, applied by
+`sync_copilot_to_claude` to `*.agent.md`; skills still symlink): translates the Copilot/VS-Code tool
+names to Claude's so spawned subagents get a non-empty tool registry — `read→Read`, `edit→Edit, Write`,
+`execute→Bash`, `search→Grep, Glob`, `web→WebFetch, WebSearch`, `todo→TodoWrite`, `agent→Agent`,
+`<server>/*→mcp__<server>` (non-`[A-Za-z0-9_-]`→`_`); `vscode`/unknown names are dropped; duplicates
+collapsed; and if nothing maps the `tools:` key is omitted entirely (→ inherit all tools, like
+`general-purpose`). Without this, the Copilot names match no Claude tool and a spawned agent can run
+**no** tools (see the Cowork/spawn section above).
 
 ## Authoring an agent
 
@@ -123,7 +142,16 @@ for multi-step, semi-autonomous work and orchestration).
   touch a note elsewhere, append under `# AI Generated` with `## Prompt` +
   `## AI Generated Answer`. Never echo secrets from `obsidian-web-clipper-settings.json`.
 - **Obsidian Web Clipper**: used to turn GitHub issues into `tasks/` notes.
-- **Zotero** (`/usr/bin/zotero`): reference manager feeding the paper's `references.bib`.
+- **Zotero** (`/usr/bin/zotero`): reference manager feeding the paper's `references.bib`. Also
+  exposed to `lorite-paper-reader` via the **`zotero-mcp` MCP server** (`54yyyu/zotero-mcp`, PyPI
+  `zotero-mcp-server`; **pilot since 2026-06**) — launcher `tools/paper-reader/zotero-mcp.sh` runs it
+  in **hybrid mode** (read the local API `:23119`, write via the Web key, key sourced from
+  `~/.config/paper-scout/zotero-api-key`, never inlined in MCP config). Installed + registered with
+  Claude Code by `install.sh` (user scope). Adds semantic search (`zotero-mcp update-db` builds the
+  ChromaDB index). **`lorite-paper-scout` still uses the curl/connector flow**, and **paywalled IEEE
+  PDFs still go through `tools/paper-scout/fetch_attach.py`** (the MCP server can't drive the
+  authenticated ITU/KB proxy). The `zotero_note.py` / `add_to_collection.py` helpers remain as
+  reader fallbacks.
 - **gh CLI**: GitHub issues/PRs on the robotics repo.
 - **Slidev**: `slidev-theme-lorite-phd` theme for presentations.
 - **SimpleTimeTracker** (Android, via **LlamaLab Automate Cloud Messaging**): live work-session
