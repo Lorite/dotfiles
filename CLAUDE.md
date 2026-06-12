@@ -17,6 +17,22 @@ Author everything **once** under `.copilot/`. `install.sh` propagates it to each
 **Never hand-edit `~/.claude/agents/`, `~/.config/opencode/...`, or `~/.copilot/...`** —
 they are generated. Edit `.copilot/`, then run `./install.sh` to re-sync.
 
+**Claude-only user settings** live in `.claude/settings.json` (tracked here, **symlinked**
+verbatim → `~/.claude/settings.json` by `install.sh`; not synced to OpenCode/Copilot, not
+generated). Edit the repo copy, not the symlink. It carries the **Bash-sandbox allowlist**:
+the Claude **Desktop app runs the bubblewrap sandbox on by default**, which blocks subagents'
+Bash from (a) writing outside the cwd and (b) reaching non-allowlisted hosts — so pipeline
+agents couldn't write the vault / robotics repo / `~/.config/paper-scout`, reach Zotero's local
+API (`localhost:23119`), the research APIs, or run the `docker exec` dev-container wrappers.
+`sandbox.filesystem.allowWrite` + `sandbox.network.{allowLocalBinding,allowedDomains}` +
+`excludedCommands: ["docker *","devcontainer *"]` fix that. Add a research-API host here when an
+agent hits a new sandbox network prompt. `enableWeakerNestedSandbox: true` is **required in the
+Desktop app**: its agent mode is itself a namespaced env where `bwrap` can't create a *nested*
+user namespace (`nested userns is capability-restricted` / seccomp `setgroups` failure), so
+without it every sandboxed command hard-fails at startup; the flag makes the inner sandbox
+bind-mount the existing `/proc` (safe because the Desktop app provides the outer boundary).
+Keep this file secret-free (it's plain-text symlinked).
+
 OpenCode normalization (`normalize_frontmatter_for_opencode` in `install.sh`):
 `argument-hint→argumentHint`, `user-invocable→userInvocable`,
 `tool-restrictions→toolRestrictions`, `tools:` arrays → `tools: {name: true}` map,

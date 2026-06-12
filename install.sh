@@ -482,6 +482,8 @@ create_symlink_path "$DOTFILES_DIR/.copilot/skills" "$HOME/.copilot/skills"
 
 # Claude uses transformed copies from .copilot source.
 mkdir -p "$HOME/.claude"
+# Claude user settings (sandbox allowlist etc.) — tracked here, symlinked (Claude-only, not synced to Copilot/OpenCode).
+create_symlink "$DOTFILES_DIR/.claude/settings.json" "$HOME/.claude/settings.json"
 sync_copilot_to_claude "$DOTFILES_DIR/.copilot/agents" "$HOME/.claude/agents" "Copilot agents"
 sync_copilot_to_claude "$DOTFILES_DIR/.copilot/skills" "$HOME/.claude/skills" "Copilot skills"
 
