@@ -116,6 +116,7 @@ never full automation. Each new agent/skill is authored in `.copilot/`.
 |---|----------------|---------------|--------|
 | 1 | Find research papers online | `lorite-paper-scout` | **built** |
 | 2 | Read papers + Zotero | `lorite-paper-reader` | **built** |
+| 2b | Theorize: research directions + concept notes (after reading, before design) | `lorite-robotics-theorist` | **built** |
 | 3 | Task manager: TaskNotes + Calendar + GitHub issues | `lorite-task-manager` | **built** |
 | 4 | Take notes in Obsidian | `lorite-obsidian-ai-brain` (existing; may extend) | exists |
 | 5 | Modify robotics code | `lorite-ros2-operator` | **built** |

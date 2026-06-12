@@ -46,6 +46,10 @@ Repos: robotics `~/git/lorite_ros2_humble_phd` (experiments live here); CLAWAR 2
 1. **Papers read** — lorite-paper-reader notes at `$PAPER_SCOUT_HOME/notes/` (default
    `~/.config/paper-scout/notes/*.md`) and ai_brain literature notes in the vault. Use them
    to ground hypotheses, pick metrics, and choose baselines/ablations the literature expects.
+   If `lorite-robotics-theorist` has already produced a **research-directions / hypotheses** note
+   (in the paper's `media/research/<title> - <citekey>.md` literature note, an `ai_brain/` directions
+   note, or the project note's `# AI Generated`), start from it — its top hypothesis (H1/H0) is your
+   design's grounding; turn it into the rigorous protocol below.
 2. **Target paper RQs** — read the CLAWAR `main.tex`: pull the abstract claims, research
    questions, the transform-chain, and especially every `% TODO: [FILL IN: …]` and
    `% TODO: [VERIFY …]`. Those tell you precisely which measurements the experiment must yield.

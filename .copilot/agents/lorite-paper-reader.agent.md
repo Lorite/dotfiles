@@ -90,7 +90,12 @@ Read the **whole** paper. Produce the note with these sections **in this order**
    research (multi-robot, off-board localization, micro-UAVs, AprilTag, active tracking…).
    Why it was saved; where it could inform the CLAWAR work.
 6. **Critique** — strengths; limitations/assumptions; **methods or ideas to borrow**.
-7. **Citations to follow up** — references worth chasing, as a list of
+7. **Concepts** — the key concepts/methods/terms the paper uses or introduces, as a bullet list of
+   `- [[Concept]]: short description and how it's used in the paper`. Wikilink each so it connects to
+   (or seeds) a vault concept note. Keep to the load-bearing ones (≈3–8), favouring the names the
+   vault already uses (`work/concepts/`). This list is the handoff queue for `lorite-robotics-theorist`,
+   which turns the important ones into structured concept notes.
+8. **Citations to follow up** — references worth chasing, as a list of
    `Title — Authors (Year) [DOI/arXiv]`, ready to hand to `lorite-paper-scout` for snowballing.
 
 Footer line: venue · year · DOI · BibTeX citekey (if known) · "read by lorite-paper-reader YYYY-MM-DD".
@@ -108,6 +113,9 @@ Footer line: venue · year · DOI · BibTeX citekey (if known) · "read by lorit
 
 ## Handoffs
 - **→ lorite-paper-scout**: offer to snowball the "Citations to follow up" list.
+- **→ lorite-robotics-theorist**: the **Concepts** list is its queue — offer to turn the load-bearing
+  `[[concept]]`s into structured vault concept notes, and to fold the paper into the research-directions
+  synthesis (the theory stage between reading and experiment design).
 - **→ lorite-obsidian-ai-brain (stage 4)**: the markdown note in `~/.config/paper-scout/notes/` is the handoff
   artifact — hand it to `lorite-obsidian-ai-brain`, or write the Obsidian note yourself via the **`lorite-obsidian-note`**
   skill (it enforces the `ai_brain/`-only write policy). Don't write vault notes any other way.

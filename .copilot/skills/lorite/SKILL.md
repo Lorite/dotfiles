@@ -78,6 +78,7 @@ keeping the timer + logging in this main thread:
 |------|-------|
 | Find papers online | `lorite-paper-scout` |
 | Read a paper + note it in Zotero/vault | `lorite-paper-reader` |
+| Theorize research directions / write concept notes | `lorite-robotics-theorist` |
 | Manage tasks / GitHub issues / calendar | `lorite-task-manager` |
 | Take/synthesize vault notes | `lorite-obsidian-ai-brain` |
 | Modify robotics ROS 2 code (nodes/launch) | `lorite-ros2-operator` |
