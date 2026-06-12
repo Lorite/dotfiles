@@ -3,8 +3,7 @@
   "agentPushNotifEnabled": true,
   "inputNeededNotifEnabled": true,
   "sandbox": {
-    "enabled": true,
-    "enableWeakerNestedSandbox": true,
+    "enabled": false,
     "excludedCommands": ["docker *", "devcontainer *"],
     "filesystem": {
       "allowWrite": [

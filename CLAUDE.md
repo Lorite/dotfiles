@@ -25,13 +25,49 @@ Bash from (a) writing outside the cwd and (b) reaching non-allowlisted hosts —
 agents couldn't write the vault / robotics repo / `~/.config/paper-scout`, reach Zotero's local
 API (`localhost:23119`), the research APIs, or run the `docker exec` dev-container wrappers.
 `sandbox.filesystem.allowWrite` + `sandbox.network.{allowLocalBinding,allowedDomains}` +
-`excludedCommands: ["docker *","devcontainer *"]` fix that. Add a research-API host here when an
-agent hits a new sandbox network prompt. `enableWeakerNestedSandbox: true` is **required in the
-Desktop app**: its agent mode is itself a namespaced env where `bwrap` can't create a *nested*
-user namespace (`nested userns is capability-restricted` / seccomp `setgroups` failure), so
-without it every sandboxed command hard-fails at startup; the flag makes the inner sandbox
-bind-mount the existing `/proc` (safe because the Desktop app provides the outer boundary).
-Keep this file secret-free (it's plain-text symlinked).
+`excludedCommands: ["docker *","devcontainer *"]` are the knobs — but only when the sandbox can
+actually run. **In the Desktop app the sandbox must be `enabled: false`**: agent mode already runs
+inside a restricted user namespace, so `bwrap` can't create the *nested* userns it needs
+(`nested userns is capability-restricted` / seccomp `setgroups` failure) and **every sandboxed
+command hard-fails at startup**. `enableWeakerNestedSandbox` does **not** fix this — that flag only
+addresses a later `/proc`-mount step, not userns creation; no `sandbox.*` key can grant back
+`CAP_SYS_ADMIN` inside an already-restricted namespace. Disabling is safe because the Desktop app
+itself provides the outer isolation boundary (the inner `bwrap` was redundant double-containment).
+The `allowWrite`/`allowedDomains`/`allowLocalBinding`/`excludedCommands` block is harmless while
+disabled and becomes useful if you instead run the agents from the **bare `claude` CLI** (no outer
+namespace → `bwrap` nests fine → set `enabled: true` there). Keep this file secret-free (it's
+plain-text symlinked).
+
+**Spawned subagents run in a separate Cowork microVM — `.claude/settings.json` `sandbox.*` does
+NOT control them.** Verified 2026-06-12: a spawned subagent (Agent/Task tool) reads a **stale
+rootfs-image snapshot** of the vault (a note showed 4444 B where the live file was 7003 B, with a
+different heading), has a **skewed clock** (VM image built 2026-03-26), and **cannot reach host
+`localhost`** (Zotero `:23119`) — so its vault *writes are discarded* and its reads are stale,
+while the **main session runs on the host and sees everything live** (which is why it self-reports
+success and can't detect the problem). Mechanism: Claude Desktop's **Cowork** feature —
+`/usr/lib/claude-desktop/.../app.asar.unpacked/cowork-vm-service.js` dispatches a pluggable backend:
+`host` (run directly on the host, no isolation), `bwrap` (namespace sandbox), or `kvm` (QEMU/KVM
+microVM; host dirs shared in via virtiofs but only the per-session workspace — everything else is
+the stale image). Auto-detect prefers `bwrap`, but `bwrap` is non-functional here (same nested-userns
+limit as above) so it falls back to the **kvm microVM** → the stale-FS symptom. **Fix: force the
+host backend with `COWORK_VM_BACKEND=host`** (values `host|bwrap|kvm`), set in two host-side files
+(not in this repo): a user desktop-entry override `~/.local/share/applications/claude-desktop.desktop`
+(`Exec=env COWORK_VM_BACKEND=host /usr/bin/claude-desktop %u`) and
+`~/.config/environment.d/claude-cowork.conf` (`COWORK_VM_BACKEND=host`). Takes effect on the **next
+Claude Desktop launch** (the launcher cleans up the old cowork daemon, so a normal relaunch re-inits
+the backend); revert by deleting the two files. With `host`, the stale-VM isolation is gone —
+**verified 2026-06-12 23:37**: a *clean* spawn now reads a just-written host file and lands durable
+writes on the live vault + reaches live Zotero (`200`), all cross-checked from the host. **But
+spawning is still flaky / non-deterministic** — in the same session `lorite-paper-reader` spawned
+twice and failed both times with *distinct* tool-bridge errors (run 1: corrupted Bash output — empty
+`cat` on a non-empty file, garbled words, wrong/stale sizes; run 2: `<class 'AssertionError'>` on
+every Bash call + the Read tool scoped to the project root), while a `general-purpose` spawn the
+same minute was perfectly clean. So the remaining instability is in the **spawn/tool-bridge layer,
+not the (now-fixed) VM filesystem**. **Operating rule: keep running pipeline agents that must touch
+the live vault/Zotero INLINE in the main session (rock-solid); treat spawning as best-effort until
+the flakiness is resolved.** (More-isolated alternative: keep the VM and virtiofs-mount specific `$HOME` dirs via
+`additionalBinds` in `~/.config/Claude/claude_desktop_linux_config.json` — but that can't restore
+localhost-service reachability, so Zotero stays unreachable from subagents.)
 
 OpenCode normalization (`normalize_frontmatter_for_opencode` in `install.sh`):
 `argument-hint→argumentHint`, `user-invocable→userInvocable`,
