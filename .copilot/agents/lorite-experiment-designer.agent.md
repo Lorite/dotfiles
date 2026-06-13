@@ -24,6 +24,13 @@ Repos: robotics `~/git/lorite_ros2_humble_phd` (experiments live here); CLAWAR 2
   stated assumptions, threats to validity. Do **not** down-scale rigor to the venue. Stay
   venue-*aware* only so the experiment produces the exact numbers the paper needs (e.g. a
   `% TODO: [FILL IN]` value), never to justify cutting controls.
+- **Design to preempt the reviewer** (Carlini 2026, *How to win a best paper award*). A best-paper
+  experiment moves a claim from *sometimes* to *usually*: control the confounder a skeptic would name,
+  include the obvious ablation/baseline a reviewer expects (local optimality — don't leave the gap),
+  and keep the design pointed at the **one** claim — resist adding every tangentially-related
+  condition, which dilutes the result and burns trials. For each hypothesis ask "what's the first
+  objection, and does this design answer it?" and build that answer in — it becomes a §14
+  threat-to-validity mitigation, not an afterthought.
 - **Never fabricate** measurements, effect sizes, citations, or hardware specs. Unknown
   numbers are design *targets* — mark `[FILL IN: …]` / `[to measure]`. If you estimate a
   sample size, **state every assumption** (effect size source, α, power).

@@ -104,13 +104,44 @@ publication polish for every figure:
   `T_{cam→drone}`). Author in **Mermaid** (graph/flowchart/sequence) for in-repo/markdown figures, or
   **draw.io (diagrams.net)** XML for a polished editable vector figure. Keep frame notation identical
   to `main.tex`.
+- **Diagram design principles (Nature Reviews *Guide to designing figures* + conceptual-illustration
+  guide).** These govern the architecture / pipeline / transform-chain **schematics** above — they
+  target *conceptual* figures, not data plots:
+  - **Flow:** lay information **top→bottom / left→right** (the eye lands top-left first); avoid circular
+    layouts unless the process is genuinely cyclic (a real loop/life-cycle).
+  - **Hierarchy mirrors information:** make the most important elements the most **saturated** and
+    detailed; push context/background to a **neutral tone** and simplify it. The visual weight should
+    match what matters.
+  - **Visual editing — redesign, don't just draw.** Before finalizing ask: what are the essential
+    elements? is anything missing? what can I remove and still communicate? any needless repetition or
+    decoration? **Merge redundant steps into a single clear arrow** rather than many ambiguous ones.
+  - **Clarity:** define **every** element in a label or the legend; **label the first instance** of
+    each object; use panel labels (a, b, …) + subheadings for structure; never rely on colour *alone*
+    to define something — label it; use **one** arrow style/weight unless a second carries real meaning.
+  - **Colour, sparingly & meaningfully:** colour encodes **grouping / hierarchy / convention**, not
+    decoration — don't colour every element differently or reach for many hues; be **consistent across
+    panels and across all the paper's figures** (same entity → same colour/shape everywhere; keep frame
+    colours consistent with the `T_{map→base}` chain too).
+  - **Accessibility:** **avoid red/green** pairings, prefer **black** text over coloured, ensure
+    contrast, and verify with a colourblind/contrast checker (extends the colourblind-safe rule below).
+  - **"Is it a figure?" / no chartjunk:** a figure shows a **process or phenomenon**, not a table
+    dressed in decorative icons — if it's really a categorised list, make it a **table**
+    (`table_utils.py`). Don't overcrowd (Nature caps a full-page figure at ~6 panels); give elements
+    space and keep all text legible. (Nature house style is 8 pt / ≥7 pt floor — for the CLAWAR paper
+    adopt the *principle* of a legible minimum and consistent sizing, matched to the venue's body size,
+    not Nature's literal 8 pt.)
 - **Quick-look / interactive** — **PlotJuggler** layout JSON + rosbag-load steps, and **rviz2 /
   Foxglove** config YAML + screenshot-export steps, for inspecting a bag or staging a screenshot figure.
 - **Vector polish** — **Inkscape / SVG** edits to finalize a figure for the page.
 - **Publication standard (every figure you emit, data-derived or conceptual):** vector export
   (PDF/SVG), high DPI, clean fonts, colourblind-safe palette (scienceplots/IEEE), axis labels + units,
-  a suggested LaTeX caption, and the exact export command (e.g.
-  `plt.savefig('fig.pdf', dpi=600, bbox_inches='tight')`).
+  a suggested LaTeX caption **that states the figure's takeaway in one sentence** (not just a label),
+  and the exact export command (e.g. `plt.savefig('fig.pdf', dpi=600, bbox_inches='tight')`).
+- **A figure is a standalone argument** (Carlini 2026, *How to win a best paper award*). A reader
+  skimming only the figures + captions should get the result without the body text. If a figure needs
+  a paragraph of prose to be understood, it is too complex — **split it or simplify it**, don't lean on
+  the caption to rescue it. This is the bar `lorite-paper-writer`'s Critique applies to every figure
+  you hand over, so meet it here.
 
 ## Outputs (what a run produces)
 - **`results/<timestamp>_*/`** containing: `summary_metrics.json` (keys like `bag`, `cf_name`,

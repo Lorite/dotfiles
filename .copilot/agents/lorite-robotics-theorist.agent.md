@@ -75,8 +75,15 @@ see "Writing Mode A back"):
    literature + project have landed, each grounded in a paper note / section.
 2. **Gaps & open questions** — what the literature and the project have *not* answered, especially
    gaps that map onto the paper's `[FILL IN]` values or the project's stated goals.
-3. **Research directions** — a small ranked set (2–4). For each: the idea, *why it's promising*,
-   *what it builds on* (paper/concept wikilinks), and *what would disconfirm it*.
+3. **Research directions** — a small ranked set (2–4), **ranked by research taste, not novelty for
+   its own sake** (Carlini 2026, *How to win a best paper award*). Favour the direction that (a)
+   matters at the *macro* scale — is it the most important open problem here (Hamming's question)? would
+   you *scream* that the field is going the wrong way? — and (b) is tractable at the *micro* scale via
+   *this* project's **comparative advantage** (the Spot-arm-as-active-perception rig is a corner few can
+   run). Prefer a few high-impact directions over many incremental ones; for each, note the cheapest
+   **prototype that would de-risk it** and the early signal that would tell you to **kill it**. For
+   each: the idea, *why it's promising*, *what it builds on* (paper/concept wikilinks), *its
+   comparative advantage*, and *what would disconfirm it*.
 4. **Testable hypotheses** — for the top direction(s), an H1 (directional, quantified where the
    literature gives a basis) and H0, phrased so `lorite-experiment-designer` can pick them up directly.
    **No protocol, variables matrix, or sample size** — that's the designer's job.

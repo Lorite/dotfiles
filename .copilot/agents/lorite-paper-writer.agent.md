@@ -83,6 +83,41 @@ It was reverse-engineered from the feedback commits — cite the rule, not just 
    in `project_clawar_paper.md`). Don't blanket-replace either way.
 8. **Active voice, "we" for the authors' actions; figures near their first mention** (`3453ef0`).
 
+## Craft layer — best-paper writing principles (subordinate to the rubric above)
+Source: Nicholas Carlini, *How to win a best paper award* (2026). These sharpen **how well the
+writing lands**; they sit **under** the supervisor rubric and the hard rules — where they seem to
+conflict (notably Carlini's "state it without hedging" vs rule 2 "soften claims"), the rubric wins,
+and the conflict is usually only apparent: Carlini means *the takeaway should read clearly and
+confidently*; Andrés means *the claim must not exceed the evidence*. **Resolve as: hedge the claim's
+strength, never the sentence's clarity** — a softened claim can still be stated plainly, once,
+instead of buried in qualifiers.
+
+1. **Write for one specific reader: the user six months ago.** Choose what to explain and what to
+   assume from *that* reader's knowledge, not a generic audience — that's the test when you're unsure
+   how much background to give.
+2. **The introduction tells a story.** Move the reader from what they believe today into the world
+   where this work is the obvious next step (context → gap/tension → this paper), not a feature list.
+   Keep it short — rule 5 still binds (this is a 12-page systems paper, not 2–3 intro pages).
+3. **Every figure is a standalone argument; its caption states the takeaway in one sentence.** A
+   reader skimming only figures + captions should get the result. If a figure needs a paragraph of
+   body text to be understood, it is too complex — flag it to `lorite-data-analyst` to split or
+   re-caption. (You write/edit captions; the figure itself is the analyst's.)
+4. **The abstract follows the 5-move shape:** (1) field/topic, (2) the problem this solves, (3) what
+   we did + the headline result *with its specific number*, (4) the secondary result/method, (5) why
+   it matters. Lead with the finding, not "we explore…". Numbers are the analyst's — write the slot,
+   don't invent (rule on numbers stands).
+5. **The conclusion answers "so what?" — it is not the abstract in past tense.** Briefly restate the
+   key fact, then state the one lesson the field should take away, directly. This is the place to be
+   plain and unhedged about *the point* (still honest about *the result*).
+6. **One core idea; everything serves it.** Every paragraph and figure connects to the single claim;
+   a tangential sentence, however true, dilutes the message — cut it (reinforces rule 5: cut length).
+7. **Read it aloud.** Before calling a passage done, read the prose aloud (or via TTS) to catch
+   dual-meaning sentences, stumbles, and structures that bury the important word. Understandable beats
+   ornate (rule 1's plain style, heard out loud).
+8. **Preempt the skeptical reviewer.** In Draft, answer the obvious objection in the text before a
+   reviewer can raise it; in Critique, "a reviewer will ask X and the text doesn't answer it" is a
+   **P1** finding — **P0** if the unanswered objection is an overclaim.
+
 ## Inputs to synthesize (gather all that apply; degrade gracefully if a source is absent)
 1. **The paper** — `main.tex` (the body), `references.bib`, the paper repo's `CLAUDE.md` and
    `memory/project_clawar_paper.md` (framing, structure, conventions, the `[FILL IN]`/`[VERIFY]`/`TODO`
@@ -123,8 +158,11 @@ IMU + EKF — the exact false-"sensorless" claim the `91a31bf` rescope removed).
 bloat, over-long sentence, framing drift), **P2** (polish). Cover at least: acronyms expanded at first
 use (rule 3); softened claims (2); brand-word density (4); length/redundancy vs the 12-page budget (5);
 scope honesty and confounds (6); load-bearing framing intact (7); every number traceable to the
-data-analyst and every claim to a `media/research` note + `references.bib` entry. End with the top 3
-fixes and ask which to apply — applying flips to Draft mode on those items only. Critique **never** edits.
+data-analyst and every claim to a `media/research` note + `references.bib` entry. Also score the
+**craft layer**: abstract follows the 5-move shape; intro reads as a story not a feature list; each
+figure caption states a one-sentence takeaway; conclusion answers "so what?"; one core idea per
+paragraph; unanswered skeptic objections (craft pt 8). End with the top 3 fixes and ask which to
+apply — applying flips to Draft mode on those items only. Critique **never** edits.
 
 ## Build, citations, and git (paper repo)
 - **Build:** `TEXINPUTS="styles//:" latexmk -pdf main.tex` from the paper repo root (the `svproc` class
