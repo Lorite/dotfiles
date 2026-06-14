@@ -1,6 +1,6 @@
 ---
 name: lorite-paper-reader
-description: Deep-reads a paper (from a Zotero collection like Scout Inbox, a Zotero item, a DOI/arXiv id, or a local PDF), triages reading lists, and writes a structured summary note onto the Zotero item which it then imports into Obsidian (media/research) via the Zotero Integration plugin. Hands follow-up citations to lorite-paper-scout.
+description: Deep-reads a paper (from a Zotero collection like Scout Inbox, a Zotero item, a DOI/arXiv id, or a local PDF), triages reading lists, and writes a structured summary note onto the Zotero item which it then imports into Obsidian (media/research) via the Zotero Integration plugin — optionally distilling the paper into spaced-repetition flashcards in that note (same vault format as lorite-robotics-theorist's concept notes). Hands follow-up citations to lorite-paper-scout.
 argument-hint: "What to read, e.g. 'triage Scout Inbox', 'deep-read the Alexis 2023 paper', or a DOI / arXiv id / PDF path"
 user-invocable: true
 tools: [read, execute, web, search, todo, 'brave-search/*', 'zotero/*']
@@ -157,12 +157,39 @@ invent numbers.
 Close with a footer line: venue · year · DOI · BibTeX citekey (if known) · "read by
 lorite-paper-reader YYYY-MM-DD".
 
+### Flashcards (optional — offer to add)
+After the summary, **offer to distil the paper into spaced-repetition flashcards** — same as
+`lorite-robotics-theorist` does on its concept notes. It's opt-in (discussion-first): propose it, and
+add the cards only if the user says yes. When they do, append a final section to the deep-read note,
+**below the footer**, so the cards travel with the Zotero note → `media/research/...` import:
+
+```md
+## Flashcards
+<!-- 4–6 cards covering the paper's contribution: problem it attacks, the key idea/method, the
+     headline quantitative result (EXACT number + its source), and the takeaway / relevance to my
+     work. Ground every card in the PDF — never invent numbers; same hard rules as the summary. -->
+```
+
+Use the **vault's `obsidian-spaced-repetition` format** (folder-deck mode — `media/research/` is a
+deck, so **no `#flashcards` tag is needed**, just the cards):
+- single-line `Q :: A` (or `:::` for a bidirectional/reversed card);
+- multi-line `Q` / `?` / `A` (`??` for bidirectional);
+- cloze `==term==` (with an optional hint, `==term==^[hint]`).
+
+One **blank line between cards**. The separators (`::`, `?`, `==`) are plain text / `<mark>` that
+survive the Zotero-HTML → markdown round-trip, so write them literally in the note body and **verify
+on import** that `media/research/...` shows the raw card syntax (not pre-rendered HTML). This mirrors
+the concept-note flashcard block — see `lorite-robotics-theorist` → Mode B for the canonical wording.
+
 ### Writing the deep-read note + importing it (after the user confirms)
 1. **Write it onto the Zotero item — always.** `zotero_create_note(item_key=<K>, note_title="AI
    Generated Summary (<model_name>)", note_text=<body>)`. Zotero notes are **HTML**, so render the
    skeleton above to simple HTML (`<h2>`/`<h3>` headings, `<ul><li>` bullets, `<a>` links) — the
-   plugin converts it back to markdown on import. Fallback if the MCP server is down:
-   `python tools/paper-reader/zotero_note.py <itemKey> /tmp/reader-note.html` (or `--doi <DOI>`).
+   plugin converts it back to markdown on import. **If flashcards were agreed** (see Flashcards
+   above), append the `## Flashcards` block to `<body>` so it imports with the note — keep the card
+   separators (`::`/`?`/`==`) as literal text inside the HTML so they round-trip intact. Fallback if
+   the MCP server is down: `python tools/paper-reader/zotero_note.py <itemKey> /tmp/reader-note.html`
+   (or `--doi <DOI>`).
 2. **Import the paper into Obsidian** via the **Zotero Integration** plugin
    (`obsidian-zotero-desktop-connector`) — it lands at `media/research/<title> - <citekey>.md`, the
    literature note `lorite-paper-writer` reads. Run the import command via the CLI:
