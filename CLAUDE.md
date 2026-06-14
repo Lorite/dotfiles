@@ -144,9 +144,11 @@ for multi-step, semi-autonomous work and orchestration).
 - **Obsidian Web Clipper**: used to turn GitHub issues into `tasks/` notes.
 - **Zotero** (`/usr/bin/zotero`): reference manager feeding the paper's `references.bib`. Also
   exposed to `lorite-paper-reader` via the **`zotero-mcp` MCP server** (`54yyyu/zotero-mcp`, PyPI
-  `zotero-mcp-server`; **pilot since 2026-06**) — launcher `tools/paper-reader/zotero-mcp.sh` runs it
-  in **hybrid mode** (read the local API `:23119`, write via the Web key, key sourced from
-  `~/.config/paper-scout/zotero-api-key`, never inlined in MCP config). Installed + registered with
+  `zotero-mcp-server`; **pilot since 2026-06**) — launcher `tools/paper-reader/zotero-mcp.sh`
+  **auto-detects** its mode: **hybrid** when the local API `:23119` is up (read local, write via the
+  Web key) and **web-only** when there's no local app (e.g. the headless home server — reads + writes
+  both go through the Web API). Key sourced from `~/.config/paper-scout/zotero-api-key`, never inlined
+  in MCP config; preset `ZOTERO_LOCAL` to force a mode. Installed + registered with
   Claude Code by `install.sh` (user scope). Adds semantic search (`zotero-mcp update-db` builds the
   ChromaDB index). **`lorite-paper-scout` still uses the curl/connector flow**, and **paywalled IEEE
   PDFs still go through `tools/paper-scout/fetch_attach.py`** (the MCP server can't drive the

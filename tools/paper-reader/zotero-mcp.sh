@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Launch the zotero-mcp server (github.com/54yyyu/zotero-mcp; PyPI: zotero-mcp-server)
-# in HYBRID mode — reads hit the LOCAL Zotero API (localhost:23119, no key, fast), while
-# writes go through the Zotero WEB API with the read/write key. This is the same
-# read-local/write-web split the curl + add_to_collection.py / zotero_note.py helpers use.
+# Launch the zotero-mcp server (github.com/54yyyu/zotero-mcp; PyPI: zotero-mcp-server).
+# Mode is auto-detected: HYBRID when the LOCAL Zotero API (localhost:23119) is up — reads
+# hit it (no key, fast), writes go through the Zotero WEB API with the read/write key (the
+# same read-local/write-web split the curl + add_to_collection.py / zotero_note.py helpers
+# use); WEB-ONLY when there's no local app (e.g. a headless server) — reads + writes both go
+# through the Web API, so the key must be present. Preset ZOTERO_LOCAL to force a mode.
 #
 # Why a wrapper: it keeps the Web API key OUT of every MCP-client config (~/.claude.json,
 # OpenCode, Copilot) — the secret is sourced at launch from the gitignored paper-scout home
@@ -18,7 +20,15 @@ set -euo pipefail
 
 HOME_DIR="${PAPER_SCOUT_HOME:-$HOME/.config/paper-scout}"
 
-export ZOTERO_LOCAL="true"                                        # read from the running desktop app
+# Hybrid when the local Zotero desktop API answers; web-only otherwise. Override via env.
+if [[ -z "${ZOTERO_LOCAL:-}" ]]; then
+    if curl -fsS -m 2 -o /dev/null http://localhost:23119/connector/ping 2>/dev/null; then
+        ZOTERO_LOCAL="true"
+    else
+        ZOTERO_LOCAL="false"
+    fi
+fi
+export ZOTERO_LOCAL
 export ZOTERO_LIBRARY_TYPE="${ZOTERO_LIBRARY_TYPE:-user}"
 export ZOTERO_LIBRARY_ID="${ZOTERO_LIBRARY_ID:-15209457}"         # numeric web userID (not secret)
 export ZOTERO_EMBEDDING_MODEL="${ZOTERO_EMBEDDING_MODEL:-default}" # local all-MiniLM-L6-v2 (free, offline)
