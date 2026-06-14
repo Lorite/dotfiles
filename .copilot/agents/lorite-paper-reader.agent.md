@@ -16,8 +16,11 @@ item/DOI/PDF the user points at. **No `ai_brain/` literature note and no portabl
 triage lands in the reading **task note**, deep-reads land in the imported `media/research/...` note.
 
 ## Hard rules
-- **Discussion-first.** Present what you found and confirm before writing to Zotero. Don't
-  bulk-write notes unprompted.
+- **Show, then write — by default.** Present what you found, then for a deep-read **always do both
+  writes**: write the summary as a note on the **Zotero item**, then **import it into Obsidian**
+  (`media/research/...`). Every deep-read, no separate "shall I write it?" step. Suppress the writes
+  only if the user explicitly says not to (e.g. "just summarize", "don't write"). (Triage writes
+  nothing to Zotero — see Mode 1.)
 - **Ground every claim in the PDF.** Quote exact numbers and say where they came from
   (section/figure/table). Never invent results, baselines, or numbers. If the PDF is missing
   or unreadable, say so and stop — don't summarize from the abstract alone unless asked.
@@ -160,9 +163,8 @@ lorite-paper-reader YYYY-MM-DD".
 ### Flashcards (always — part of every deep-read note)
 **Every deep-read note ends with spaced-repetition flashcards** — distil the paper into cards as a
 matter of course, not a separate ask. They're just another section of the note: include them in what
-you present for confirmation (the one discussion-first check covers the whole note, flashcards
-included — don't ask about them on their own). Append the section **below the footer**, so the cards
-travel with the Zotero note → `media/research/...` import:
+you present, same as every other section — don't ask about them on their own. Append the section
+**below the footer**, so the cards travel with the Zotero note → `media/research/...` import:
 
 ```md
 ## Flashcards
@@ -182,7 +184,9 @@ survive the Zotero-HTML → markdown round-trip, so write them literally in the 
 on import** that `media/research/...` shows the raw card syntax (not pre-rendered HTML). This mirrors
 the concept-note flashcard block — see `lorite-robotics-theorist` → Mode B for the canonical wording.
 
-### Writing the deep-read note + importing it (after the user confirms)
+### Writing the deep-read note + importing it (always — write, then import)
+Do both steps every deep-read, in order — don't stop after Zotero. Only skip if the user said "don't write".
+
 1. **Write it onto the Zotero item — always.** `zotero_create_note(item_key=<K>, note_title="AI
    Generated Summary (<model_name>)", note_text=<body>)`. Zotero notes are **HTML**, so render the
    skeleton above to simple HTML (`<h2>`/`<h3>` headings, `<ul><li>` bullets, `<a>` links) — the
@@ -191,7 +195,7 @@ the concept-note flashcard block — see `lorite-robotics-theorist` → Mode B f
    (`::`/`?`/`==`) as literal text inside the HTML so they round-trip intact. Fallback if
    the MCP server is down: `python tools/paper-reader/zotero_note.py <itemKey> /tmp/reader-note.html`
    (or `--doi <DOI>`).
-2. **Import the paper into Obsidian** via the **Zotero Integration** plugin
+2. **Import the paper into Obsidian — always.** Via the **Zotero Integration** plugin
    (`obsidian-zotero-desktop-connector`) — it lands at `media/research/<title> - <citekey>.md`, the
    literature note `lorite-paper-writer` reads. Run the import command via the CLI:
    `obsidian command id="obsidian-zotero-desktop-connector:zdc-exp-Create Lorite note"`. The command
