@@ -134,6 +134,31 @@ for multi-step, semi-autonomous work and orchestration).
 | `~/git/lorite-obsidian-notes` | Obsidian vault (edited manually). `ai_brain/` is AI-writable; key dirs: `tasks/`, `bases/`, `people/`, `templates/`, `work/`. |
 | `~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-` | LaTeX paper (Springer `svproc`), CLAWAR 2026. |
 
+## On-the-go access (home server)
+
+To keep working with Claude from the **phone when the laptop is off**, an always-on home server
+runs **Claude Code Remote Control** (set up 2026-06-14). Server: `lorite-thinkcentre-m720q`
+(Lenovo ThinkCentre M720q), reachable over **Tailscale** (`100.72.103.27`), OS user `lorite`.
+
+- **Why Remote Control, not Dispatch:** Remote Control is a **headless CLI** feature (outbound-HTTPS
+  only, no inbound ports — the phone drives it via the Claude app *Code* tab / claude.ai/code);
+  Dispatch needs the GUI Desktop app, which a headless server can't run. Requires a full-scope
+  claude.ai (Pro/Max) **OAuth** login — not an API key (ensure no `ANTHROPIC_API_KEY` shadows it).
+- **Server mode** (`claude remote-control --spawn same-dir`) so the phone can **spawn multiple
+  on-demand chats** (capacity 32), each in the server's cwd (`~/git/dotfiles`).
+- **Persistence:** the command runs inside **tmux** session `phd`, launched by a systemd **user**
+  service with boot-start via `loginctl enable-linger lorite`; a wrapper loop restarts it (Remote
+  Control exits after a ~10 min network outage). Canonical copies of both files live in
+  **`tools/home-server/`** (`claude-rc-loop.sh` + `claude-rc.service`); the live copies on the server
+  are `~/.local/bin/claude-rc-loop.sh` and `~/.config/systemd/user/claude-rc.service`. **Control:**
+  `tmux attach -t phd`; `systemctl --user {status,restart,stop} claude-rc` (needs
+  `XDG_RUNTIME_DIR=/run/user/$(id -u)` over SSH).
+- **What works on the server vs. stays on the laptop:** the Obsidian **vault is kept live by
+  Syncthing**, but the Obsidian GUI isn't running there → agents use the **direct file-write
+  fallback** (no `base:query`/Bases). **Zotero** runs **web-only** there (the `zotero-mcp` launcher
+  auto-detects this — see Tooling below; the Web API key is at `~/.config/paper-scout/zotero-api-key`).
+  **Robotics / dev-container / hardware work stays on the laptop** (can't move to a headless box).
+
 ## Tooling / integrations available
 
 - **Obsidian CLI** (`~/.local/bin/obsidian`): requires the Obsidian desktop app

@@ -1,0 +1,22 @@
+# Canonical copy of the home-server Remote Control systemd *user* unit.
+# Install on the server at ~/.config/systemd/user/claude-rc.service, then:
+#   sudo loginctl enable-linger lorite          # run at boot without a login
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now claude-rc.service
+# Control: systemctl --user {status,restart,stop} claude-rc   (needs
+#   XDG_RUNTIME_DIR=/run/user/$(id -u) over a non-login SSH session).
+# Type=oneshot + RemainAfterExit keeps the daemonized tmux server alive without systemd
+# trying to track/kill it; the wrapper's loop provides the actual restart resilience.
+[Unit]
+Description=Claude Code Remote Control (tmux session: phd)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/tmux new-session -d -s phd %h/.local/bin/claude-rc-loop.sh
+ExecStop=/usr/bin/tmux kill-session -t phd
+
+[Install]
+WantedBy=default.target
