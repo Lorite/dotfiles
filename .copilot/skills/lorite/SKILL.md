@@ -10,8 +10,9 @@ The thing you talk to in a chat is the **base session**, not a pipeline agent �
 read-first / log-often Obsidian rule baked into `lorite-experiment-coder`, `lorite-paper-reader`,
 etc. doesn't apply to it automatically. This skill is how the base session adopts that rule: run
 `/lorite` at the **start of a chat** and it (1) pins the session to a specific **task note**,
-(2) starts a **live time-tracker**, (3) commits to **logging as we go**, and (4) **routes** the
-work to the right specialized agent. Re-run it to **switch task** or to **stop** the timer.
+(2) times the work — a **live timer** when work starts now, or a **back-filled block** when it's
+already done — (3) commits to **logging as we go**, and (4) **routes** the work to the right
+specialized agent. Re-run it to **switch task** or to **stop** the timer.
 
 Vault: `~/git/lorite-obsidian-notes`. Timer script:
 `~/git/dotfiles/tools/lorite/simple_time_tracker.py`. Dates `yyyy-MM-dd`, times `HH:mm`
@@ -21,6 +22,8 @@ Vault: `~/git/lorite-obsidian-notes`. Timer script:
 - **At the start of a PhD work session** — before doing the work, so it's anchored and timed.
 - **When the task changes** mid-session — stop the old timer, re-anchor, start a new one.
 - **At wrap-up** — `/lorite stop`: stop the timer and write the closing diary log.
+- **To log already-finished work** — e.g. "create a task for what we did, log it, mark done": skip
+  the live timer and back-fill a finished block with `add_record` (step 3, retrospective mode).
 
 ## Procedure
 
@@ -42,19 +45,37 @@ Read the task note (and the project/paper note it links) for the latest human + 
 status, decisions, prior findings. Don't re-derive what the note already records. Surface the
 current state back to the user in a line or two.
 
-### 3. Start the live timer
-Start a running SimpleTimeTracker activity tied to the task note name:
+### 3. Track the time — live timer, or back-fill a finished block
+Pick the mode from when the work happens:
+
+**Default (work starts now)** — start a running SimpleTimeTracker activity tied to the task note name:
 
 ```bash
 python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py start \
   --activity Task --comment "<task-note name>"
 ```
 
+**Retrospective (the work is already done)** — when the user asks you to *log/record* a piece of
+work that's already finished, or you reach wrap-up and realize no live timer was ever running, do
+**not** start a live timer. Back-fill a **finished block** with `add_record` instead:
+
+```bash
+python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py add_record \
+  --activity Task --comment "<task-note name>" \
+  --start "YYYY-MM-DD HH:MM:SS" --end "YYYY-MM-DD HH:MM:SS"
+```
+
+You usually don't know exactly when the user started — **propose your best estimate of start/end
+and confirm before sending** (show it with `--dry-run` first). This is the right move whenever the
+session is "create a task / log what we did / mark done" on already-completed work.
+
 - `--comment` is the task-note **basename** (no `.md`, no `[[ ]]`) — the vault renders it as a
   `[[wikilink]]`, matching `daily_time_tracker.py`.
 - For non-task work use a different `--activity` (e.g. `Code`, `Read`, `Write`, `Meeting`) with a
   free-text `--comment`.
-- Add `--dry-run` to show the envelope first (the secret is redacted) before sending.
+- `--dry-run` is a **global** flag: place it **before** the subcommand
+  (`simple_time_tracker.py --dry-run add_record …`), not after — it prints the envelope (secret
+  redacted) without sending.
 - Transport = **LlamaLab Automate Cloud Messaging** (`POST https://llamalab.com/automate/cloud/message`),
   not a per-flow webhook. Config comes from env (or `<vault>/.secrets/automate.env`):
   `AUTOMATE_ANDROID_APP_SECRET` (**secret — never print**), `AUTOMATE_ANDROID_APP_TO`,
@@ -100,7 +121,9 @@ otherwise do the work inline and keep logging.
   python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py stop
   ```
 
-  then write the closing `lorite-ai-chat-diary` entry summarizing the session.
+  then write the closing `lorite-ai-chat-diary` entry summarizing the session. If no live timer was
+  ever running (e.g. retrospective logging), back-fill the block with `add_record` (step 3) instead
+  of `stop`.
 
 ## Notes & gotchas
 - **Confirm the task before starting the timer** — a wrong activity pollutes the day's tracking.
