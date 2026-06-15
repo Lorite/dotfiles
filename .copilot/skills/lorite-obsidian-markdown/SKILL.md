@@ -424,6 +424,12 @@ graph TD
 ```
 ````
 
+### Gantt charts (Mermaid)
+
+Gantt charts follow a shared lorite colour convention — a canonical `init` block plus tag→colour
+rules (untagged = amber/planned, `:active` = blue, `:done` = green, `:crit` = red; milestones use the
+same fills). See the **`lorite-mermaid-gantt`** skill for the block and the full tables.
+
 ## Footnotes
 
 ```markdown

@@ -77,19 +77,22 @@ The section count and titles come from the note, **not** from this skill.
     build — prefer these over AI mock-ups when reporting a paper.
 - Video: standard HTML5 `<video controls><source src="./assets/videos/…mp4" /></video>` inside a
   `<figure class="media-figure">` + `<FigureCaption>` (the theme's `SlidevVideo` is unreliable).
-- `mermaid` `gantt` for timelines; `[DIAGRAM_PLACEHOLDER: …]` where a diagram is needed but absent.
+- `mermaid` `gantt` for timelines — follow the **`lorite-mermaid-gantt`** skill (canonical `init`
+  block + tag→colour convention). `[DIAGRAM_PLACEHOLDER: …]` where a diagram is needed but absent.
 - Layouts: `default`, `two-cols-header` (`::left::` / `::right::`), the theme grid families
   (`two-by-two-header`, `one-by-three`, …), `center`, `cover`, `agenda`.
 - Useful assets in `OneDrive/Pictures`: `Logos and icons/`, `AI generated/` (overview + rendered
   Spot/Crazyflie scenes), `Presentations/` (fermentation tanks). Videos in `OneDrive/Videos/Camera/`.
 
-## 5. Validate
+## 5. Validate — then hand off (do NOT read the PDF back)
 ```bash
-npm run build      # agenda:generate + slidev build; catches component/import errors
+npm run build      # agenda:generate + slidev build; catches component/import errors (NOT mermaid)
 npm run export     # -> slides.pdf (needs playwright-chromium); good to hand to the user
 npm run dev        # http://localhost:3030 to present (video plays live)
 ```
-Then read the exported PDF to eyeball rendering.
+`npm run build` does **not** catch mermaid parse errors. **Do not export + read the PDF yourself to
+verify** — reading rendered PDF pages is very token-expensive. Make your best-reasoned change, then
+**ask the user** to check the render (`npm run dev`, or open `slides.pdf`).
 
 ## Gotchas (learned 2026-06-15)
 - **`public/combined-logos.png` is mandatory** — the theme's `global-top.vue` imports
@@ -104,4 +107,8 @@ Then read the exported PDF to eyeball rendering.
   (even a leading-slash `/…` public path is resolved at build), so a missing placeholder fails the
   build. For a video the user will supply later, point the slide at an existing clip (e.g. the MOCAP
   clip under `assets/videos/Camera/`) as a working placeholder and leave a comment to swap the src.
+- **Gantt charts:** follow the **`lorite-mermaid-gantt`** skill — its canonical `init` block (colours +
+  wider rows / bigger font) and the tag→colour convention (untagged = amber/planned, `:active` = blue,
+  `:done` = green, `:crit` = red; milestones same). A gantt that renders **blank** is a parse error
+  `npm run build` won't catch — compare to the template and **ask the user** to confirm the render.
 - Don't double the logos: the theme renders them globally, so no per-slide logo `MediaFigure`.

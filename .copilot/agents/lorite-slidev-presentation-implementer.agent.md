@@ -81,7 +81,7 @@ Always ensure `slides.md` uses:
 - Footer must contain slide number, date, author, and context label.
 - Use `layout: cover` for title slide when possible.
 - Prefer one full-width visual per major section; avoid text-only stretches longer than 2 slides.
-- Use mermaid for system diagrams or timelines if no source image exists.
+- Use mermaid for system diagrams or timelines if no source image exists. For **gantt timelines**, follow the **`lorite-mermaid-gantt`** skill (canonical `init` block + tag→colour convention).
 
 ## Implementation Contract
 When done, report:
