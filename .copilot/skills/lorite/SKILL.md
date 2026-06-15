@@ -125,7 +125,8 @@ inline. Spawning an agent is the expensive path — only delegate when the stage
 | Write experiment run-code + run trials / record bags | `lorite-experiment-coder` |
 | Check data, compute metrics, make figures/tables | `lorite-data-analyst` |
 | Write the LaTeX paper | `lorite-paper-writer` *(planned)* |
-| Build the Slidev deck | `lorite-slidev-presentation-*` |
+| Build a Slidev **paper** deck | `lorite-slidev-presentation-*` |
+| Build a Slidev **meeting / status** deck (PhD 3-1, status updates) | `lorite-slidev-meeting-deck` |
 
 ### 6. Switch task / wrap up
 - **Switch**: `/lorite stop`, then `/lorite <new task>` (step 1) — or just start the new activity,
