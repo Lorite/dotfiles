@@ -12,7 +12,7 @@ also widens rows and enlarges the font (good for slides).
 ## Canonical init block
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'sectionBkgColor':'#e2eeff','altSectionBkgColor':'#bad3f8','sectionBkgColor2':'#ffffff','primaryColor':'#f5f5f5','primaryBorderColor':'#bbbbbb','gridColor':'#dddddd','taskBkgColor':'#ffd54f','taskBorderColor':'#f9a825','taskTextColor':'#000000','taskTextDarkColor':'#000000','doneTaskBkgColor':'#a5d6a7','doneTaskBorderColor':'#2e7d32','activeTaskBkgColor':'#bbdefb','activeTaskBorderColor':'#1976d2','critBkgColor':'#e53935','critBorderColor':'#b71c1c','fontSize':'18px'},'gantt':{'barHeight':30,'barGap':6,'topPadding':40,'leftPadding':280,'fontSize':18,'sectionFontSize':20,'gridLineStartPadding':30}}}%%
+%%{init: {'theme':'base','themeVariables':{'sectionBkgColor':'#e2eeff','altSectionBkgColor':'#bad3f8','sectionBkgColor2':'#ffffff','primaryColor':'#f5f5f5','primaryBorderColor':'#bbbbbb','gridColor':'#dddddd','taskBkgColor':'#ffd54f','taskBorderColor':'#f9a825','taskTextColor':'#000000','taskTextDarkColor':'#000000','doneTaskBkgColor':'#a5d6a7','doneTaskBorderColor':'#2e7d32','activeTaskBkgColor':'#bbdefb','activeTaskBorderColor':'#1976d2','critBkgColor':'#e53935','critBorderColor':'#b71c1c','fontSize':'18px'},'themeCSS':'.tick text{font-size:15px;}','gantt':{'barHeight':30,'barGap':6,'topPadding':40,'leftPadding':280,'fontSize':18,'sectionFontSize':20,'gridLineStartPadding':30}}}%%
 gantt
     dateFormat YYYY-MM-DD
     axisFormat %d %b
