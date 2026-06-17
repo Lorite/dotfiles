@@ -130,9 +130,19 @@ for multi-step, semi-autonomous work and orchestration).
 
 | Repo | Role |
 |------|------|
-| `~/git/lorite_ros2_humble_phd` | Robotics code (ROS 2 Humble; Spot + Crazyflie). Uses nested `AGENTS.md` files. |
+| `~/git/lorite_ros2_humble_phd` | Robotics code (ROS 2 Humble; Spot + Crazyflie). Uses nested `AGENTS.md` files. Runs across **three Tailscale hosts** — see below. |
 | `~/git/lorite-obsidian-notes` | Obsidian vault (edited manually). `ai_brain/` is AI-writable; key dirs: `tasks/`, `bases/`, `people/`, `templates/`, `work/`. |
 | `~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-` | LaTeX paper (Springer `svproc`), CLAWAR 2026. |
+
+The robotics repo runs on **three machines**, so "where do I run this?" is a real decision — GPU-heavy perception (FoundationPose / Isaac ROS DNN) only runs on the two with a discrete GPU. The two lab machines (Lab PC + Orin) are reachable from the laptop both over **Tailscale** (remote) and on the **lab LAN** (on-site):
+
+| Machine | Tailscale name | Arch / GPU | Role |
+|---------|----------------|------------|------|
+| **Laptop** (the host Claude runs on) | `lori-ThinkPad-P15-Gen-2i` | x86_64 · RTX A2000 **4 GB** | Edit, `colcon build`, dry runs. **Too little VRAM for FoundationPose** (≥7.5 GB) — don't run heavy inference here. |
+| **Lab PC** | `helix-lab-linux-asus-nvidia-rtx-3080-desktop` | x86_64 · RTX **3080** | Lab workstation; reaches RealSense + OptiTrack + Crazyradio; builds x86 TensorRT engines. |
+| **AGX Orin on Spot** | `helix-lab-linux-spot-nvidia-jetson-agx-orin` | aarch64 · Orin 64 GB | On-robot deployment + onboard-runtime numbers; aarch64 `.plan` engines (don't transfer across arch). |
+
+Typical flow: edit/build on the **laptop** → push → pull + run GPU work on the **Lab PC** or the **Orin** over SSH (Tailscale when remote, the lab LAN when on-site). (The repo's own `CLAUDE.md` carries the same table for in-repo agents.)
 
 ## On-the-go access (home server)
 

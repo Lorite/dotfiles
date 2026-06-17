@@ -108,7 +108,7 @@ Turn the design's protocol into runnable artifacts, mirroring the flagship's str
 - **Preflight + metadata scaffolds** — `config/preflight_checklist.json` (loadable via
   `preflight_ui.py`) and the capture fields in `trial_metadata.template.json`, matching the
   design's variables.
-- **Remote-exec plumbing** (laptop Jupyter → Jetson Docker) — wire `remote_exec_utils`
+- **Remote-exec plumbing** (laptop Jupyter → a GPU host's Docker — the Lab PC RTX 3080 *or* the AGX Orin on Spot, both on Tailscale; the laptop's 4 GB GPU can't run heavy DNN inference) — wire `remote_exec_utils`
   (`RemoteTarget`, `start_background`, `run_foreground`, `stop_remote_process`, `rsync_back`) when
   the camera/sensor is on a different host; record `execution_host`/`execution_container` in
   capture metadata.
