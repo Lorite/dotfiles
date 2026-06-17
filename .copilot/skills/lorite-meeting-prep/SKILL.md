@@ -1,126 +1,100 @@
 ---
 name: lorite-meeting-prep
-description: Prepare for a meeting by collecting recent work updates and tasks between previous/next meeting dates (Calendar if available) using Bases first (recently edited/created work notes).
-argument-hint: "meeting=<title or id> start=<YYYY-MM-DD> end=<YYYY-MM-DD>"
+description: Stage 1 of the meeting workflow — gather recent work updates/tasks (Bases-first, Calendar if available) AND author the structured Obsidian meeting note (Purpose + agenda table + per-item sections with ^prep ids + scaffolded # Meeting Notes embeds) that the slidev deck reads. Use to prepare a recurring or one-off PhD meeting.
+argument-hint: "meeting=<title or id> [start=<YYYY-MM-DD> end=<YYYY-MM-DD>]"
 ---
 
-# Meeting Prep
+# Meeting Prep — author the structured meeting note (stage 1)
 
 ## What this skill does
+Prepares a meeting by (a) gathering what you've worked on since the last meeting from vault evidence,
+then (b) **writing the structured meeting note** that is the single **source of truth** for the deck.
 
-Creates a meeting preparation note for either:
-
-- A one-off meeting (explicit `start`/`end` interval), or
-- A recurring meeting series (prefer Calendar to compute previous → next meeting bounds).
-
-It surfaces what you’ve been working on recently / since the last meeting using vault evidence:
-
-- Base: `NOTES RECENTLY MODIFIED` → view `Recently Edited Work Notes`
-- Base: `NOTES RECENTLY CREATED` → view `Recently Created Work Notes`
-
-Output must use exactly these Markdown headers:
-
-- `## Context`
-- `## Updates Since Last Meeting`
-- `## Proposed Agenda`
-- `## Questions / Asks`
-- `## Links`
+> **Pipeline:** this is **step 1** — author/structure the Obsidian meeting note. The user then edits
+> it by hand, and it feeds **`lorite-slidev-meeting-deck`** (step 2, note → slides → PDF). Author the
+> note in *exactly* the shape step 2 reads (below), so the deck maps 1:1 onto it.
 
 ## Inputs
-
-You may get the date range in one of these ways:
-
-1. Preferred: use Google Calendar (MCP) to resolve the meeting title/id and determine the interval (previous meeting → next meeting).
-2. If Calendar is not available: use the `start`/`end` arguments provided by the user.
-
-Notes from real usage:
-- Google Calendar MCP may be unavailable (expired auth tokens). This skill must still work using vault evidence only.
-- Obsidian CLI `base:views` / `base:query` operate on the *currently active base file*.
-  - In practice, you must `obsidian open path="bases/<BASE>.base"` before running `obsidian base:views` / `obsidian base:query`.
+Resolve the meeting interval one of two ways:
+1. Preferred: Google Calendar (MCP) — resolve the title/id and the interval (previous occurrence →
+   next, for a recurring series; or the event's own start/end for a one-off).
+2. Fallback (Calendar auth often expires): the `start`/`end` arguments. The skill must still work
+   from vault evidence alone.
 
 ## Procedure (Obsidian-first)
 
-1. Resolve meeting interval
-   - If Calendar is available:
-     - Locate the meeting event by title/id.
-     - Determine the relevant interval:
-       - Recurring series: previous occurrence end → next occurrence start (or previous start → current start).
-       - One-off: use that event’s start/end as the interval.
-   - If Calendar fails:
-     - Require `start` and `end` from the user.
+1. **Resolve the interval** (Calendar, else `start`/`end`).
 
-2. Identify stakeholders (optional)
-   - If Calendar attendees are available, list key attendees.
-   - If the meeting is part of a recurring series, also look at the attendees of the previous meeting occurrence.
-   - Map attendees to notes in `people/` if possible (e.g. by name) to get more context on their recent work.
-   - If not, proceed without stakeholder mapping.
+2. **Identify stakeholders** (optional): Calendar attendees + the previous occurrence's attendees;
+   map to `people/` notes for context where possible.
 
-3. Collect vault evidence (Bases first)
+3. **Collect vault evidence (Bases first).** The Obsidian CLI base commands act on the *active* base
+   file, so `obsidian open path="bases/<BASE>.base" newtab` before querying.
+   - Recently edited work notes: `bases/NOTES RECENTLY MODIFIED.base` → view `Recently Edited Work Notes`.
+   - Recently created work notes: `bases/NOTES RECENTLY CREATED.base` → view `Recently Created Work Notes`.
+   - `obsidian base:query view="<view>" format=tsv` (or `format=json` + filter by `updated`/`created`
+     for strict interval filtering). Then open the most relevant notes to confirm content/timestamps.
+   - Also read the **previous meeting note** and any **paper repo(s)** being reported (real numbers,
+     not approximations).
 
-   Primary evidence: recently edited work notes.
+4. **Write the structured meeting note** (the source of truth for step 2).
+   The note normally already exists in `calendar_events/<date> <title>.md` (created by the calendar
+   sync: `type: calendar_event`, with template sections `# Details` / `# Description` /
+   `# Pre-meeting Tasks and Notes` / `# Meeting Notes` / `# Other Notes` / `# LLM Summary` /
+   `# Tasks`). Fill it **in place**; if it doesn't exist, create it from the meeting template first.
 
-   - Recently edited work notes:
-     - `obsidian open path="bases/NOTES RECENTLY MODIFIED.base" newtab`
-     - `obsidian base:views`
-     - `obsidian base:query view="Recently Edited Work Notes" format=tsv`
-     - If output is too long, sample the most recent rows:
-       - `... | head`
+   Fill `# Pre-meeting Tasks and Notes` in exactly this shape:
 
-   Secondary evidence: recently created work notes.
+   ```markdown
+   %% Agenda for <meeting> on [[<date>]]. Source: vault evidence since the last meeting + <links>. %%
 
-   - Recently created work notes:
-     - `obsidian open path="bases/NOTES RECENTLY CREATED.base" newtab`
-     - `obsidian base:views`
-     - `obsidian base:query view="Recently Created Work Notes" format=tsv`
-     - If output is too long, sample the most recent rows:
-       - `... | head`
+   - **Purpose:** <one line — what this meeting must produce>.
 
-   If you need strict interval filtering:
-   - Prefer `format=json` and filter by the `updated`/`created` column in a script (e.g. `jq`/Python).
-   - If JSON isn’t available, do a best-effort approach:
-     - Use the Bases’ natural recency ordering plus keyword filtering.
-     - Then open the most relevant notes and confirm timestamps/content.
+   | # | Item | Goal / decision sought |
+   |---|---|---|
+   | 1 | <Agenda item> | <what you want from it> |
+   | 2 | <Agenda item> 👥💬 | <discussion → feedback sought> |
+   | … | … | … |
 
-4. Create the meeting prep note in `ai_brain/`
+   ### 1. <Agenda item>
+   - **Goal / decision sought:** <…> ^prep1
+   - Pre-meeting notes:
+       - <bullet grounded in the vault evidence / previous meeting / paper repo>
 
-   - Create a new AI Brain note using the `ai_brain` template:
-     - `obsidian create path="ai_brain/YYYY-MM-DD AI Brain - Meeting Prep - <Meeting Title>.md" template=ai_brain`
+   ### 2. <Agenda item> 👥💬
+   - **Goal / decision sought:** <…> ^prep2
+   - Pre-meeting notes:
+       - <bullet>
+   ```
 
-   - Think about what is important for the meeting by reading the previous meeting notes (if available), the stakeholders involved, and the recent updates you found in the vault. Populate the note with:
+   - **One `^prepN` per agenda item** (on the Goal/decision-sought line) — step 2 makes one
+     `layout: agenda` deck section per item.
+   - Mark discussion items with **👥💬** in the table and the heading; step 2 carries it onto the slide.
 
-     - `## Context`
-       - Meeting title + date range
-       - Attendees (if available)
+   Then scaffold `# Meeting Notes` (one embed per item, filled live during the meeting):
 
-     - `## Updates Since Last Meeting`
-       - Bullets summarizing work done since last meeting.
-       - Link to source notes (as wikilinks).
+   ```markdown
+   ![[#^prep1]]
+   - TODO outcome.
 
-     - `## Proposed Agenda`
-       - Agenda bullets derived from the updates.
+   ![[#^prep2]]
+   - TODO outcome.
+   ```
 
-     - `## Questions / Asks`
-       - Specific questions you want answered.
-       - Decisions needed.
-       - Requests from stakeholders.
+   Optionally seed `# Tasks` with carried-over actions (TaskNotes `- [ ]` checkboxes; wikilink the
+   `[[#^prepN]]` they came from).
 
-     - `## Links`
-       - Links to the most relevant notes.
-       - Any relevant tasks/PRs/docs (as wikilinks).
+   Mechanics: use the **`lorite-obsidian-note`** skill (Obsidian CLI when the app is up, file-write
+   fallback). Multi-line CLI `append` is fragile → create/edit the file directly for these blocks.
 
-   Implementation tip (CLI ergonomics):
-   - Multi-line `obsidian append ... content="..."` can be fragile due to shell quoting.
-   - Prefer smaller appends, or create the note then edit it directly if needed.
+## Write policy
+- The **meeting note is the sanctioned exception** to the AI "ai_brain-only" rule: fill its
+  `# Pre-meeting Tasks and Notes` and scaffold `# Meeting Notes` directly (the note template's `%%`
+  comment invites it). **Never** rewrite the user's hand-written outcomes, `# Other Notes`, or other
+  sections; never touch other notes outside `ai_brain/`.
+- No secrets (never copy from `obsidian-web-clipper-settings.json` etc.).
 
 ## Troubleshooting
-
-- If Bases commands say “Active file is not a base file …”:
-  - Run `obsidian open path="bases/<BASE>.base" newtab` and retry `obsidian base:views` / `obsidian base:query`.
-- If Obsidian CLI commands fail:
-  - Ensure the Obsidian desktop app is running with this vault open.
-
-## Notes
-
-- Never modify notes outside `ai_brain/`.
-- If you must write outside `ai_brain/` (rare), append under `# AI Generated` with `## Prompt` and `## AI Generated Answer` only.
-- Do not include secrets (avoid copying anything from `obsidian-web-clipper-settings.json`).
+- "Active file is not a base file …" → `obsidian open path="bases/<BASE>.base" newtab`, then retry.
+- Obsidian CLI failing → ensure the desktop app is running with this vault open.
+- Calendar MCP unavailable (expired tokens) → fall back to `start`/`end` + vault evidence.

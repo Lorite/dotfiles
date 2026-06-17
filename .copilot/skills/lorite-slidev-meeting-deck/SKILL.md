@@ -1,7 +1,7 @@
 ---
 name: lorite-slidev-meeting-deck
-description: Build a visual-first Slidev status/meeting deck (PhD 3-1, status updates) in the lorite_presentations_phd_slidev repo, using the lorite-phd theme. NOT for paper decks (those use lorite-slidev-presentation-*). Mirrors the structure of the prepared Obsidian meeting note's agenda, pulling content from that note, the recurring-meeting docx, and the relevant paper repo(s). Use when asked to make slides for a recurring PhD meeting or status update.
-argument-hint: "date=<YYYY-MM-DD> [meeting=<short name>] [source=<meeting note / docx>]"
+description: Stage 2 of the meeting workflow — build a visual-first Slidev status/meeting deck (PhD 3-1, status updates) FROM the prepared Obsidian meeting note, by copying the meetings/_skeleton template and filling it from the note's agenda. Uses the lorite-phd theme. NOT for paper decks (those use lorite-slidev-presentation-*). Use when asked to make slides for a recurring PhD meeting or status update.
+argument-hint: "date=<YYYY-MM-DD> [meeting=<short name>] [note=<meeting note path>]"
 ---
 
 # lorite-slidev-meeting-deck — visual-first status/meeting decks
@@ -9,11 +9,17 @@ argument-hint: "date=<YYYY-MM-DD> [meeting=<short name>] [source=<meeting note /
 A **meeting** deck (PhD 3-1, status update) is different from a **paper** deck. Paper decks use
 the `lorite-slidev-presentation-*` agents (14-section paper structure). A meeting deck's structure
 **mirrors the prepared Obsidian meeting note's agenda** — one deck section per `# Pre-meeting Tasks
-and Notes` item — kept *simple and visual* (the Word doc already holds the detail; the deck must
+and Notes` item — kept *simple and visual* (the note already holds the detail; the deck must
 not repeat it). The supervisors' status shape (thesis objective · timeline · Past/Present/Future ·
 actions) is just *one possible* agenda; **follow whatever the note defines, not a fixed template.**
 
 Repo: `~/git/lorite_presentations_phd_slidev`. Theme: `slidev-theme-lorite-phd`. Node ≥ 20.
+
+**Two-step pipeline (note → slides).** This skill is **step 2**. Step 1 is authoring the Obsidian
+meeting note's `# Pre-meeting Tasks and Notes` agenda (via `lorite-meeting-prep`, then the user edits
+it by hand) — the note is the **source of truth**. This skill only *reads* that note and renders the
+deck; it never invents the structure. (Porting the other way, slides → note, is a manual one-off, not
+the normal flow.)
 
 ## 1. Gather content first (don't invent)
 The deck is the visual layer over work already prepared:
@@ -21,10 +27,9 @@ The deck is the visual layer over work already prepared:
 - The **meeting note** in the vault (`calendar_events/<date> …`) — its `# Pre-meeting Tasks and
   Notes` agenda (Purpose + table + numbered items) is the deck's backbone and section list (pairs
   with `lorite-meeting-prep`).
-- The **rolling docx** for the series (pairs with `lorite-recurring-meeting-docx`) — same content,
-  concise.
-- The **previous meeting's PDF** in the OneDrive series folder — copy its visual style and which
-  assets exist.
+- The **previous meeting's deck/PDF** under `meetings/` — copy its visual style and which assets
+  exist. (The old rolling Word doc + `lorite-recurring-meeting-docx` are **deprecated** — the note is
+  the only ground truth now; share the deck as an exported PDF.)
 - The **paper repo(s)** for any work being reported (e.g. the CLAWAR paper at
   `~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-`) — use the real abstract,
   numbers, and `figures/` rather than approximations or AI mock-ups (read `main.tex` for exact
@@ -45,9 +50,13 @@ Gotchas). Then:
 
 ```bash
 cd ~/git/lorite_presentations_phd_slidev/meetings/meeting_<name>_<YYYY-MM-DD>
+cp ../_skeleton/slides.md slides.md   # start from the meeting-deck skeleton, then adapt it from the note
 npm run media:link        # symlinks assets/pictures -> OneDrive/Pictures, assets/videos -> OneDrive/Videos
 npm install               # pinned @slidev/cli 52.14.1
 ```
+
+`meetings/_skeleton/` is the copyable template (see its README) — `deck:new` handles the scaffolding
++ config, then you overwrite `slides.md` with the skeleton and adapt it.
 
 ## 3. Slide structure = the meeting note's agenda
 Read the meeting note's `# Pre-meeting Tasks and Notes` (Purpose + agenda table + the numbered
@@ -65,8 +74,15 @@ highlighted — one `layout: agenda` slide per section, first heading = the sect
 
 The section count and titles come from the note, **not** from this skill.
 
+**Start from the skeleton** (`meetings/_skeleton/slides.md`, copied in step 2): it already encodes
+cover → purpose → one agenda-separated section per item → actions table, with the gantt convention
+and 👥💬 discussion markers — fill the `<...>` placeholders from the note. Reference deck:
+`meetings/meeting_alejandro_phd_3-1_2026-06-16` — 6 sections: Recent milestones (a "last 2 months"
+gantt + paper/MSc deep-dive) · Roadmap (a Q3 gantt + a "key points" slide) · Thesis direction ·
+Paper 2 · Novo Nordisk asks · Next steps (actions/owners table). Mark discussion slides with 👥💬.
+
 ## 4. Visual-first rules
-- ~1 slide per 2 min; **no text-only stretch > 2 slides**; the docx holds the detail.
+- ~1 slide per 2 min; **no text-only stretch > 2 slides**; the note holds the detail.
 - Big numbers as **stat callouts** (`<div class="px-4 py-2 bg-blue-50 border-l-4 border-blue-700">`
   with a `text-3xl font-bold` number) instead of prose.
 - `<MediaFigure src="…" caption="…" img-class="w-full h-auto object-contain shadow" />` for images.
