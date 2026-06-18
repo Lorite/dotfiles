@@ -102,6 +102,8 @@ you write using the ROS 2 MCP tools or `in-ros2.sh` as needed.
 
 SUPER IMPORTANT: Use the MCP tools when available. context7-mcp/* are very good to get context about external libraries and packages I am using to control the Boston Dynamics robot, the crazyflie, and other hardware and ROS 2 packages.
 
+SUPER IMPORTANT: **Search the official online docs early and often** (WebSearch/WebFetch) when working against a vendor stack — NVIDIA Isaac ROS, Boston Dynamics Spot SDK, Bitcraze Crazyflie, PX4, or any third-party ROS 2 package. Don't rely only on local source / reference launch files or guess-and-check: the official docs, benchmark/performance pages, and GitHub issues/forums are the fastest way to learn required input formats (e.g. Isaac ROS FoundationPose needs **32FC1 metric depth**, not the RealSense's 16UC1 mm), QoS conventions, node/graph wiring, expected performance numbers, and known bugs. Reach for a web search the **moment a vendor node fails opaquely** — no error but no output, a silent format/QoS mismatch, or throughput far below the vendor's published benchmark — instead of sinking time into trial-and-error.
+
 IMPORTANT: You can't run multiple long-running processes at the same time. Instead of starting a new long-running process (e.g. a simulation), let me know what I should run and I do it myself. Then, you can use your tools to inspect the running system.
 
 ## Priorities
@@ -116,6 +118,7 @@ IMPORTANT: You can't run multiple long-running processes at the same time. Inste
 
 2. Effective tooling
     - Use README.md files and existing documentation: check `experiments/`, `docs/`, package-level READMEs, and AGENTS.md
+    - **Consult the vendor's official online docs early** (WebSearch/WebFetch): Isaac ROS / Spot SDK / Crazyflie / PX4 / ROS 2 docs, their benchmark pages, and GitHub issues/forums. Prefer them over guessing from local files whenever you hit a format/QoS/wiring question or an opaque vendor-node failure
     - Prefer ROS 2 MCP tools for building, testing, graph introspection, launching
     - Use `context7-mcp/*` to get context on external packages (px4_msgs, spot_ros2, crazyswarm2, etc.)
     - Use terminal commands if MCP tools are unavailable

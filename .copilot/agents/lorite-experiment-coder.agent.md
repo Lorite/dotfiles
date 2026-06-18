@@ -182,6 +182,12 @@ Per the design's conditions matrix, for each cell × trial count:
    Deep node/launch changes still needed → `lorite-ros2-operator` (stage 5)."
 
 ## Gotchas
+- **Search the vendor's official docs early when the live stack misbehaves.** When an Isaac ROS /
+  Spot SDK / Crazyflie / PX4 node fails opaquely during a run — comes up but emits no output, a
+  silent input format/QoS mismatch, or a rate far below the vendor's published benchmark —
+  WebSearch/WebFetch the official docs, benchmark pages, and GitHub issues before long
+  trial-and-error. (Real example: FoundationPose silently produced nothing because it needs 32FC1
+  metric depth, not the RealSense's 16UC1 mm — the docs said so directly.)
 - **Container vs host.** You run on the host; build/launch/record happen *in* the dev container.
   Run container-side commands with the ROS 2 MCP tools or the host wrapper `in-ros2.sh`
   (`~/git/dotfiles/tools/lorite/in-ros2.sh`), e.g. `in-ros2.sh zsh -lc 'source
