@@ -4,7 +4,10 @@
   "inputNeededNotifEnabled": true,
   "sandbox": {
     "enabled": false,
-    "excludedCommands": ["docker *", "devcontainer *"],
+    "excludedCommands": [
+      "docker *",
+      "devcontainer *"
+    ],
     "filesystem": {
       "allowWrite": [
         "~/git/lorite-obsidian-notes",

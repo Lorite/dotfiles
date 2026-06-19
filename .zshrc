@@ -112,6 +112,10 @@ fi
 if [ -f .env.secrets ]; then
     source .env.secrets
 fi
+# private env vars (gitignored, not published)
+if [ -f "$HOME/git/dotfiles/private/env.sh" ]; then
+    source "$HOME/git/dotfiles/private/env.sh"
+fi
 
 # aliases
 alias clean_squash_merged_local_git_branches='git checkout -q main && git for-each-ref refs/heads/ \"--format=%(refname:short)\" | while read branch; do mergeBase=\$(git merge-base main \$branch) && [[ \$(git cherry main \$(git commit-tree \$(git rev-parse \"\$branch^{tree}\") -p \$mergeBase -m _)) == \"-\"* ]] && git branch -D \$branch; done'

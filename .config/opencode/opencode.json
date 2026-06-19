@@ -2,5 +2,17 @@
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": true,
   "default_agent": "plan",
-  "plugin": ["opencode-notifier", "opencode-dynamic-context-pruning"]
+  "plugin": ["opencode-notifier", "opencode-dynamic-context-pruning"],
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (Jetson)",
+      "options": {
+        "baseURL": "{env:ORIN_OLLAMA_URL}"
+      },
+      "models": {
+        "qwen3.6:latest": {}
+      }
+    }
+  }
 }
