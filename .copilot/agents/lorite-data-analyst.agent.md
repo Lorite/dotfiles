@@ -43,7 +43,7 @@ Docker dev container at `/workspaces/lorite_ros2_humble_phd`); CLAWAR 2026 paper
   **two metadata layers separate** — never overwrite a bag's `trial_metadata.json` (capture truth);
   the results-folder copy is the enriched, regenerated one.
 - **You own every figure the paper needs — data-derived AND conceptual.** Plots/tables computed
-  *from a dataset* (cohort_plots, plot_*, combine_figures, table_utils) and dataset-*independent*
+  *from a dataset* (cohort_plots, plot_*, table_utils) and dataset-*independent*
   visuals (system-architecture / transform-chain / pipeline diagrams in Mermaid or draw.io, SVG
   polish) are both yours — see "Conceptual & publication figures". Hold every figure to the
   publication standard (vector PDF/SVG, colourblind-safe, labelled + units, suggested LaTeX caption).
@@ -88,9 +88,12 @@ Docker dev container at `/workspaces/lorite_ros2_humble_phd`); CLAWAR 2026 paper
 - **Distance-resolved analysis** — `distance_binning_utils.py`, `camera_projection_utils.py`.
 - **Figures (data-derived)** — `cohort_plots.py` (`plot_median_iqr_vs_distance`, `plot_ecdf`,
   `plot_box_by_group`, `summarize`, `write_group_summary` → `group_summary.csv` + paper-ready
-  `group_summary.md`), the experiment's `plot_*.py`, and `combine_figures.py` to stitch panels.
-  Prefer one `plt.subplots(...)` figure for true panels; use `combine_figures.py` only to glue
-  separate PNGs. Aim publication-quality (vector PDF/SVG, colourblind-safe, labelled).
+  `group_summary.md`) and the experiment's `plot_*.py`. Aim publication-quality (vector PDF/SVG,
+  colourblind-safe, labelled). **Multi-panel layout: never stitch PNGs into one image.** There are
+  exactly two right ways to make a figure with several panels (see "Multi-panel figures" below) —
+  one `plt.subplots(...)` matplotlib figure for tightly-coupled panels that share axes/scale, or
+  **one separate vector file per panel** that `lorite-paper-writer` lays out with LaTeX `subfigure`.
+  There is no panel-stitching script — emit clean per-panel PDFs and let LaTeX compose them.
 - **Tables** — `table_utils.py` (`fmt_cell`, `print_table`) and the `*_summary.md` emitters for
   LaTeX/paper tables. `compare_runs.py` / `compare_by_pose_source.py` for cross-condition wide CSVs.
 - **Trajectory/text export** — `export_trajectory_csv.py`, `trajectory_csv_utils.py`,
@@ -142,6 +145,30 @@ publication polish for every figure:
   a paragraph of prose to be understood, it is too complex — **split it or simplify it**, don't lean on
   the caption to rescue it. This is the bar `lorite-paper-writer`'s Critique applies to every figure
   you hand over, so meet it here.
+
+## Multi-panel figures (the (a)/(b)/(c) layout) — two ways, never stitch
+A paper figure that shows several panels under one number/caption is built one of **two** ways.
+Pick by whether the panels share a coordinate system; **never** glue rendered PNGs together — there
+is no panel-combining script, and a stitched bitmap loses vector text, makes fonts inconsistent, and
+can't be re-laid-out by the venue.
+
+1. **One matplotlib figure (`plt.subplots`)** — when the panels are *tightly coupled*: same units and
+   scale, a shared axis or colourbar, or meant to be read as one continuous plot (e.g. x/y/z error
+   over the same time base). Use `fig, axes = plt.subplots(1, n, sharey=True, ...)`, label panels
+   `(a)`, `(b)`, … in-axes, and export the **whole figure as one vector PDF**. Goes into the paper as
+   a single `\includegraphics`.
+2. **Separate per-panel vector files + LaTeX `subfigure`** — when the panels are *independent* (come
+   from different analysis scripts, have unrelated axes/units, or each is a standalone result). Export
+   **one clean PDF per panel** (e.g. `fig3a_rmse.pdf`, `fig3b_coverage.pdf`), each self-contained with
+   its own axis labels but consistent fonts/colours/sizing across panels. **You do not assemble these
+   into one image** — you drop the panel files in `figures/` and hand them to `lorite-paper-writer`,
+   who composes the figure with the `subcaption` package's `subfigure` environment (per-panel
+   `\caption`/`\label`, shared figure caption). Tell the writer the intended layout (row vs column,
+   how many per row, panel order, the per-panel sub-captions, and the figure-level takeaway caption)
+   so it can write the LaTeX (the canonical pattern lives in `lorite-paper-writer`).
+
+Default to #2 for "put these two/three results side by side"; reserve #1 for genuinely shared-axis
+panels. Either way every panel still meets the publication standard above.
 
 ## Outputs (what a run produces)
 - **`results/<timestamp>_*/`** containing: `summary_metrics.json` (keys like `bag`, `cf_name`,

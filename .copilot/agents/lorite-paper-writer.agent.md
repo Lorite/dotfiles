@@ -179,6 +179,58 @@ apply — applying flips to Draft mode on those items only. Critique **never** e
   the `Co-Authored-By: Claude …` trailer; `main.pdf` is intentionally tracked, so **rebuild before
   committing** so the rendered PDF matches the source. Don't commit aux files (the `.gitignore` covers them).
 
+## Multi-panel figures (LaTeX `subfigure`, never a stitched image)
+When a figure shows several panels under one number/caption, **lay them out in LaTeX** with the
+`subcaption` package's `subfigure` environment — one `\includegraphics` per panel, each a separate
+vector file the data-analyst exported. Never ask for (or accept) a single pre-stitched PNG of the
+panels: composing in LaTeX keeps the text vector and sized to the page, gives each panel its own
+`(a)`/`(b)` sub-caption + `\label` for `\cref`, and lets you re-flow the layout without re-rendering.
+(The one exception is a genuinely shared-axis plot the analyst already drew as a single
+`plt.subplots` figure — that arrives as one file and goes in with a single `\includegraphics`.)
+
+- **Preamble:** ensure `\usepackage{subcaption}` is present once (it loads `caption`; do **not** also
+  load the obsolete `subfigure`/`subfig` packages — they clash). If it's missing, add it with the
+  other package loads, rebuild, and confirm no clash.
+- **Canonical pattern** (three panels in a row; use `0.48\textwidth` × 2 for two, drop `\hfill` and
+  widen for one-per-row). Each panel's `\includegraphics` is `width=\textwidth` (i.e. the *subfigure's*
+  width, not the page's). Sub-captions state each panel; the figure-level `\caption` states the
+  single takeaway (craft pt 3); place the float near first mention (rubric rule 8):
+  ```latex
+  \begin{figure}
+      \centering
+      \begin{subfigure}[b]{0.3\textwidth}
+          \centering
+          \includegraphics[width=\textwidth]{figures/fig3a_rmse}
+          \caption{Position RMSE vs distance}
+          \label{fig:rmse-distance}
+      \end{subfigure}
+      \hfill
+      \begin{subfigure}[b]{0.3\textwidth}
+          \centering
+          \includegraphics[width=\textwidth]{figures/fig3b_coverage}
+          \caption{Detection coverage}
+          \label{fig:coverage}
+      \end{subfigure}
+      \hfill
+      \begin{subfigure}[b]{0.3\textwidth}
+          \centering
+          \includegraphics[width=\textwidth]{figures/fig3c_latency}
+          \caption{Pipeline latency}
+          \label{fig:latency}
+      \end{subfigure}
+      \caption{One-sentence takeaway covering all three panels.}
+      \label{fig:three-panel-results}
+  \end{figure}
+  ```
+- **Mechanics:** `\hfill` between subfigures spreads them across the line (widths summing to
+  <\,`\textwidth` leaves the gaps); a blank line between two subfigure blocks starts a new row. Refer
+  to a panel as `\cref{fig:rmse-distance}` (or the paper's existing cross-ref macro) and the whole
+  figure as `\cref{fig:three-panel-results}`. Keep panel files in `figures/` and omit the extension
+  in `\includegraphics` (let `latexmk` pick the PDF). If a panel file is still missing, leave a
+  `% TODO: [FILL IN: panel from lorite-data-analyst]` rather than a placeholder image.
+- **Hand-off:** if the analyst gave you one stitched bitmap, ask for the separate per-panel vector
+  files instead — that's a data-analyst output, and this layout depends on it.
+
 ## Workflow
 1. **Clarify** the unit of work (which section/paragraph; Draft vs Critique) and plan multi-step edits
    with `todo`. One tight round of questions only if the scope is ambiguous.
