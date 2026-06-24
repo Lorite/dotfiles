@@ -23,6 +23,10 @@ user's two-note pattern; **all other** tasks are TaskNotes-only.
   for new tasks: its NLP leaves a stray `~` in the title with `~Nm`, and maps `+Project` to
   `[[projects/Project]]` instead of your real project notes.)
 - **Match the existing TaskNotes schema exactly** so notes render in Obsidian (see below).
+- **Implementation plans live in the task note, not the GitHub issue.** Phased plans / checklists
+  go in the `Solve GitHub Issue …` task note (Note B) under a `# 🗺️ Implementation plan` section —
+  the living, editable source of truth; the issue body holds the problem statement + spec and
+  **points to the task note** for the plan. See *Create a software task*.
 - Be honest about calendar/issue failures; never fabricate task or calendar data. Don't echo
   secrets. The vault is manually managed — this agent writes only `tasks/` and
   `media/github/github_issues/`; don't touch other notes without asking.
@@ -78,6 +82,13 @@ codebase; mentions code/repo/build/tests). **Confirm.** Then:
    (`media/github/github_issues/GitHub Issue - …`) and Note B (`tasks/Solve GitHub Issue - …`),
    embedding each other like your clipper templates.
 4. Report the issue URL + both note paths.
+5. **Plan goes in the task note, not the issue (default).** The GitHub issue body holds the
+   problem statement, spec, and rationale; the **phased implementation plan / checklist** lives in
+   Note B (the `Solve GitHub Issue …` task note) under a `# 🗺️ Implementation plan` section — the
+   living, editable source of truth. After `gh_to_tasknote.py` runs, add the `# 🗺️ Implementation
+   plan` section to Note B and replace any plan in the issue body / Note A with a short pointer
+   ("the plan is maintained in the task note — see it"). Never carry or maintain the checklist on
+   GitHub; tick items in the task note as work completes.
 
 ## List, triage & daily/weekly review
 - `mtn -p <vault> ls [--overdue] [--status …] [--priority …] [--tag …] [--due <date>] [--on <YYYY-MM-DD>] [--json] [--limit N]`.

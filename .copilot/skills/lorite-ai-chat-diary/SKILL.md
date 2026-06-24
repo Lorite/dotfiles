@@ -65,6 +65,12 @@ lands depends on the note type** — defer to the `lorite-obsidian-note` skill f
   Demote any sub-headings in the detail to `####`+ so they nest under `### AI generated`. Use a
   **direct file edit** for this positioned insert — the CLI `append` only writes to the end of the
   file, which is the wrong place here.
+  - **Replicate manually (whenever the work ran commands).** Make the log *reproducible*, not just
+    descriptive: add a `**Replicate manually:**` line followed by a fenced `bash` block with the
+    **exact commands** the user can paste to reproduce the result — environment/setup (the venv, or
+    `docker exec ros2_humble_dev zsh -c 'source …/setup.zsh && …'`), build/run/test commands, key
+    file paths, and any `gh` / CLI calls, in order. **Redact secrets.** Omit only for pure
+    prose/decision work that ran nothing.
 
 - **Any other note** (project note, paper literature note, etc.): append at the **END**:
   ```
@@ -88,4 +94,5 @@ CLI-first / file-fallback, exactly like `lorite-obsidian-note`: Obsidian CLI whe
 
 ## Output
 Report: today's diary note path, the entry added, and which linked notes received a detail section
-(and via which mechanism).
+(and via which mechanism). When the work ran commands, confirm the task-note entry includes a
+`Replicate manually` block capturing them.
