@@ -1,0 +1,51 @@
+# Canonical copy of the rclone-mount systemd *user* unit for the Nextcloud home
+# server (on-demand access to ALL folders, ~700 GB / 800k files, fetch-on-open).
+#
+# This is the "browse everything" layer. It is deliberately SEPARATE from the
+# Nextcloud desktop client, which does real two-way sync of only a few working
+# folders under ~/nextcloud (e.g. ~/nextcloud/zotero). Keep the two paths apart:
+#   ~/nextcloud       -> desktop client, full local copy, offline, real-time
+#   ~/nextcloud-all   -> THIS mount, on-demand, needs network, fetch-on-open
+#
+# Install (laptop, no linger needed — runs on graphical login):
+#   ln -sf ~/git/dotfiles/tools/nextcloud/rclone-nextcloud-all.service \
+#          ~/.config/systemd/user/rclone-nextcloud-all.service
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now rclone-nextcloud-all.service
+# Or just run: tools/nextcloud/setup.sh
+#
+# Control: systemctl --user {status,restart,stop} rclone-nextcloud-all
+# Logs:    journalctl --user -u rclone-nextcloud-all   (+ ~/.local/state/rclone/nextcloud-all.log)
+#
+# Requires: an rclone WebDAV remote named "nextcloud_home_server_webdav"
+#   (rclone config; type=webdav, vendor=nextcloud,
+#    url=https://nextcloud.lorite.eu/remote.php/dav/files/<USER>).
+
+[Unit]
+Description=rclone mount: Nextcloud home server (on-demand, all folders) at %h/nextcloud-all
+Documentation=https://rclone.org/webdav/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+# Make sure the mountpoint + log dir exist and clear any stale mount first.
+ExecStartPre=/bin/mkdir -p %h/nextcloud-all %h/.local/state/rclone
+ExecStartPre=-/usr/bin/fusermount3 -uz %h/nextcloud-all
+ExecStart=/usr/bin/rclone mount nextcloud_home_server_webdav: %h/nextcloud-all \
+    --config %h/.config/rclone/rclone.conf \
+    --vfs-cache-mode full \
+    --vfs-cache-max-size 50G \
+    --vfs-cache-max-age 168h \
+    --vfs-write-back 5s \
+    --dir-cache-time 5m \
+    --attr-timeout 1s \
+    --umask 022 \
+    --log-level INFO \
+    --log-file %h/.local/state/rclone/nextcloud-all.log
+ExecStop=/usr/bin/fusermount3 -uz %h/nextcloud-all
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
