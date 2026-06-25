@@ -402,6 +402,7 @@ PACKAGES=(
 	"build-essential"
 	"python3-venv"
 	"python3-pip"
+	"rclone"
 )
 
 for package in "${PACKAGES[@]}"; do

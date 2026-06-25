@@ -54,7 +54,7 @@ lands depends on the note type** — defer to the `lorite-obsidian-note` skill f
 
 - **Task notes** (`type: task`, in `tasks/`): the detail *is* a work-log entry, so it goes **inside
   the note's existing `# 📓 Journal / Work Log` section**, not in a separate top-level section. Add a
-  dated entry at the **top** of that section (newest-first), leaving existing entries intact:
+  dated entry **newest-first**, leaving existing entries intact:
   ```
   ## [[<yyyy-MM-dd>]]
 
@@ -62,9 +62,15 @@ lands depends on the note type** — defer to the `lorite-obsidian-note` skill f
 
   <full detail; link the diary with [[AI Chat - <yyyy-MM-dd>]] and wikilink liberally>
   ```
-  Demote any sub-headings in the detail to `####`+ so they nest under `### AI generated`. Use a
-  **direct file edit** for this positioned insert — the CLI `append` only writes to the end of the
-  file, which is the wrong place here.
+  **Ordering is strict and the opposite of the diary file: the most recent date heading is always at
+  the TOP of the section, above all older ones.** Insert a new `## [[<date>]]` heading **immediately
+  under the `# 📓 Journal / Work Log` header**, never at the end of the file. So a journal spanning two
+  days reads top-to-bottom **newest → oldest** — e.g. `## [[2026-06-25]]` *above* `## [[2026-06-24]]`.
+  If today's date heading already exists, just add your `### AI generated` entry under it (it's already
+  on top). Demote any sub-headings in the detail to `####`+ so they nest under `### AI generated`. Use
+  a **direct file edit** for this positioned insert — the CLI `append` only writes to the end of the
+  file, which is the **wrong place here** (that is exactly the bug that puts a new date below older
+  ones).
   - **Replicate manually (whenever the work ran commands).** Make the log *reproducible*, not just
     descriptive: add a `**Replicate manually:**` line followed by a fenced `bash` block with the
     **exact commands** the user can paste to reproduce the result — environment/setup (the venv, or

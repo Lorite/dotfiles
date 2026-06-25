@@ -1,23 +1,7 @@
 {
-  "effortLevel": "high",
-  "agentPushNotifEnabled": true,
-  "inputNeededNotifEnabled": true,
   "sandbox": {
     "enabled": false,
-    "excludedCommands": [
-      "docker *",
-      "devcontainer *"
-    ],
-    "filesystem": {
-      "allowWrite": [
-        "~/git/lorite-obsidian-notes",
-        "~/git/lorite_ros2_humble_phd",
-        "~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-",
-        "~/.config/paper-scout"
-      ]
-    },
     "network": {
-      "allowLocalBinding": true,
       "allowedDomains": [
         "api.semanticscholar.org",
         "api.openalex.org",
@@ -28,7 +12,23 @@
         "*.oclc.org",
         "github.com",
         "api.github.com"
+      ],
+      "allowLocalBinding": true
+    },
+    "filesystem": {
+      "allowWrite": [
+        "~/git/lorite-obsidian-notes",
+        "~/git/lorite_ros2_humble_phd",
+        "~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-",
+        "~/.config/paper-scout"
       ]
-    }
-  }
+    },
+    "excludedCommands": [
+      "docker *",
+      "devcontainer *"
+    ]
+  },
+  "effortLevel": "high",
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true
 }

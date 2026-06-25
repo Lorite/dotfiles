@@ -41,6 +41,10 @@ running log** — read-first, log-often:
 - Use conventional commit messages: `type(scope): description`
 - Run lint/typecheck before committing when available
 
+## Parallel subagent limits (critical)
+
+**Never spawn more than **3** `task` / `Agent` subagents in parallel.** The engine silently drops or rejects excess concurrent spawns — all of them fail with zero output, wasting your time and context window. When a task naturally decomposes into a large batch (e.g. "process 400 articles"), always do it **sequentially** or with at most **2–3 concurrent batches**. If a single subagent can handle the work inline, prefer that over parallelism.
+
 ## Code Style
 
 - Use 4-space indentation for shell scripts
