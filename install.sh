@@ -466,6 +466,9 @@ create_symlink "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
 create_symlink "$DOTFILES_DIR/.config/starship.toml" "$HOME/.config/starship.toml"
 create_symlink "$DOTFILES_DIR/.gitconfig" "$HOME/.gitconfig"
 create_symlink "$DOTFILES_DIR/.tmux.conf" "$HOME/.tmux.conf"
+# OneDrive (abraunegg client): only the 'config' file is tracked — the refresh_token,
+# items.sqlite3 and other state stay in ~/.config/onedrive/ and are never committed.
+create_symlink "$DOTFILES_DIR/.config/onedrive/config" "$HOME/.config/onedrive/config"
 
 # Handle VS Code settings with private config support
 print_info "Setting up VS Code settings..."

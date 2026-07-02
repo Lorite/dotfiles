@@ -40,6 +40,14 @@ Thumbs.db
 id_rsa*
 *.ppk
 
+# OneDrive (abraunegg) secrets/state — only .config/onedrive/config is tracked
+.config/onedrive/refresh_token
+.config/onedrive/items.sqlite3
+.config/onedrive/.config.hash
+.config/onedrive/.config.backup
+.config/onedrive/resume_download.*
+.config/onedrive/session_upload.*
+
 # Python
 __pycache__/
 *.pyc
