@@ -66,9 +66,12 @@ running log** — read-first, log-often:
   <date>` and files the full detail in the linked note(s) where their type dictates (task notes → a
   dated `### AI generated` entry inside `# 📓 Journal / Work Log`; other notes → a `# AI Generated`
   section), on top of the `lorite-obsidian-note` safe-write policy (`ai_brain/`-only writes; elsewhere
-  append-only, never rewriting hand-written content — with one exception: **task-note subtask
-  checkboxes may be ticked** when the work is verifiably done, evidence logged; toggle the box only,
-  never the item text).
+  append-only, never rewriting hand-written content — with two task-note exceptions: **subtask
+  checkboxes may be ticked** when the work is verifiably done (box only, never the item text), and
+  the **`status` frontmatter may be set** to todo / investigating / in-progress / blocked /
+  **pending-review** / cancelled as the work state changes — `pending-review` when the deliverable
+  is finished and awaits the user's review; **never `done`**, that's the user's call. Evidence
+  logged either way).
 - **"Corresponding note"**, in order: the task note (`tasks/`, `type: task`) driving the work; else
   the paper's literature note; else the project note (e.g. the Conference Paper project). When
   unsure, ask, or default to an `ai_brain/` note that wikilinks to the others.

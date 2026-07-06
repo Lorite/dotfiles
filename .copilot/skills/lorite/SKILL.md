@@ -152,7 +152,10 @@ inline. Spawning an agent is the expensive path — only delegate when the stage
 
   then write the closing `lorite-ai-chat-diary` entry summarizing the session. If no live timer was
   ever running (e.g. retrospective logging), back-fill the block with `add_record` (step 3) instead
-  of `stop`.
+  of `stop`. **Update the task's `status`** to reflect where the work landed (allowed agent values:
+  todo / investigating / in-progress / blocked / pending-review / cancelled — never `done`):
+  set **`pending-review`** when the session finished the task's deliverable and it now awaits the
+  user's review; leave `in-progress` when work continues next session.
 
 ## Notes & gotchas
 - **Confirm the task before starting the timer** — a wrong activity pollutes the day's tracking.

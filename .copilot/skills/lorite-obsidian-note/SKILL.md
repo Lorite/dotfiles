@@ -22,6 +22,11 @@ out of scope here — use the `lorite-obsidian-bases` skill (Bases) and `obsidia
     note's `# 🎯 Task Description` when the subtask is **verifiably done** (evidence stated in the
     journal entry you write alongside). Toggle only the checkbox state — never edit, reword, or
     reorder the item text, and never untick a box the user checked.
+  - **Status exception (task notes):** you may set the `status` frontmatter field to **todo /
+    investigating / in-progress / blocked / pending-review / cancelled** as the work state actually
+    changes — notably **`pending-review`** when the deliverable is finished and awaits the user's
+    review. **Never set `done`** (completion is the user's call), and don't touch other frontmatter.
+    Log the change + evidence in the journal entry.
   - **Any other note**: append a top-level `# AI Generated` section containing exactly `## Prompt`
     and `## AI Generated Answer`.
 - **Never write secrets** into notes (e.g. nothing from `obsidian-web-clipper-settings.json`).

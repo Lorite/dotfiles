@@ -50,8 +50,13 @@ user's two-note pattern; **all other** tasks are TaskNotes-only.
 
 ## TaskNotes schema (match exactly)
 Folder `tasks/`, tag `task`. Frontmatter fields:
-- `status` ∈ {new, backlog, todo, investigating, in-progress, continuous, blocked, done,
-  cancelled, delegated} (completed = done/cancelled/delegated; default **new**).
+- `status` ∈ {new, backlog, todo, investigating, in-progress, continuous, blocked, pending-review,
+  done, cancelled, delegated} (completed = done/cancelled/delegated; default **new**).
+- **Agent status transitions:** agents may set `status` to **todo, investigating, in-progress,
+  blocked, pending-review, cancelled** as the work state actually changes — in particular set
+  **`pending-review`** when the task's deliverable is finished but awaits the user's review.
+  **Never set `done`** (and don't touch `new`/`backlog`/`continuous`/`delegated`) — completing a
+  task is the user's call after review. Log the status change + evidence in the journal entry.
 - `priority` ∈ {none, very_low, low, normal, high, very_high} (default **none**).
 - `date_due`, `date_scheduled`, `date_completed` (dates); `date_created`, `date_modified`
   (datetimes `YYYY-MM-DDTHH:mm`); `time_estimate` (int minutes); `recurrence`; `blocked_by`.
