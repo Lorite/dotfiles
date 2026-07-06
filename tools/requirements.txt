@@ -9,3 +9,7 @@ playwright>=1.40
 # task-manager: gcalcli reads Google Calendar (agenda/free-slots/conflicts) from the CLI.
 # Needs a one-time OAuth (own Google Cloud OAuth client) — see the task-manager agent.
 gcalcli>=4.3
+
+# paper-reader: extract_pdf_annotations.py + sync_zotero_obsidian_notes.py read embedded
+# PDF annotations (BOOX highlights) from the Zotero linked files in ~/nextcloud/zotero.
+pypdf>=4.0

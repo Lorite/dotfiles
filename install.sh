@@ -608,6 +608,21 @@ create_symlink "$DOTFILES_DIR/.copilot/CLAUDE.md" "$HOME/.config/opencode/AGENTS
 sync_copilot_to_opencode "$DOTFILES_DIR/.copilot/agents" "$HOME/.config/opencode/agents" "Copilot agents"
 sync_copilot_to_opencode "$DOTFILES_DIR/.copilot/skills" "$HOME/.config/opencode/skills" "Copilot skills"
 
+# Zotero -> Obsidian literature-note sync (a vault note for every Zotero item).
+# Canonical unit copies live in tools/paper-reader/; the timer runs the idempotent
+# sync script every 15 min (no-op when Zotero is closed or nothing is missing).
+if systemctl --user show-environment >/dev/null 2>&1; then
+	mkdir -p "$HOME/.config/systemd/user"
+	cp "$DOTFILES_DIR/tools/paper-reader/zotero-obsidian-sync.service" \
+		"$DOTFILES_DIR/tools/paper-reader/zotero-obsidian-sync.timer" \
+		"$HOME/.config/systemd/user/"
+	systemctl --user daemon-reload
+	systemctl --user enable --now zotero-obsidian-sync.timer
+	print_success "Enabled zotero-obsidian-sync.timer (every 15 min)"
+else
+	print_warning "No systemd user session — skipped zotero-obsidian-sync.timer (headless server?)"
+fi
+
 # Setup VS Code global prompt files.
 mkdir -p "$DOTFILES_DIR/.vscode/prompts"
 create_symlink_path "$DOTFILES_DIR/.vscode/prompts" "$HOME/.config/Code/User/prompts"

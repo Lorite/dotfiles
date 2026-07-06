@@ -1,0 +1,9 @@
+# Canonical copy: ~/git/dotfiles/tools/paper-reader/zotero-obsidian-sync.service
+# Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
+[Unit]
+Description=Create an Obsidian literature note for every Zotero item
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/share/dotfiles-agents/venv/bin/python %h/git/dotfiles/tools/paper-reader/sync_zotero_obsidian_notes.py --quiet
+# Zotero closed → script exits 0 quietly; real failures show in `journalctl --user -u zotero-obsidian-sync`

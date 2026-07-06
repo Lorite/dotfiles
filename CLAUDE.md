@@ -196,6 +196,13 @@ runs **Claude Code Remote Control** (set up 2026-06-14). Server: `lorite-thinkce
   Embedded PDF highlights are extracted headlessly by
   `tools/paper-reader/extract_pdf_annotations.py` (pypdf, shared agents venv); the vault's
   `obsidian-extract-pdf-annotations` plugin does the same interactively in-app.
+  **Every Zotero item has a vault literature note, automatically:** the
+  **`zotero-obsidian-sync.timer`** systemd user timer (units canonical in `tools/paper-reader/`,
+  installed+enabled by `install.sh`) runs `sync_zotero_obsidian_notes.py --quiet` every 15 min —
+  idempotent, no-op when Zotero is closed (the browser connector needs Zotero open to add items, so
+  nothing is missed). The user saves papers via the browser connector or "Add by identifier";
+  the note appears within ~15 min with no human or AI involvement. Agents may therefore *assume*
+  the literature note exists, and run the same script (`--key <K>`) for a just-added item.
 - **gh CLI**: GitHub issues/PRs on the robotics repo.
 - **Slidev**: `slidev-theme-lorite-phd` theme for presentations.
 - **SimpleTimeTracker** (Android, via **LlamaLab Automate Cloud Messaging**): live work-session

@@ -1,0 +1,13 @@
+# Canonical copy: ~/git/dotfiles/tools/paper-reader/zotero-obsidian-sync.timer
+# Every 15 min while logged in — the Zotero browser connector only adds items while
+# Zotero desktop is running, so this cadence bounds note-creation latency to ~15 min.
+[Unit]
+Description=Periodic Zotero -> Obsidian literature-note sync
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Unit=zotero-obsidian-sync.service
+
+[Install]
+WantedBy=timers.target

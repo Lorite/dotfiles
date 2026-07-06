@@ -204,6 +204,12 @@ verified end-to-end 2026-07-06. Only skip if the user said "don't write".
    the citekey: `curl "http://localhost:23119/api/users/0/items/<K>?format=json"` →
    `data.citationKey`, title, creators, DOI, dates, url, tags, collections. (MCP alternative:
    `zotero_get_item_metadata` — but the JSON curl is one call for all fields.)
+   **The note should already exist** — the `zotero-obsidian-sync.timer` (systemd user timer, every
+   15 min) maintains a literature note for *every* Zotero item via
+   `tools/paper-reader/sync_zotero_obsidian_notes.py`. If it's missing (item added minutes ago),
+   run that same script (`--key <K>`) rather than hand-building the note — one shared tool, same
+   result whether the timer, the user, or an agent invokes it. Steps 2–3 below describe what the
+   script produces (and remain the manual fallback if it can't run).
 2. **If the note exists** (most papers imported before 2026-07): append inside its
    `%% begin notes %%` … `%% end notes %%` block, before the end marker:
    `## Written directly on [[<yyyy-MM-dd>]]` → `### AI Generated Summary (<model_name>)` → the

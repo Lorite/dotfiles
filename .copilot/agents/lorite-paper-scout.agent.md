@@ -137,6 +137,9 @@ created via any API** — the user must create "Scout Inbox" once by hand.
    {"sessionID":"<same uuid>","target":"C<ScoutInboxId>","tags":""}`. Use one sessionID
    per item to isolate failures (or one batch session for all).
 4. **Report**: items saved, duplicates skipped. PDF download+attach is a separate flow ↓.
+   (No note-creation step needed: the `zotero-obsidian-sync.timer` creates each saved item's
+   `media/research/` literature note within ~15 min — or run
+   `tools/paper-reader/sync_zotero_obsidian_notes.py` to make them appear immediately.)
 
 ## PDF download + attach (helper script)
 Metadata-only saving (above) is optional — the **recognizer** path below creates the item

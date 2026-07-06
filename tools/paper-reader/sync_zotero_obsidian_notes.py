@@ -158,10 +158,22 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="create at most N notes")
     ap.add_argument("--key", help="only process this item key")
     ap.add_argument("--no-highlights", action="store_true")
+    ap.add_argument("--quiet", action="store_true",
+                    help="timer mode: no output unless something was created or failed")
     args = ap.parse_args()
 
     from datetime import date
     today = date.today().isoformat()
+
+    # Timer mode: if Zotero isn't running there's nothing new to sync (the browser
+    # connector needs Zotero open to add items) — exit clean, don't mark the unit failed.
+    try:
+        api("/collections?limit=1")
+    except Exception:
+        if args.quiet:
+            return 0
+        print("Zotero local API unreachable (is Zotero running?)", file=sys.stderr)
+        return 1
 
     epa = None
     if not args.no_highlights:
@@ -218,8 +230,9 @@ def main():
             failed += 1
             print(f"FAILED {citekey}: {e}", file=sys.stderr)
 
-    print(f"\n{'would create' if args.dry_run else 'created'}: {created}, "
-          f"existing skipped: {skipped}, failed: {failed}")
+    if not args.quiet or created or failed:
+        print(f"\n{'would create' if args.dry_run else 'created'}: {created}, "
+              f"existing skipped: {skipped}, failed: {failed}")
     return 0 if failed == 0 else 1
 
 
