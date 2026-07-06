@@ -146,10 +146,46 @@ def build_note(item, coll_paths, today, highlights_md=None):
              "%% end notes %%", ""]
     body += ["# Highlights", "", "%% begin annotations %%", ""]
     if highlights_md:
-        body += [f"## Extracted on [[{today}]] (embedded PDF annotations, headless)", "",
-                 highlights_md.rstrip(), ""]
+        body += [hl_section(today, highlights_md)]
     body += ["%% end annotations %%", "", "# Links", "", "%% begin links %%", "%% end links %%", ""]
     return title, "\n".join(fm + body)
+
+
+HL_BEGIN = "<!-- boox-highlights:begin -->"
+HL_END = "<!-- boox-highlights:end -->"
+
+
+def hl_section(today, highlights_md):
+    return (f"{HL_BEGIN}\n## Extracted on [[{today}]] (embedded PDF annotations, headless)\n\n"
+            f"{highlights_md.rstrip()}\n{HL_END}\n")
+
+
+def refresh_note_highlights(note_path, today, highlights_md):
+    """Replace the machine-managed highlights section inside the annotations block.
+
+    Only the marked (or legacy unmarked '## Extracted on') section is touched —
+    plugin-imported Zotero annotations ('## Imported on ...') and hand edits stay.
+    Returns True if the file changed.
+    """
+    s = open(note_path).read()
+    if "%% begin annotations %%" not in s:
+        return False
+    new_sec = hl_section(today, highlights_md)
+    if HL_BEGIN in s and HL_END in s:
+        pre, rest = s.split(HL_BEGIN, 1)
+        _, post = rest.split(HL_END, 1)
+        out = pre + new_sec.rstrip("\n") + post
+    else:
+        m = re.search(r"## Extracted on \[\[[0-9-]+\]\] \(embedded PDF annotations, headless\)\n"
+                      r".*?(?=\n%% end annotations %%)", s, re.DOTALL)
+        if m:  # legacy unmarked section from the first backfill — migrate to markers
+            out = s[:m.start()] + new_sec.rstrip("\n") + s[m.end():]
+        else:  # no section yet — insert before the block's end marker
+            out = s.replace("%% end annotations %%", new_sec + "%% end annotations %%", 1)
+    if out != s:
+        open(note_path, "w").write(out)
+        return True
+    return False
 
 
 def main():
@@ -158,6 +194,9 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="create at most N notes")
     ap.add_argument("--key", help="only process this item key")
     ap.add_argument("--no-highlights", action="store_true")
+    ap.add_argument("--refresh-highlights", action="store_true",
+                    help="re-extract highlights into EXISTING notes for PDFs whose mtime "
+                         "changed since the last run (BOOX reading sessions synced back)")
     ap.add_argument("--quiet", action="store_true",
                     help="timer mode: no output unless something was created or failed")
     args = ap.parse_args()
@@ -230,9 +269,43 @@ def main():
             failed += 1
             print(f"FAILED {citekey}: {e}", file=sys.stderr)
 
-    if not args.quiet or created or failed:
+    refreshed = 0
+    if args.refresh_highlights and epa and not args.dry_run:
+        state_dir = os.path.expanduser("~/.local/state/zotero-obsidian-sync")
+        os.makedirs(state_dir, exist_ok=True)
+        state_path = os.path.join(state_dir, "highlights_mtimes.json")
+        try:
+            state = json.load(open(state_path))
+        except Exception:
+            state = {}
+        note_by_citekey = {f[:-3].rsplit(" - ", 1)[-1]: os.path.join(NOTES_DIR, f)
+                           for f in os.listdir(NOTES_DIR) if f.endswith(".md")}
+        for it in items:
+            d = it["data"]
+            if d["itemType"] in ("attachment", "note", "annotation") or "parentItem" in d:
+                continue
+            note = note_by_citekey.get(d.get("citationKey", ""))
+            if not note:
+                continue
+            try:
+                pdf = linked_pdf(d["key"])
+                if not pdf:
+                    continue
+                mtime = os.path.getmtime(pdf)
+                if state.get(pdf) == mtime:
+                    continue
+                annots = epa.extract(pdf)
+                if annots and refresh_note_highlights(note, today, epa.to_markdown(annots)):
+                    refreshed += 1
+                    print(f"highlights refreshed: {os.path.basename(note)}")
+                state[pdf] = mtime  # record even if no annotations — don't rescan unchanged files
+            except Exception as e:
+                print(f"warn: highlight refresh failed for {d.get('citationKey')}: {e}", file=sys.stderr)
+        json.dump(state, open(state_path, "w"))
+
+    if not args.quiet or created or refreshed or failed:
         print(f"\n{'would create' if args.dry_run else 'created'}: {created}, "
-              f"existing skipped: {skipped}, failed: {failed}")
+              f"existing skipped: {skipped}, highlights refreshed: {refreshed}, failed: {failed}")
     return 0 if failed == 0 else 1
 
 
