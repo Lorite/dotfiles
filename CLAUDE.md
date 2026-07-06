@@ -187,8 +187,15 @@ runs **Claude Code Remote Control** (set up 2026-06-14). Server: `lorite-thinkce
   Claude Code by `install.sh` (user scope). Adds semantic search (`zotero-mcp update-db` builds the
   ChromaDB index). **`lorite-paper-scout` still uses the curl/connector flow**, and **paywalled IEEE
   PDFs still go through `tools/paper-scout/fetch_attach.py`** (the MCP server can't drive the
-  authenticated ITU/KB proxy). The `zotero_note.py` / `add_to_collection.py` helpers remain as
-  reader fallbacks.
+  authenticated ITU/KB proxy). The `add_to_collection.py` helper remains a reader fallback;
+  `zotero_note.py` is retired from the normal flow (kept only for explicitly-requested Zotero notes).
+  **Since 2026-06 the PDFs are Zotero *linked files* in `~/nextcloud/zotero/`** (synced by the
+  Nextcloud client, annotated on the BOOX e-reader), and **since 2026-07-06 all AI reading content is
+  written directly to the Obsidian literature note** (`media/research/<title> - <citekey>.md`, schema
+  of `templates/media/research.md`) — no Zotero child notes, no Zotero-Integration import picker.
+  Embedded PDF highlights are extracted headlessly by
+  `tools/paper-reader/extract_pdf_annotations.py` (pypdf, shared agents venv); the vault's
+  `obsidian-extract-pdf-annotations` plugin does the same interactively in-app.
 - **gh CLI**: GitHub issues/PRs on the robotics repo.
 - **Slidev**: `slidev-theme-lorite-phd` theme for presentations.
 - **SimpleTimeTracker** (Android, via **LlamaLab Automate Cloud Messaging**): live work-session
