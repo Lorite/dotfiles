@@ -18,6 +18,10 @@ out of scope here — use the `lorite-obsidian-bases` skill (Bases) and `obsidia
   - **Task notes** (`type: task`, in `tasks/`): put AI content under `# 📓 Journal / Work Log` →
     `## [[YYYY-MM-DD]]` (today) → `### AI generated`. New dated entries go at the **top** of the
     Journal section (newest-first); leave existing entries untouched.
+  - **Checkbox exception (task notes):** you may tick a `- [ ]` → `- [x]` checkbox in a task
+    note's `# 🎯 Task Description` when the subtask is **verifiably done** (evidence stated in the
+    journal entry you write alongside). Toggle only the checkbox state — never edit, reword, or
+    reorder the item text, and never untick a box the user checked.
   - **Any other note**: append a top-level `# AI Generated` section containing exactly `## Prompt`
     and `## AI Generated Answer`.
 - **Never write secrets** into notes (e.g. nothing from `obsidian-web-clipper-settings.json`).

@@ -23,7 +23,9 @@ structure, and wording are yours. If a repeated read need can't be answered by a
 - **Outside `ai_brain/`: append only**, never rewriting existing content (the vault is
   hand-maintained):
   - **Task notes** (`type: task`): under `# 📓 Journal / Work Log` → `## [[today]]` →
-    `### AI generated` (new dated entries at the top of the Journal section).
+    `### AI generated` (new dated entries at the top of the Journal section). Exception: subtask
+    checkboxes in `# 🎯 Task Description` may be **ticked** when verifiably done (box state only,
+    never the item text).
   - **Other notes**: a top-level `# AI Generated` heading with `## Prompt` + `## AI Generated Answer`.
 - **Never write secrets** into notes (nothing from `obsidian-web-clipper-settings.json`).
 

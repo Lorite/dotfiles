@@ -216,7 +216,11 @@ verified end-to-end 2026-07-06. Only skip if the user said "don't write".
    with # stripped>]`, `links: []`, `date_published`/`date_saved`/`date_read` as
    `YYYY-MM-DD HH:mm`, `url`, `zotero: zotero://select/library/items/<K>`, `type: research`,
    `publish: true`, `publish_mode: external`, `personal_rating:`), then `# Formatted Bibliography`
-   (flattened BibTeX from `curl ".../items/<K>?format=bibtex"`), `# Abstract`, `# Extra`,
+   — the **CSL-rendered** entry: `curl ".../items/<K>?format=json&include=bib&style=bibtex"` →
+   strip HTML tags from `.bib`, unescape entities, flatten to one line (matches plugin-created
+   notes). **Never use `?format=bibtex`** — that export embeds every child note as an `annote`
+   field (a Cita citations note can be ~100 KB) and bloats the bibliography by orders of magnitude.
+   Then `# Abstract`, `# Extra`,
    `# Notes` with the summary inside `%% begin notes %%` markers, `# Highlights` with empty
    `%% begin annotations %%` markers, `# Links` with `%% begin links %%` markers. The persist
    markers keep the note compatible with any later Zotero Integration import.

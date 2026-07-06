@@ -32,7 +32,9 @@ note) and after each substantive exchange or finished piece of work.
 - In **every other note**, only **append**, never rewrite hand-written content — and **where** the
   append goes is note-type-specific (see Part 2): **task notes** get a dated `### AI generated` entry
   inside their `# 📓 Journal / Work Log`; **all other notes** get a top-level `# AI Generated`
-  section. Defer to the **`lorite-obsidian-note`** skill for the per-note append mechanics and the
+  section. One exception: **task-note subtask checkboxes may be ticked** (`- [ ]` → `- [x]`) when
+  the logged work verifiably completes them — box state only, never the item text. Defer to the
+  **`lorite-obsidian-note`** skill for the per-note append mechanics and the
   **`lorite-obsidian-markdown`** skill for syntax (wikilinks, callouts).
 - Never write secrets.
 
