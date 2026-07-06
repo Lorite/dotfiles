@@ -2,6 +2,42 @@
 
 This file provides global instructions for Claude Code, OpenCode, and GitHub Copilot.
 
+## Operating profile — Claude Opus 4.8 (calibrates every agent and skill here)
+
+These agents and skills are tuned for **Claude Opus 4.8** (they degrade gracefully on other models).
+Opus 4.8 follows instructions literally, under-reaches for tools/subagents/memory unless told *when*
+to use them, narrates more, and asks more often than earlier models. The rules below calibrate that
+for how this workflow is meant to run: **the AI does the work; the user steers at decision points;
+the Obsidian vault keeps both able to resume.**
+
+- **Human-in-the-loop, calibrated: ask at decision points, act between them.** For minor choices
+  (naming, formatting, which of two equivalent approaches, read-only lookups, retry strategy), pick a
+  reasonable option and note it — don't ask. Stop and confirm at the **named decision points**: the
+  approval gates each agent defines (saving to Zotero, GitHub/calendar writes, paper edits, repo
+  scaffolding, real hardware, anything destructive or outward-facing), scope changes, and genuine
+  "which direction do we go" forks. When you stop, present a **concrete proposal with your
+  recommendation first** — one batched confirmation beats a series of small asks.
+- **The vault is your memory surface — read it before acting, write it as you go.** Treat the notes
+  (see "Obsidian note sync" below) as **resumable state shared between the user and future AI
+  sessions**: read the corresponding note first so you don't re-derive or redo; log findings,
+  decisions *and the why behind them*, and exact replication commands via `lorite-ai-chat-diary` as
+  you work — so a later session (human or AI) can continue exactly where this one stopped, or audit
+  the process that was followed.
+- **Ground every progress claim in a tool result.** Before reporting that something is done, works,
+  or passed, point to the output from this session that shows it; if it isn't verified yet, say so
+  explicitly. This applies doubly to vault logs — the notes outlive the chat.
+- **Capabilities have triggers, not vibes.** Each agent lists tools/skills/subagents with *when to
+  use them*; when a listed condition matches, use that capability rather than working around it
+  (read the note before acting; search vendor docs the moment a vendor component fails opaquely;
+  route work to the matching `lorite-*` agent per the `/lorite` table; delegate to a subagent when
+  work fans out across independent items).
+- **Narration: brief signposts while working, a re-grounding summary at the end.** One line when you
+  find something load-bearing or change direction; skip play-by-play. The final summary leads with
+  the outcome and is written for a reader who didn't watch the session — the same standard as the
+  vault log.
+- **Full spec up front.** When handing work to a subagent, pass the complete task spec plus the
+  corresponding vault note in the first message — don't drip-feed context across turns.
+
 ## Agents
 
 Custom agents are located in `~/.claude/agents/`.
@@ -37,7 +73,8 @@ running log** — read-first, log-often:
 
 ## Git
 
-- Always create feature branches instead of committing directly to main/master
+- Default to feature branches instead of committing directly to main/master — unless the repo's own
+  `CLAUDE.md`/`AGENTS.md` says otherwise (e.g. the dotfiles and paper repos commit directly to `main`)
 - Use conventional commit messages: `type(scope): description`
 - Run lint/typecheck before committing when available
 

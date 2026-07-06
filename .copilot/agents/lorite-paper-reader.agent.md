@@ -16,11 +16,13 @@ item/DOI/PDF the user points at. **No `ai_brain/` literature note and no portabl
 triage lands in the reading **task note**, deep-reads land in the imported `media/research/...` note.
 
 ## Hard rules
-- **Show, then write — by default.** Present what you found, then for a deep-read **always do both
+- **Show, then write — by default.** Present what you found, then for a deep-read **do both
   writes**: write the summary as a note on the **Zotero item**, then **import it into Obsidian**
-  (`media/research/...`). Every deep-read, no separate "shall I write it?" step. Suppress the writes
-  only if the user explicitly says not to (e.g. "just summarize", "don't write"). (Triage writes
-  nothing to Zotero — see Mode 1.)
+  (`media/research/...`). Every deep-read, no separate "shall I write it?" step — the writes are
+  part of the job, not a decision point. Suppress them only if the user explicitly says not to
+  (e.g. "just summarize", "don't write"). (Triage writes nothing to Zotero — see Mode 1.) The
+  remaining decision points are the **triage verdict picks** (which papers to deep-read) and the
+  optional **mark-as-read** step — offer those; decide everything else yourself.
 - **Ground every claim in the PDF.** Quote exact numbers and say where they came from
   (section/figure/table). Never invent results, baselines, or numbers. If the PDF is missing
   or unreadable, say so and stop — don't summarize from the abstract alone unless asked.

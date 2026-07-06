@@ -100,11 +100,20 @@ you write using the ROS 2 MCP tools or `in-ros2.sh` as needed.
 - Build command: `colcon build --symlink-install` (allows live code editing)
 - Scripts: `scripts/build.sh`, `scripts/test.sh`, `scripts/setup.sh`
 
-SUPER IMPORTANT: Use the MCP tools when available. context7-mcp/* are very good to get context about external libraries and packages I am using to control the Boston Dynamics robot, the crazyflie, and other hardware and ROS 2 packages.
+Tool triggers (use the capability when its condition fires — don't work around it):
+- **Working with an external library/package** (spot_ros2, crazyswarm2, px4_msgs, any third-party
+  ROS 2 package) → pull its docs via `context7-mcp/*` before coding against it from memory.
+- **A vendor node fails opaquely** — comes up but emits nothing, a silent input-format/QoS mismatch,
+  or throughput far below the vendor's published benchmark → WebSearch/WebFetch the **official docs,
+  benchmark pages, and GitHub issues** immediately, before trial-and-error. The docs are the fastest
+  route to required input formats (e.g. Isaac ROS FoundationPose needs **32FC1 metric depth**, not
+  the RealSense's 16UC1 mm), QoS conventions, graph wiring, and known bugs.
+- **Introspecting or driving the live graph** → prefer the ROS 2 MCP tools; fall back to
+  `in-ros2.sh` shell commands when they don't reach the container.
 
-SUPER IMPORTANT: **Search the official online docs early and often** (WebSearch/WebFetch) when working against a vendor stack — NVIDIA Isaac ROS, Boston Dynamics Spot SDK, Bitcraze Crazyflie, PX4, or any third-party ROS 2 package. Don't rely only on local source / reference launch files or guess-and-check: the official docs, benchmark/performance pages, and GitHub issues/forums are the fastest way to learn required input formats (e.g. Isaac ROS FoundationPose needs **32FC1 metric depth**, not the RealSense's 16UC1 mm), QoS conventions, node/graph wiring, expected performance numbers, and known bugs. Reach for a web search the **moment a vendor node fails opaquely** — no error but no output, a silent format/QoS mismatch, or throughput far below the vendor's published benchmark — instead of sinking time into trial-and-error.
-
-IMPORTANT: You can't run multiple long-running processes at the same time. Instead of starting a new long-running process (e.g. a simulation), let me know what I should run and I do it myself. Then, you can use your tools to inspect the running system.
+You can't run multiple long-running processes at the same time. Instead of starting a new
+long-running process (e.g. a simulation) over a live one, hand the user the exact command to run,
+then use your tools to inspect the running system.
 
 ## Priorities
 
@@ -197,11 +206,18 @@ sourcing ROS first, e.g. `in-ros2.sh zsh -lc 'source /opt/ros/humble/setup.zsh &
 - Synchronize launch timing with delays for proper initialization
 - Check for DDS discovery issues with `ros2 discovery graph`
 
-## Approval guidance
+## Approval guidance (ask at decision points, act between them)
 
-- Ask for approval before running terminal commands that modify the environment or start long-running processes
-- When tool approval is required, show relevant parameters clearly
-- Always ask before attempting real hardware control (Spot, Crazyflie, or physical PX4)
+- **Act without asking:** reads, graph introspection, builds (`colcon build`), tests, lint, edits to
+  the repo's source that the task calls for, and sim-only verification launches you can background —
+  these are the work itself, not decision points.
+- **Ask first (the decision points):** real hardware control (Spot, Crazyflie, physical PX4 —
+  explicit per-session approval, always), anything touching safety limits/geofences/watchdogs
+  (never bypass, even with approval to run), long-running foreground processes you can't background
+  (hand the user the exact command instead), destructive ops (deleting bags/results, force-pushes),
+  and scope changes beyond the design spec. Present one batched proposal with your recommendation,
+  not a series of small asks.
+- When tool approval is required, show the relevant parameters clearly.
 
 ## Hardware-Specific Notes
 

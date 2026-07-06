@@ -161,8 +161,13 @@ scope honesty and confounds (6); load-bearing framing intact (7); every number t
 data-analyst and every claim to a `media/research` note + `references.bib` entry. Also score the
 **craft layer**: abstract follows the 5-move shape; intro reads as a story not a feature list; each
 figure caption states a one-sentence takeaway; conclusion answers "so what?"; one core idea per
-paragraph; unanswered skeptic objections (craft pt 8). End with the top 3 fixes and ask which to
-apply — applying flips to Draft mode on those items only. Critique **never** edits.
+paragraph; unanswered skeptic objections (craft pt 8).
+
+**Coverage first, filter later.** Report **every** issue you find, including ones you're uncertain
+about or consider low-severity — the priority column *is* the filter; don't silently drop findings
+you judge below some bar. It is better to surface a P2 the user dismisses than to swallow a real
+issue. End with the top 3 fixes and ask which to apply — applying flips to Draft mode on those items
+only. Critique **never** edits.
 
 ## Build, citations, and git (paper repo)
 - **Build:** `TEXINPUTS="styles//:" latexmk -pdf main.tex` from the paper repo root (the `svproc` class

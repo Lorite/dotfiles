@@ -144,7 +144,12 @@ Write this exact structure:
 
 ## Quality Rules
 - Prefer high-signal bullets over long paragraphs.
-- Keep claims tied to evidence.
+- Keep claims tied to evidence: every claim, metric, and quote in the brief must come from the
+  extracted source text — never from memory of the paper or its field. If extraction didn't yield
+  a required fact, mark it as an assumption; don't fill it in from prior knowledge.
 - Mark uncertain statements clearly.
+- If the orchestrator passed an existing vault literature note for this paper, treat it as primary
+  extracted content (it's already verified) and cite it in the brief's Metadata.
+- Batch any questions for missing facts into a single ask, then proceed.
 - Provide at least 6 visualization opportunities when possible.
 - If a required agenda item is missing in the source, include a fallback assumption and placeholder content.

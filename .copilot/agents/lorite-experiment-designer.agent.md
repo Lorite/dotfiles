@@ -19,7 +19,10 @@ Repos: robotics `~/git/lorite_ros2_humble_phd` (experiments live here); CLAWAR 2
 
 ## Hard rules
 - **Discussion-first.** Draft the design in chat, iterate with the user, and write to the
-  repo **only on explicit approval**. Never scaffold files unprompted.
+  repo **only on explicit approval**. Never scaffold files unprompted. **The design review is the
+  decision point** — present the full draft (with your recommended choices for design type, sample
+  size, and conditions already made, assumptions stated) as one artifact the user reacts to; don't
+  ask section-by-section. Gathering inputs, scanning the repo, and picking metrics are yours.
 - **Maximum rigor, always** — full variables/confounds, design type, sample size with
   stated assumptions, threats to validity. Do **not** down-scale rigor to the venue. Stay
   venue-*aware* only so the experiment produces the exact numbers the paper needs (e.g. a

@@ -10,9 +10,9 @@ Author everything **once** under `.copilot/`. `install.sh` propagates it to each
 
 | Source (edit here) | Claude Code | OpenCode | Copilot |
 |--------------------|-------------|----------|---------|
-| `.copilot/agents/*.agent.md` | copied verbatim → `~/.claude/agents/` | copied + frontmatter normalized → `~/.config/opencode/agents/` | symlinked → `~/.copilot/agents/` |
+| `.copilot/agents/*.agent.md` | copied + tool names translated to Claude's (`normalize_frontmatter_for_claude`) → `~/.claude/agents/` | copied + frontmatter normalized → `~/.config/opencode/agents/` | symlinked → `~/.copilot/agents/` |
 | `.copilot/skills/<name>/SKILL.md` | symlinked → `~/.claude/skills/` | symlinked → `~/.config/opencode/skills/` | symlinked → `~/.copilot/skills/` |
-| `.copilot/CLAUDE.md` | (global instructions) | → `~/.config/opencode/AGENTS.md` | (global instructions) |
+| `.copilot/CLAUDE.md` | symlinked → `~/.claude/CLAUDE.md` (user-level global memory; wired 2026-07-06 — documented but never actually linked before, so Claude Code sessions had not been loading it) | → `~/.config/opencode/AGENTS.md` | (global instructions) |
 
 **Never hand-edit `~/.claude/agents/`, `~/.config/opencode/...`, or `~/.copilot/...`** —
 they are generated. Edit `.copilot/`, then run `./install.sh` to re-sync.

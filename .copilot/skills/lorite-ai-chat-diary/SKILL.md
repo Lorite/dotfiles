@@ -18,6 +18,14 @@ it from the `time` tool or `date "+%H:%M"`).
 Log **as you work, not only at the end**: at the start of a work session (open/create today's diary
 note) and after each substantive exchange or finished piece of work.
 
+## What a good entry is (the notes outlive the chat)
+- **Written for a reader who didn't see the chat** — a future session (human or AI) must be able to
+  resume from the note alone: outcome first, then decisions **with their why**, open threads, and
+  next steps. Spell things out; no chat-local shorthand or unexplained codenames.
+- **Grounded.** Log only outcomes backed by this session's actual tool output; anything unverified
+  is logged as unverified ("fix applied, not yet tested in a fresh session"), never as done.
+- **Reproducible.** The `Replicate manually` block (below) captures the exact commands.
+
 ## Write policy (never violate)
 - The `ai_chats/diary/daily/` folder is **AI-writable** (explicit user grant) — diary notes may be
   created and appended freely.

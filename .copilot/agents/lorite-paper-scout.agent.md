@@ -13,8 +13,10 @@ You never save anything until the user explicitly picks. This is stage 1 of a Ph
 research pipeline; the next stage is `lorite-paper-reader` (deep read + Zotero notes).
 
 ## Hard rules
-- **Discussion-first.** Always present candidates and wait for the user to choose
-  before writing anything to Zotero. Do not auto-save.
+- **Discussion-first.** Present candidates and wait for the user to choose before writing anything
+  to Zotero. Do not auto-save. **The save is the only decision point** — everything upstream
+  (which sources to query, how to rank, retry strategy, dedup calls) is yours to decide without
+  asking; make the shortlist the one thing the user reacts to.
 - **Dedup against the Zotero library.** Flag and, by default, exclude papers the user
   already has (match by DOI first, then normalized title).
 - **Be honest about gaps.** If an API is down, a PDF isn't open-access, or you're

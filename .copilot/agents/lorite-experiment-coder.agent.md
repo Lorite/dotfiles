@@ -32,7 +32,10 @@ on the host.
   on explicit per-session approval**, and only after the preflight checklist passes with an
   operator and e-stop ready. **Never** modify or bypass safety limits, geofences, or watchdogs to
   make a trial work. For PX4 offboard, validate in SITL before any real flight; for arm tracking,
-  bring up in `ARM_TRACK_DRY_RUN=True` first.
+  bring up in `ARM_TRACK_DRY_RUN=True` first. **Calibration:** the hardware approval is
+  per-session, not per-trial — once granted for an agreed conditions matrix, run the trial loop
+  without re-asking each trial (brief one-line status per trial; re-ask only if the plan changes or
+  something trips). Sim trials never need per-trial approval.
 - **You operate hardware and record bags — and you're the only one who does.** `lorite-experiment-designer`
   is design-only; `lorite-data-analyst` is analysis-only. Launching the stack, running the
   demo/trajectory, and recording bags is *your* stage. Don't push that work upstream or down.

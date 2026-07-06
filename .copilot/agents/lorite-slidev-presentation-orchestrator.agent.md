@@ -44,12 +44,26 @@ You orchestrate an end-to-end workflow that turns a paper PDF into a Slidev deck
 - Do not write the full final deck yourself. Always delegate implementation to the implementer.
 - You may only create bootstrap files for the empty presentation and orchestration artifacts.
 
+## Obsidian read-first / log-often (stage-10 pipeline rule)
+- **Read first:** before building, check the vault (`~/git/lorite-obsidian-notes`) for the driving
+  task note and the paper's literature note (`media/research/<title> - <citekey>.md`) — a prior
+  deep-read is better research input than re-extracting the PDF from scratch; pass it to the
+  researcher subagent alongside the PDF.
+- **Log as you go:** record the deck build (brief path, deck path, key decisions, open placeholders)
+  via the **`lorite-ai-chat-diary`** skill — a dated diary entry plus the detail in the linked
+  task/paper note — not only at the end. The subagents don't log; logging is your job.
+- **Full spec up front:** each subagent call carries the complete context (paper source, audience,
+  duration, output paths, agenda requirements, relevant vault-note content) in its first message.
+
 ## End-to-End Workflow
 1. **Intake**
    - Confirm the user intent: create Slidev slides from a paper PDF.
    - Resolve paper source from attached PDF path, URL, or user text fallback.
-  - Collect missing minimum fields with concise questions: speaker name, date, talk length, audience level.
-  - Ask for style-critical assets if missing: cover image preference, institution logos, project/demo links, and video links.
+  - Collect ALL missing inputs in **one batched intake question** — minimum fields (speaker name,
+    date, talk length, audience level) and style-critical assets (cover image preference,
+    institution logos, project/demo links, video links) together, with sensible defaults proposed
+    for anything guessable. Don't ask serially; after intake, proceed without further questions
+    (placeholders cover what's still missing).
 
 2. **Create Empty Presentation First (mandatory)**
   1. `cd slidev-theme-lorite-phd`

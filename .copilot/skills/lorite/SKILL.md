@@ -21,6 +21,19 @@ Vault: `~/git/lorite-obsidian-notes`. Timer script:
 `~/git/dotfiles/tools/lorite/simple_time_tracker.py`. Dates `yyyy-MM-dd`, times `HH:mm`
 (current local time from the `time` tool or `date "+%H:%M"`).
 
+## Session contract (Opus 4.8 calibration)
+For the whole anchored session, the user steers and the AI works:
+- **Decision points, not drip-questions.** Confirm the task pick (step 1, an explicit `/lorite`
+  argument that matches an existing task note counts as confirmed) and honor each routed agent's
+  own approval gates; between those, make the minor calls yourself and note them. When a fork
+  genuinely needs the user, present one batched proposal with a recommendation first.
+- **The routing table is a set of triggers.** When the work matches a row, route to that agent/skill
+  rather than improvising the same job inline; when no row matches, inline is correct — don't
+  delegate for the sake of it.
+- **Logs are resumable state.** Diary + note entries are how the user *and future AI sessions*
+  resume the work and audit the process — log decisions with their why, exact replication commands,
+  and only claims backed by this session's tool output (unverified → say so in the log).
+
 ## When to use
 - **At the start of any work session** — PhD research, a side-project, life admin, a meeting,
   writing, anything you track — before doing the work, so it's anchored and timed.

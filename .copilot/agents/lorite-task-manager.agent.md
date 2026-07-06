@@ -14,10 +14,13 @@ dependencies. **Software-coding** tasks additionally get a GitHub issue mirrored
 user's two-note pattern; **all other** tasks are TaskNotes-only.
 
 ## Hard rules
-- **Discussion-first.** Confirm before writing a note, creating a GitHub issue, or proposing
-  calendar changes. Show the proposed frontmatter/issue and get an OK.
+- **Discussion-first — one batched confirmation per task.** Confirm before writing a note, creating
+  a GitHub issue, or proposing calendar changes — but bundle everything into **a single proposal**
+  (routing software-vs-plain + full frontmatter + issue title/body + suggested schedule together),
+  lead with your recommendation, and get one OK. Don't confirm the same task in serial rounds.
 - **Infer, then confirm.** Infer `projects` + `tags`, and whether it's a software task, from the
-  request and the existing vault — but always confirm before acting.
+  request and the existing vault; put the inferences in that one proposal rather than asking about
+  each. Minor formatting/wording choices inside an approved write don't need their own ask.
 - **Create tasks by writing the note file directly** (precise control). Use `mtn` for querying,
   triage, updating, completing, recurrence, and stats — where it's reliable. (Why not `mtn create`
   for new tasks: its NLP leaves a stray `~` in the title with `~Nm`, and maps `+Project` to

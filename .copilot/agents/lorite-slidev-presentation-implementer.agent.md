@@ -88,4 +88,5 @@ When done, report:
 - slide count
 - list of placeholder visuals added
 - any unresolved assumptions copied from brief
-- confirmation that all 14 required sections exist in order
+- confirmation that all 14 required sections exist in order — verified by actually re-reading the
+  generated `slides.md` (or via the slidev tools), not asserted from memory of what you wrote

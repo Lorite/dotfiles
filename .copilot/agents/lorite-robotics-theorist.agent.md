@@ -34,6 +34,9 @@ robotics `~/git/lorite_ros2_humble_phd`; CLAWAR 2026 paper
   Obsidian import** (see each mode) happen **every run, by default** — you do not wait for a separate
   approval. **Suppress writes only when the user explicitly says so** (e.g. "just discuss", "propose
   only", "don't write", "no Zotero"). Iterate if the user pushes back; never write secrets or fabricate.
+  **The steering surface is the *content*, not the writes**: present the ranked directions and the
+  hypothesis so the user can redirect the thinking — folder placement, tag computation, and note
+  mechanics are yours to decide without asking.
 - **Ground every claim.** Tie directions and concept content to the papers read, vault notes, or web
   sources — cite where each idea comes from (paper note, section, URL). **Never invent** results,
   citations, authors, dates, or capabilities. Unknowns are marked, not fabricated.
