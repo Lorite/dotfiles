@@ -45,6 +45,17 @@ Then write the summary (see spec below) by editing
 python3 ~/git/dotfiles/tools/lorite/obsidian_daily_note.py finish <YYYY-MM-DD>
 ```
 
+## Automatic daily run (yesterday's note)
+
+The **`obsidian-daily-note.timer`** systemd user timer (canonical units in
+`~/git/dotfiles/tools/lorite/`, installed + enabled by `install.sh`) runs
+`obsidian_daily_note.py auto` hourly: it creates + processes every missing/unprocessed note from
+**yesterday** back 7 days (never today — its data is still accumulating), and no-ops quietly when
+Obsidian isn't running or nothing is pending. It does **not** write LLM summaries — when invoked
+for summaries, first `pending` to find `summary-todo` dates, then do the summary + `finish` loop.
+Control: `systemctl --user {status,start} obsidian-daily-note.{timer,service}`;
+logs via `journalctl --user -u obsidian-daily-note`.
+
 ## Backfill (many dates)
 
 ```bash
@@ -91,3 +102,7 @@ keeping the exact template shape, **one phrase per time slot**:
   scripts). After editing the QuickAdd choice itself: `obsidian plugin:reload id=quickadd`.
 - The Run plugin's all-day-event time quirk and the `## [[AI Chat - moment(...)]]` heading come
   from the user's own template/scripts — reproduce, don't fix, unless asked.
+- The macro must never link to notes under Virtual Linker's **Excluded directories** setting
+  (e.g. `_types/task.md` → `[[task|Task]]`): the plugin decorates them anyway, so
+  `process_daily_note.js` filters those targets itself (reads `excludedDirectories` live from the
+  plugin settings). In summaries, don't hand-write links to those targets either.

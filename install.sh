@@ -623,6 +623,21 @@ else
 	print_warning "No systemd user session — skipped zotero-obsidian-sync.timer (headless server?)"
 fi
 
+# Obsidian daily-note pipeline for the previous day (create + run + strip + link
+# + lint; no LLM summary). Canonical unit copies live in tools/lorite/; the timer
+# runs hourly and no-ops when Obsidian is closed or yesterday is already done.
+if systemctl --user show-environment >/dev/null 2>&1; then
+	mkdir -p "$HOME/.config/systemd/user"
+	cp "$DOTFILES_DIR/tools/lorite/obsidian-daily-note.service" \
+		"$DOTFILES_DIR/tools/lorite/obsidian-daily-note.timer" \
+		"$HOME/.config/systemd/user/"
+	systemctl --user daemon-reload
+	systemctl --user enable --now obsidian-daily-note.timer
+	print_success "Enabled obsidian-daily-note.timer (hourly, processes yesterday's daily note)"
+else
+	print_warning "No systemd user session — skipped obsidian-daily-note.timer (headless server?)"
+fi
+
 # Setup VS Code global prompt files.
 mkdir -p "$DOTFILES_DIR/.vscode/prompts"
 create_symlink_path "$DOTFILES_DIR/.vscode/prompts" "$HOME/.config/Code/User/prompts"

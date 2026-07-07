@@ -1,0 +1,15 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/obsidian-daily-note.timer
+# Hourly while logged in — the service is a cheap no-op once yesterday's note is
+# processed (and whenever Obsidian isn't running), so hourly just bounds the
+# latency until a moment when the app happens to be open. LLM summaries are NOT
+# written by this unit; run the lorite-daily-note skill for those.
+[Unit]
+Description=Periodic Obsidian daily-note creation/processing for the previous day
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Unit=obsidian-daily-note.service
+
+[Install]
+WantedBy=timers.target

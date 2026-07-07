@@ -1,0 +1,10 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/obsidian-daily-note.service
+# Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
+[Unit]
+Description=Create + process yesterday's Obsidian daily note (Templater, Run, strip, Virtual Linker, lint)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/git/dotfiles/tools/lorite/obsidian_daily_note.py auto
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Obsidian closed → script exits 0 quietly; real failures show in `journalctl --user -u obsidian-daily-note`

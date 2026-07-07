@@ -25,6 +25,12 @@ Usage:
   obsidian_daily_note.py pending [--since YYYY-MM-DD]
       # list dates (since --since, or from the last existing note, up to today)
       # that are missing, still contain %% run %% blocks, or have a TODO summary
+  obsidian_daily_note.py auto [--lookback N]
+      # create + process every missing/unprocessed note from yesterday back N
+      # days (default 7; never today — its data is still accumulating). Exits 0
+      # quietly when Obsidian isn't running. Run by obsidian-daily-note.timer
+      # (systemd user unit, canonical copy in this directory). Does NOT write
+      # the LLM summary — that stays with the lorite-daily-note skill.
 """
 
 import argparse
@@ -81,7 +87,7 @@ def step_create(date: str) -> None:
     print(f"[{date}] created from template")
 
 
-def step_process(date: str) -> None:
+def step_process(date: str) -> int:
     obs("open", f"path={vault_rel(date)}")
     time.sleep(1.5)
     SENTINEL.unlink(missing_ok=True)
@@ -100,6 +106,7 @@ def step_process(date: str) -> None:
         raise RuntimeError(f"[{date}] macro failed: {status} — {debug}")
     links = sum(int(c.rsplit("=", 1)[1]) for c in json.loads(debug).get("chunks", []))
     print(f"[{date}] processed (virtual links converted: {links})")
+    return links
 
 
 def step_finish(date: str) -> None:
@@ -114,7 +121,13 @@ def step_finish(date: str) -> None:
 
 def cmd_process(date: str) -> None:
     step_create(date)
-    step_process(date)
+    links = step_process(date)
+    if links == 0:
+        # Virtual Linker decorations occasionally miss a pass entirely (transient
+        # rendering hiccup); zero conversions on a daily note is almost always
+        # that, so retry the (idempotent) in-app pipeline once.
+        print(f"[{date}] 0 links converted — retrying once")
+        step_process(date)
     content = read(date)
     if "%% run" in content:
         raise RuntimeError(f"[{date}] %% run %% markers still present after processing")
@@ -145,6 +158,23 @@ def cmd_pending(since: str | None) -> None:
         day += dt.timedelta(days=1)
 
 
+def cmd_auto(lookback: int) -> None:
+    res = subprocess.run(["obsidian", "vault"], capture_output=True, text=True)
+    if res.returncode != 0:
+        print("auto: Obsidian not running — skipping")
+        return
+    yesterday = dt.date.today() - dt.timedelta(days=1)
+    for offset in range(lookback):
+        date = (yesterday - dt.timedelta(days=offset)).isoformat()
+        p = note_path(date)
+        if p.exists() and "%% run start" not in p.read_text(encoding="utf-8"):
+            continue  # already processed (a TODO summary is the LLM step, not ours)
+        try:
+            cmd_process(date)
+        except Exception as e:  # keep going: one bad day must not block the rest
+            print(f"auto: [{date}] failed: {e}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -153,10 +183,15 @@ def main() -> None:
         s.add_argument("date", help="YYYY-MM-DD")
     s = sub.add_parser("pending")
     s.add_argument("--since", default=None, help="first date to check (default: from last existing note)")
+    s = sub.add_parser("auto")
+    s.add_argument("--lookback", type=int, default=7, help="days before today to catch up (default 7)")
     args = ap.parse_args()
 
     if args.cmd == "pending":
         cmd_pending(args.since)
+        return
+    if args.cmd == "auto":
+        cmd_auto(args.lookback)
         return
     dt.date.fromisoformat(args.date)  # validate
     {"process": cmd_process, "finish": step_finish}[args.cmd](args.date)
