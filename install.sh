@@ -639,8 +639,8 @@ else
 fi
 
 # Bridge Nextcloud reference folders into the Obsidian vault: per-machine symlinks
-# (vault/papers -> ~/nextcloud/zotero, …) + Syncthing/git ignore entries, so notes
-# embed files with stable vault-relative links while the bytes live in Nextcloud.
+# (vault/nextcloud/papers -> ~/nextcloud/zotero, …) + Syncthing/git ignore entries,
+# so notes embed files with stable vault-relative links while the bytes live in Nextcloud.
 # Point it at the sync client, NOT a WebDAV mount. Config: ~/.config/dotfiles/paths.env
 # (see tools/nextcloud-bridge/{README.md,paths.env.example}).
 BRIDGE_SCRIPT="$DOTFILES_DIR/tools/nextcloud-bridge/setup-bridge.sh"
