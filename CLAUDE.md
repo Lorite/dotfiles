@@ -204,6 +204,14 @@ runs **Claude Code Remote Control** (set up 2026-06-14). Server: `lorite-thinkce
   the note appears within ~15 min with no human or AI involvement. Agents may therefore *assume*
   the literature note exists, and run the same script (`--key <K>`) for a just-added item.
 - **gh CLI**: GitHub issues/PRs on the robotics repo.
+- **Obsidian daily notes, automatically:** the **`obsidian-daily-note.timer`** systemd user timer
+  (units canonical in `tools/lorite/`, installed+enabled by `install.sh`) runs
+  `tools/lorite/obsidian_daily_note.py auto` hourly — creates + fully processes (Templater
+  template, Run-plugin blocks, script-strip, Virtual Linker links, lint) every missing/unprocessed
+  `diary/daily/` note from yesterday back 7 days, never today; quiet no-op when Obsidian is closed.
+  The pipeline drives the **live Obsidian app** via the `obsidian` CLI + the vault QuickAdd macro
+  `scripts/process_daily_note.js`. LLM time-slot summaries are NOT written by the timer — that's
+  the **`lorite-daily-note`** skill (the agent writes them from the note's own generated data).
 - **Slidev**: `slidev-theme-lorite-phd` theme for presentations.
 - **SimpleTimeTracker** (Android, via **LlamaLab Automate Cloud Messaging**): live work-session
   timing. `tools/lorite/simple_time_tracker.py start|stop|add_record` POSTs to
