@@ -212,6 +212,24 @@ runs **Claude Code Remote Control** (set up 2026-06-14). Server: `lorite-thinkce
   The pipeline drives the **live Obsidian app** via the `obsidian` CLI + the vault QuickAdd macro
   `scripts/process_daily_note.js`. LLM time-slot summaries are NOT written by the timer — that's
   the **`lorite-daily-note`** skill (the agent writes them from the note's own generated data).
+- **Nextcloud → Obsidian file bridge:** `tools/nextcloud-bridge/setup-bridge.sh` (run by
+  `install.sh` on every machine, also runnable standalone) symlinks curated **Nextcloud
+  sync-client** folders into the vault so notes embed/link files with stable, cross-machine
+  vault-relative wikilinks (`![[papers/foo.pdf]]`) while the bytes live in Nextcloud (editable by
+  any app, offline-available). Default map `zotero:papers` → `vault/papers` ➞ `~/nextcloud/zotero`;
+  each link is added to the vault's `.stignore` **and** `.gitignore` so it is **never synced** —
+  every machine creates its own (targets + the `/home/<user>` path differ per host: `lori` laptop
+  vs `lorite` server). Idempotent; **refuses to replace a real (non-symlink) vault path**. Config
+  (per-machine, optional): `~/.config/dotfiles/paths.env` — `NEXTCLOUD_BASE` (default
+  `~/nextcloud`), `OBSIDIAN_VAULT`, `NEXTCLOUD_BRIDGE` (space/newline `subfolder:linkname` pairs);
+  see `tools/nextcloud-bridge/{README.md,paths.env.example}`. **Point `NEXTCLOUD_BASE` at the
+  Nextcloud desktop sync client, NOT a WebDAV/rclone mount** (`~/nextcloud-all` is `fuse.rclone`):
+  network mounts are slow, break offline, and serve stale cache — the same "reads wrong/partial"
+  hazard that bites Obsidian's indexer and non-interactive agent reads; the script warns if the
+  base is on a `*dav*`/`fuse` mount. Bridge **only curated subfolders, never the whole tree** (a
+  whole-tree link makes Obsidian enumerate/watch thousands of files, pollutes explorer/search/graph,
+  and risks symlink recursion). With Nextcloud VFS ("files on demand"), keep bridged folders pinned
+  "available locally" so the indexer/agents never hit dehydrated placeholders.
 - **Slidev**: `slidev-theme-lorite-phd` theme for presentations.
 - **SimpleTimeTracker** (Android, via **LlamaLab Automate Cloud Messaging**): live work-session
   timing. `tools/lorite/simple_time_tracker.py start|stop|add_record` POSTs to
