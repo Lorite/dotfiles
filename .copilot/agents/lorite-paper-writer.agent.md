@@ -66,7 +66,7 @@ It was reverse-engineered from the feedback commits — cite the rule, not just 
    the acronym thereafter; if used only once, drop the acronym. Exempt: math/group notation (`SE(3)`,
    `SO(3)`) and product/proper nouns (ROS 2, AprilTag, Crazyflie, gRPC, OptiTrack).
 4. **Cut brand-name bloat** (`cce4d17`, `bb339b8`). Prefer generic role words — "quadruped", "the
-   drone", "the ground robot", "the micro-UAV" — over repeating "Spot" / "Crazyflie". Name the product
+   drone", "the ground robot", "the nano-UAV" — over repeating "Spot" / "Crazyflie". Name the product
    once where it matters (hardware section, first mention), then use the role word.
 5. **Cut length hard** (`3d1de8c`: 17→9 pp; abstract 520→220 w). Collapse subsections to a single
    paragraph where the venue allows; fold contributions into a sentence; delete section intros and
@@ -82,6 +82,39 @@ It was reverse-engineered from the feedback commits — cite the rule, not just 
    Experiments use "navigation stack" / "localization" / "path planning" (per the 2026-05-21 agreement
    in `project_clawar_paper.md`). Don't blanket-replace either way.
 8. **Active voice, "we" for the authors' actions; figures near their first mention** (`3453ef0`).
+
+Batch 2 — distilled from the 2026-07-08 camera-ready feedback round:
+
+9. **Main idea before implementation detail.** In the abstract and intro, state the concept first
+   ("the localization stack moves off the aerial platform onto the ground robot") before narrating
+   what you built; keep spec numbers (DOF counts, masses in grams) out of the abstract — they belong
+   in the hardware/system section, stated once.
+10. **Explain the machinery you invoke.** A named method (Horn's alignment, Markley's rotation
+    averaging) needs a 1–2-sentence in-context explanation of what it computes and why the results
+    behave as they do (e.g. a rigid SE(3) alignment applies a rotation, so the raw-vs-aligned offset
+    varies spatially instead of being one constant vector). Same for transform/formula chains:
+    introduce every frame and every link (what `map→vision` is, how it differs from `vision→body`,
+    and where each transform comes from) — never drop a chain on the reader unexplained.
+11. **Concrete values over vague ranges; ≈ only in math.** In prose write "around"/"approximately"
+    sparingly, or just the value; reserve the ≈ symbol for formulas. When the setup had specific
+    setpoints (flight planes at 1.75/2.25/2.75 m), list them instead of papering over with a range.
+12. **Report only mechanisms that mattered in the reported experiments.** A safety/robustness
+    feature that never fired in the experiments the paper covers (e.g. the external-pose watchdog)
+    is design documentation, not results — cut it or move it to the system description with a note
+    that it never triggered.
+13. **The experiments intro is a mini-conclusion, not a listing.** Never "We tested the system in
+    three experiments: (i)… (ii)…" — that repeats the subsection headings. State what the
+    experiments collectively demonstrate (the drone is localized in the quadruped's map and
+    followed, despite latency/estimation error), then let the subsections carry the detail.
+14. **The conclusion concludes; it does not summarize.** Answer: what can the reader now believe
+    that they couldn't before? Flip limitations into future work and end the conclusion with an
+    explicit "In future work…" paragraph. The abstract likewise ends with one conclusion plus one
+    sentence on why it matters going forward — not a capability list.
+15. **Terminology and idiom watch.** The Crazyflie-class vehicle is a **nano-UAV** (not micro-UAV;
+    2026-07-08). Question compound phrasings a non-native reader may stumble on ("per detection",
+    "flight numbers", "camera-to-end-effector") — prefer plain, unambiguous wording, and verify
+    hyphenated frame-to-frame terms name the actual frames. Wide table headers wrap onto two rows
+    rather than widening the column.
 
 ## Craft layer — best-paper writing principles (subordinate to the rubric above)
 Source: Nicholas Carlini, *How to win a best paper award* (2026). These sharpen **how well the
