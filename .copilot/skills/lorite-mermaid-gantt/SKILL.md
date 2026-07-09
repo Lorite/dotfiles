@@ -5,9 +5,7 @@ description: Author or restyle a Mermaid gantt chart (timeline / roadmap / sched
 
 # lorite-mermaid-gantt — gantt colour convention
 
-The single source of truth for how lorite gantt charts look. Put the canonical `init` block on every
-gantt; then **the task's tag chooses its colour and meaning** — no per-task styling needed. The block
-also widens rows and enlarges the font (good for slides).
+The single source of truth for how lorite gantt charts look. Put the canonical `init` block on every gantt; then **the task's tag chooses its colour and meaning** — no per-task styling needed. The block also widens rows and enlarges the font (good for slides).
 
 ## Canonical init block
 
@@ -26,8 +24,7 @@ gantt
     Missed deadline      :milestone, crit, 2026-06-23, 0d
 ```
 
-Tune `gantt.leftPadding` for long task labels, and `barHeight` / `fontSize` / `sectionFontSize` for
-the surface (bigger for slides, smaller for dense notes). Use `todayMarker on` to show "now".
+Tune `gantt.leftPadding` for long task labels, and `barHeight` / `fontSize` / `sectionFontSize` for the surface (bigger for slides, smaller for dense notes). Use `todayMarker on` to show "now".
 
 ## Period bars (rectangles)
 
@@ -49,8 +46,7 @@ the surface (bigger for slides, smaller for dense notes). Use `todayMarker on` t
 
 ## `crit` on `:active` / `:done` (special case)
 
-`crit` combined with `active`/`done` does **not** repaint the fill — it keeps the fill and only turns
-the **border** red (`critBorderColor`):
+`crit` combined with `active`/`done` does **not** repaint the fill — it keeps the fill and only turns the **border** red (`critBorderColor`):
 
 | Tag | Fill | Border | Reads as |
 |---|---|---|---|
@@ -60,7 +56,4 @@ the **border** red (`critBorderColor`):
 ## Gotchas
 
 - Untagged period tasks are **valid** — they are the amber "planned" state; don't force a tag on them.
-- A gantt that renders **blank** is a Mermaid parse error — `slidev build` does **not** catch it and
-  it's only visible once rendered. Compare against the block above, and **ask the user to confirm the
-  render** rather than exporting + reading a PDF yourself (token-expensive; see
-  `lorite-slidev-meeting-deck` §5).
+- A gantt that renders **blank** is a Mermaid parse error — `slidev build` does **not** catch it and it's only visible once rendered. Compare against the block above, and **ask the user to confirm the render** rather than exporting + reading a PDF yourself (token-expensive; see `lorite-slidev-meeting-deck` §5).

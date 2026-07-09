@@ -34,7 +34,7 @@ cd ~/.dotfiles
 
 ### Automatic Installation
 - **Oh-My-Zsh**: Zsh framework with plugins
-- **Zsh Plugins**: 
+- **Zsh Plugins**:
   - zsh-autosuggestions
   - zsh-syntax-highlighting
 - **Starship**: Cross-shell prompt

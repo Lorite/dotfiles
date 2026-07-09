@@ -7,8 +7,7 @@ argument-hint: "meeting=<title or id> [start=<YYYY-MM-DD> end=<YYYY-MM-DD>]"
 # Meeting Prep — author the structured meeting note (stage 1)
 
 ## What this skill does
-Prepares a meeting by (a) gathering what you've worked on since the last meeting from vault evidence,
-then (b) **writing the structured meeting note** that is the single **source of truth** for the deck.
+Prepares a meeting by (a) gathering what you've worked on since the last meeting from vault evidence, then (b) **writing the structured meeting note** that is the single **source of truth** for the deck.
 
 > **Pipeline:** this is **step 1** — author/structure the Obsidian meeting note. The user then edits
 > it by hand, and it feeds **`lorite-slidev-meeting-deck`** (step 2, note → slides → PDF). Author the
@@ -16,20 +15,16 @@ then (b) **writing the structured meeting note** that is the single **source of 
 
 ## Inputs
 Resolve the meeting interval one of two ways:
-1. Preferred: Google Calendar (MCP) — resolve the title/id and the interval (previous occurrence →
-   next, for a recurring series; or the event's own start/end for a one-off).
-2. Fallback (Calendar auth often expires): the `start`/`end` arguments. The skill must still work
-   from vault evidence alone.
+1. Preferred: Google Calendar (MCP) — resolve the title/id and the interval (previous occurrence → next, for a recurring series; or the event's own start/end for a one-off).
+2. Fallback (Calendar auth often expires): the `start`/`end` arguments. The skill must still work from vault evidence alone.
 
 ## Procedure (Obsidian-first)
 
 1. **Resolve the interval** (Calendar, else `start`/`end`).
 
-2. **Identify stakeholders** (optional): Calendar attendees + the previous occurrence's attendees;
-   map to `people/` notes for context where possible.
+2. **Identify stakeholders** (optional): Calendar attendees + the previous occurrence's attendees; map to `people/` notes for context where possible.
 
-3. **Collect vault evidence (Bases first).** The Obsidian CLI base commands act on the *active* base
-   file, so `obsidian open path="bases/<BASE>.base" newtab` before querying.
+3. **Collect vault evidence (Bases first).** The Obsidian CLI base commands act on the *active* base file, so `obsidian open path="bases/<BASE>.base" newtab` before querying.
    - Recently edited work notes: `bases/NOTES RECENTLY MODIFIED.base` → view `Recently Edited Work Notes`.
    - Recently created work notes: `bases/NOTES RECENTLY CREATED.base` → view `Recently Created Work Notes`.
    - `obsidian base:query view="<view>" format=tsv` (or `format=json` + filter by `updated`/`created`
@@ -37,11 +32,7 @@ Resolve the meeting interval one of two ways:
    - Also read the **previous meeting note** and any **paper repo(s)** being reported (real numbers,
      not approximations).
 
-4. **Write the structured meeting note** (the source of truth for step 2).
-   The note normally already exists in `calendar_events/<date> <title>.md` (created by the calendar
-   sync: `type: calendar_event`, with template sections `# Details` / `# Description` /
-   `# Pre-meeting Tasks and Notes` / `# Meeting Notes` / `# Other Notes` / `# LLM Summary` /
-   `# Tasks`). Fill it **in place**; if it doesn't exist, create it from the meeting template first.
+4. **Write the structured meeting note** (the source of truth for step 2). The note normally already exists in `calendar_events/<date> <title>.md` (created by the calendar sync: `type: calendar_event`, with template sections `# Details` / `# Description` / `# Pre-meeting Tasks and Notes` / `# Meeting Notes` / `# Other Notes` / `# LLM Summary` / `# Tasks`). Fill it **in place**; if it doesn't exist, create it from the meeting template first.
 
    Fill `# Pre-meeting Tasks and Notes` in exactly this shape:
 
@@ -81,17 +72,12 @@ Resolve the meeting interval one of two ways:
    - TODO outcome.
    ```
 
-   Optionally seed `# Tasks` with carried-over actions (TaskNotes `- [ ]` checkboxes; wikilink the
-   `[[#^prepN]]` they came from).
+   Optionally seed `# Tasks` with carried-over actions (TaskNotes `- [ ]` checkboxes; wikilink the `[[#^prepN]]` they came from).
 
-   Mechanics: use the **`lorite-obsidian-note`** skill (Obsidian CLI when the app is up, file-write
-   fallback). Multi-line CLI `append` is fragile → create/edit the file directly for these blocks.
+   Mechanics: use the **`lorite-obsidian-note`** skill (Obsidian CLI when the app is up, file-write fallback). Multi-line CLI `append` is fragile → create/edit the file directly for these blocks.
 
 ## Write policy
-- The **meeting note is the sanctioned exception** to the AI "ai_brain-only" rule: fill its
-  `# Pre-meeting Tasks and Notes` and scaffold `# Meeting Notes` directly (the note template's `%%`
-  comment invites it). **Never** rewrite the user's hand-written outcomes, `# Other Notes`, or other
-  sections; never touch other notes outside `ai_brain/`.
+- The **meeting note is the sanctioned exception** to the AI "ai_brain-only" rule: fill its `# Pre-meeting Tasks and Notes` and scaffold `# Meeting Notes` directly (the note template's `%%` comment invites it). **Never** rewrite the user's hand-written outcomes, `# Other Notes`, or other sections; never touch other notes outside `ai_brain/`.
 - No secrets (never copy from `obsidian-web-clipper-settings.json` etc.).
 
 ## Troubleshooting

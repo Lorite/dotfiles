@@ -45,15 +45,9 @@ You orchestrate an end-to-end workflow that turns a paper PDF into a Slidev deck
 - You may only create bootstrap files for the empty presentation and orchestration artifacts.
 
 ## Obsidian read-first / log-often (stage-10 pipeline rule)
-- **Read first:** before building, check the vault (`~/git/lorite-obsidian-notes`) for the driving
-  task note and the paper's literature note (`media/research/<title> - <citekey>.md`) — a prior
-  deep-read is better research input than re-extracting the PDF from scratch; pass it to the
-  researcher subagent alongside the PDF.
-- **Log as you go:** record the deck build (brief path, deck path, key decisions, open placeholders)
-  via the **`lorite-ai-chat-diary`** skill — a dated diary entry plus the detail in the linked
-  task/paper note — not only at the end. The subagents don't log; logging is your job.
-- **Full spec up front:** each subagent call carries the complete context (paper source, audience,
-  duration, output paths, agenda requirements, relevant vault-note content) in its first message.
+- **Read first:** before building, check the vault (`~/git/lorite-obsidian-notes`) for the driving task note and the paper's literature note (`media/research/<title> - <citekey>.md`) — a prior deep-read is better research input than re-extracting the PDF from scratch; pass it to the researcher subagent alongside the PDF.
+- **Log as you go:** record the deck build (brief path, deck path, key decisions, open placeholders) via the **`lorite-ai-chat-diary`** skill — a dated diary entry plus the detail in the linked task/paper note — not only at the end. The subagents don't log; logging is your job.
+- **Full spec up front:** each subagent call carries the complete context (paper source, audience, duration, output paths, agenda requirements, relevant vault-note content) in its first message.
 
 ## End-to-End Workflow
 1. **Intake**

@@ -6,9 +6,7 @@ argument-hint: "date=<YYYY-MM-DD> [series=<folder name>] [topics=<what the meeti
 
 # lorite-recurring-meeting-docx — update the rolling meeting Word file in place
 
-Alejandro keeps **one rolling `.docx` per recurring meeting series** and types live notes into
-it during the meeting. To prep the next meeting, **edit that file in place** — never generate a
-new document, never overwrite the file wholesale, never touch past meeting sections.
+Alejandro keeps **one rolling `.docx` per recurring meeting series** and types live notes into it during the meeting. To prep the next meeting, **edit that file in place** — never generate a new document, never overwrite the file wholesale, never touch past meeting sections.
 
 ## The files
 
@@ -26,17 +24,13 @@ Files ending in `-safeBackup-NNNN.docx` are OneDrive conflict artifacts — **ne
 
 1. **TOC** (Word field — never hand-edit; the user refreshes it in Word).
 2. `# Thesis objective` — short standing project description.
-3. `# Timeline` — key hard dates; the user strikes through past ones himself. Add with a new line
-   when a new hard date was agreed (deadline, midway date, stay start); and edit existing lines as needed.
-4. `# 2026-MM-dd` — the **blank template section** (Status: Past / Present / Future + Actions).
-   Leave it untouched; it marks the insertion point.
+3. `# Timeline` — key hard dates; the user strikes through past ones himself. Add with a new line when a new hard date was agreed (deadline, midway date, stay start); and edit existing lines as needed.
+4. `# 2026-MM-dd` — the **blank template section** (Status: Past / Present / Future + Actions). Leave it untouched; it marks the insertion point.
 5. Dated meeting sections `# YYYY-MM-DD`, **newest first**, directly after the template section.
 
 ## Prerequisites
 
-mcp-libre is installed and registered by `install.sh` in the dotfiles repo (handles cloning,
-building the `.oxt`, Python 3.12 venv, and `claude mcp add`). If the `libreoffice` MCP server
-is missing, re-run `install.sh`.
+mcp-libre is installed and registered by `install.sh` in the dotfiles repo (handles cloning, building the `.oxt`, Python 3.12 venv, and `claude mcp add`). If the `libreoffice` MCP server is missing, re-run `install.sh`.
 
 Each session, LibreOffice must be open with the document and the in-app MCP server started:
 
@@ -49,17 +43,10 @@ Each session, LibreOffice must be open with the document and the in-app MCP serv
 
 ## Procedure
 
-1. **Read the document structure**: `structure(action="outline")` to get all headings with paragraph
-   numbers; `document(action="content")` to read the full text. The **most recent dated section is
-   the canonical format to mirror** — practices evolve, and the latest meeting reflects the current
-   preference. (As of 2026-06-12 that is: `## Purpose` → `## Agenda` table (Min · Item · Decision
-   sought) → one `##` section per numbered topic, each with `### Pre-meeting notes` (concise bullets)
-   + `### Notes and decision` containing `- TODO` → an action-items section. If the latest section
-   instead uses the older Status(Past/Present/Future)+Actions form, mirror that.)
+1. **Read the document structure**: `structure(action="outline")` to get all headings with paragraph numbers; `document(action="content")` to read the full text. The **most recent dated section is the canonical format to mirror** — practices evolve, and the latest meeting reflects the current preference. (As of 2026-06-12 that is: `## Purpose` → `## Agenda` table (Min · Item · Decision sought) → one `##` section per numbered topic, each with `### Pre-meeting notes` (concise bullets)
+   + `### Notes and decision` containing `- TODO` → an action-items section. If the latest section instead uses the older Status(Past/Present/Future)+Actions form, mirror that.)
 
-2. **Gather content vault-first**: `lorite-meeting-prep` skill / Bases, the relevant project +
-   task notes, and `ai_chats/diary/daily/` since the previous meeting. Pre-meeting bullets are
-   *context to decide from*, 1–2 lines each; decisions stay as `- TODO` to be filled live.
+2. **Gather content vault-first**: `lorite-meeting-prep` skill / Bases, the relevant project + task notes, and `ai_chats/diary/daily/` since the previous meeting. Pre-meeting bullets are *context to decide from*, 1–2 lines each; decisions stay as `- TODO` to be filled live.
 
 3. **Back up** to `/tmp` before editing:
    ```bash
@@ -67,11 +54,9 @@ Each session, LibreOffice must be open with the document and the in-app MCP serv
    ```
    Ask the user to close the file in Word/OneDrive sync first if possible.
 
-4. **Find the insertion point**: use `search(action="find", query="2026-MM-dd")` to locate the
-   template section heading and get its paragraph number. The new section goes **after** this
-   template heading and **before** the previous newest meeting heading.
+4. **Find the insertion point**: use `search(action="find", query="2026-MM-dd")` to locate the template section heading and get its paragraph number. The new section goes **after** this template heading and **before** the previous newest meeting heading.
 
-5. **Insert the new section**: 
+5. **Insert the new section**:
    - `cursor(action="goto_paragraph", n=<template_para_n>)` to move to the template heading.
    - `cursor(action="context")` to confirm position.
    - `text(action="insert", content="\n<full new section text>")` to insert after the cursor.
@@ -85,8 +70,7 @@ Each session, LibreOffice must be open with the document and the in-app MCP serv
 
 6. **Save**: `save(action="save")` — preserves the .docx format since the file was opened as docx.
 
-7. **Validate**: re-run `structure(action="outline")` to confirm the new section appears at the
-   right position between the template and the previous meeting. Report to the user.
+7. **Validate**: re-run `structure(action="outline")` to confirm the new section appears at the right position between the template and the previous meeting. Report to the user.
 
 8. **Log** the prep via `lorite-ai-chat-diary` (diary entry + detail in the meeting's vault notes).
 
@@ -101,9 +85,6 @@ Each session, LibreOffice must be open with the document and the in-app MCP serv
 ## Gotchas
 
 - The path contains spaces and accented characters (`Andrés`) — always quote, prefer absolute paths.
-- OneDrive sync: if the file changes on disk mid-session (sync conflict), re-open it in LibreOffice
-  rather than continuing to edit a stale in-memory copy.
-- The TOC will show the new section only after the user refreshes fields in Word — say so in the
-  hand-off message rather than trying to regenerate the TOC.
-- LibreOffice must be running and the MCP server started before any tool calls; if
-  `document(action="status")` fails, walk the user through the setup steps above.
+- OneDrive sync: if the file changes on disk mid-session (sync conflict), re-open it in LibreOffice rather than continuing to edit a stale in-memory copy.
+- The TOC will show the new section only after the user refreshes fields in Word — say so in the hand-off message rather than trying to regenerate the TOC.
+- LibreOffice must be running and the MCP server started before any tool calls; if `document(action="status")` fails, walk the user through the setup steps above.

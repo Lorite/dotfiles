@@ -6,38 +6,21 @@ argument-hint: "<short summary of what was done> + which notes to link (task / p
 
 # lorite-ai-chat-diary — log work to the daily AI-chat diary
 
-The **single, canonical way** to record what was worked on, so any later session can reconstruct
-context fast. Used by `lorite-obsidian-ai-brain`, every PhD-pipeline agent (`lorite-paper-scout`, `lorite-paper-reader`,
-`lorite-task-manager`, `lorite-experiment-designer`, …), and the user directly. Two parts: a lightweight **diary
-entry** (the index) and the **full detail in the linked note(s)**.
+The **single, canonical way** to record what was worked on, so any later session can reconstruct context fast. Used by `lorite-obsidian-ai-brain`, every PhD-pipeline agent (`lorite-paper-scout`, `lorite-paper-reader`, `lorite-task-manager`, `lorite-experiment-designer`, …), and the user directly. Two parts: a lightweight **diary entry** (the index) and the **full detail in the linked note(s)**.
 
-Vault: `~/git/lorite-obsidian-notes`. Dates are `yyyy-MM-dd`, times `HH:mm` (current local time — get
-it from the `time` tool or `date "+%H:%M"`).
+Vault: `~/git/lorite-obsidian-notes`. Dates are `yyyy-MM-dd`, times `HH:mm` (current local time — get it from the `time` tool or `date "+%H:%M"`).
 
 ## When to use
-Log **as you work, not only at the end**: at the start of a work session (open/create today's diary
-note) and after each substantive exchange or finished piece of work.
+Log **as you work, not only at the end**: at the start of a work session (open/create today's diary note) and after each substantive exchange or finished piece of work.
 
 ## What a good entry is (the notes outlive the chat)
-- **Written for a reader who didn't see the chat** — a future session (human or AI) must be able to
-  resume from the note alone: outcome first, then decisions **with their why**, open threads, and
-  next steps. Spell things out; no chat-local shorthand or unexplained codenames.
-- **Grounded.** Log only outcomes backed by this session's actual tool output; anything unverified
-  is logged as unverified ("fix applied, not yet tested in a fresh session"), never as done.
+- **Written for a reader who didn't see the chat** — a future session (human or AI) must be able to resume from the note alone: outcome first, then decisions **with their why**, open threads, and next steps. Spell things out; no chat-local shorthand or unexplained codenames.
+- **Grounded.** Log only outcomes backed by this session's actual tool output; anything unverified is logged as unverified ("fix applied, not yet tested in a fresh session"), never as done.
 - **Reproducible.** The `Replicate manually` block (below) captures the exact commands.
 
 ## Write policy (never violate)
-- The `ai_chats/diary/daily/` folder is **AI-writable** (explicit user grant) — diary notes may be
-  created and appended freely.
-- In **every other note**, only **append**, never rewrite hand-written content — and **where** the
-  append goes is note-type-specific (see Part 2): **task notes** get a dated `### AI generated` entry
-  inside their `# 📓 Journal / Work Log`; **all other notes** get a top-level `# AI Generated`
-  section. Two task-note exceptions: **subtask checkboxes may be ticked** (`- [ ]` → `- [x]`) when
-  the logged work verifiably completes them (box state only, never the item text), and the
-  **`status` frontmatter may be set** to todo / investigating / in-progress / blocked /
-  pending-review / cancelled (never `done`) as the logged work changes the task's state. Defer to the
-  **`lorite-obsidian-note`** skill for the per-note append mechanics and the
-  **`lorite-obsidian-markdown`** skill for syntax (wikilinks, callouts).
+- The `ai_chats/diary/daily/` folder is **AI-writable** (explicit user grant) — diary notes may be created and appended freely.
+- In **every other note**, only **append**, never rewrite hand-written content — and **where** the append goes is note-type-specific (see Part 2): **task notes** get a dated `### AI generated` entry inside their `# 📓 Journal / Work Log`; **all other notes** get a top-level `# AI Generated` section. Two task-note exceptions: **subtask checkboxes may be ticked** (`- [ ]` → `- [x]`) when the logged work verifiably completes them (box state only, never the item text), and the **`status` frontmatter may be set** to todo / investigating / in-progress / blocked / pending-review / cancelled (never `done`) as the logged work changes the task's state. Defer to the **`lorite-obsidian-note`** skill for the per-note append mechanics and the **`lorite-obsidian-markdown`** skill for syntax (wikilinks, callouts).
 - Never write secrets.
 
 ## Part 1 — the daily diary note (lightweight index)
@@ -61,12 +44,9 @@ Path: `ai_chats/diary/daily/AI Chat - <yyyy-MM-dd>.md`.
    Multi-line CLI `append` is flaky → **edit the file directly** to insert the entry (create-then-edit).
 
 ## Part 2 — full detail in each linked note
-For every note wikilinked in the entry, file the same detail you gave the user in chat. **Where it
-lands depends on the note type** — defer to the `lorite-obsidian-note` skill for the exact mechanics:
+For every note wikilinked in the entry, file the same detail you gave the user in chat. **Where it lands depends on the note type** — defer to the `lorite-obsidian-note` skill for the exact mechanics:
 
-- **Task notes** (`type: task`, in `tasks/`): the detail *is* a work-log entry, so it goes **inside
-  the note's existing `# 📓 Journal / Work Log` section**, not in a separate top-level section. Add a
-  dated entry **newest-first**, leaving existing entries intact:
+- **Task notes** (`type: task`, in `tasks/`): the detail *is* a work-log entry, so it goes **inside the note's existing `# 📓 Journal / Work Log` section**, not in a separate top-level section. Add a dated entry **newest-first**, leaving existing entries intact:
   ```
   ## [[<yyyy-MM-dd>]]
 
@@ -74,15 +54,7 @@ lands depends on the note type** — defer to the `lorite-obsidian-note` skill f
 
   <full detail; link the diary with [[AI Chat - <yyyy-MM-dd>]] and wikilink liberally>
   ```
-  **Ordering is strict and the opposite of the diary file: the most recent date heading is always at
-  the TOP of the section, above all older ones.** Insert a new `## [[<date>]]` heading **immediately
-  under the `# 📓 Journal / Work Log` header**, never at the end of the file. So a journal spanning two
-  days reads top-to-bottom **newest → oldest** — e.g. `## [[2026-06-25]]` *above* `## [[2026-06-24]]`.
-  If today's date heading already exists, just add your `### AI generated` entry under it (it's already
-  on top). Demote any sub-headings in the detail to `####`+ so they nest under `### AI generated`. Use
-  a **direct file edit** for this positioned insert — the CLI `append` only writes to the end of the
-  file, which is the **wrong place here** (that is exactly the bug that puts a new date below older
-  ones).
+  **Ordering is strict and the opposite of the diary file: the most recent date heading is always at the TOP of the section, above all older ones.** Insert a new `## [[<date>]]` heading **immediately under the `# 📓 Journal / Work Log` header**, never at the end of the file. So a journal spanning two days reads top-to-bottom **newest → oldest** — e.g. `## [[2026-06-25]]` *above* `## [[2026-06-24]]`. If today's date heading already exists, just add your `### AI generated` entry under it (it's already on top). Demote any sub-headings in the detail to `####`+ so they nest under `### AI generated`. Use a **direct file edit** for this positioned insert — the CLI `append` only writes to the end of the file, which is the **wrong place here** (that is exactly the bug that puts a new date below older ones).
   - **Replicate manually (whenever the work ran commands).** Make the log *reproducible*, not just
     descriptive: add a `**Replicate manually:**` line followed by a fenced `bash` block with the
     **exact commands** the user can paste to reproduce the result — environment/setup (the venv, or
@@ -98,19 +70,12 @@ lands depends on the note type** — defer to the `lorite-obsidian-note` skill f
 
   <full detail: what was done, decisions, findings, exact numbers, next steps — wikilink liberally>
   ```
-  If the note **already has** a `# AI Generated` H1, add **only** the
-  `## [[<date>]] - [[AI Chat - <date>]]` subsection under it (don't duplicate the H1). For a brand-new
-  `ai_brain/` note, the detail can be the note body itself (use the `lorite-obsidian-note` skill's
-  `ai_brain` template) and the diary entry just links to it.
+  If the note **already has** a `# AI Generated` H1, add **only** the `## [[<date>]] - [[AI Chat - <date>]]` subsection under it (don't duplicate the H1). For a brand-new `ai_brain/` note, the detail can be the note body itself (use the `lorite-obsidian-note` skill's `ai_brain` template) and the diary entry just links to it.
 
-- **Diary = index; linked notes = full detail.** Don't put the long detail in the diary note; the
-  linked note should stand on its own without re-reading the chat.
+- **Diary = index; linked notes = full detail.** Don't put the long detail in the diary note; the linked note should stand on its own without re-reading the chat.
 
 ## Mechanism
-CLI-first / file-fallback, exactly like `lorite-obsidian-note`: Obsidian CLI when the desktop app is running
-(use direct file edits for positioned inserts), direct file-write when it isn't.
+CLI-first / file-fallback, exactly like `lorite-obsidian-note`: Obsidian CLI when the desktop app is running (use direct file edits for positioned inserts), direct file-write when it isn't.
 
 ## Output
-Report: today's diary note path, the entry added, and which linked notes received a detail section
-(and via which mechanism). When the work ran commands, confirm the task-note entry includes a
-`Replicate manually` block capturing them.
+Report: today's diary note path, the entry added, and which linked notes received a detail section (and via which mechanism). When the work ran commands, confirm the task-note entry includes a `Replicate manually` block capturing them.

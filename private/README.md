@@ -12,8 +12,7 @@ cp dconf-settings.ini.example dconf-settings.ini
 cp env.sh.example env.sh
 ```
 
-Then edit each file with your actual values.
-The install script also writes your system dconf backup to `dconf-settings.ini` in this directory.
+Then edit each file with your actual values. The install script also writes your system dconf backup to `dconf-settings.ini` in this directory.
 
 ## Files
 
