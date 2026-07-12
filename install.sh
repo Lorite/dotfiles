@@ -638,6 +638,22 @@ else
 	print_warning "No systemd user session — skipped obsidian-daily-note.timer (headless server?)"
 fi
 
+# Morning briefing at 06:00: headless Claude Code run of the lorite-morning-briefing
+# skill (daily-note LLM summaries + vault git audit + ai_brain briefing note).
+# Canonical unit copies live in tools/lorite/; Persistent catches slept-through
+# mornings and the wrapper is idempotent per day.
+if systemctl --user show-environment >/dev/null 2>&1; then
+	mkdir -p "$HOME/.config/systemd/user"
+	cp "$DOTFILES_DIR/tools/lorite/lorite-morning-briefing.service" \
+		"$DOTFILES_DIR/tools/lorite/lorite-morning-briefing.timer" \
+		"$HOME/.config/systemd/user/"
+	systemctl --user daemon-reload
+	systemctl --user enable --now lorite-morning-briefing.timer
+	print_success "Enabled lorite-morning-briefing.timer (daily 06:00 briefing)"
+else
+	print_warning "No systemd user session — skipped lorite-morning-briefing.timer (headless server?)"
+fi
+
 # Bridge Nextcloud reference folders into the Obsidian vault: per-machine symlinks
 # (vault/nextcloud/papers -> ~/nextcloud/zotero, …) + Syncthing/git ignore entries,
 # so notes embed files with stable vault-relative links while the bytes live in Nextcloud.

@@ -1,0 +1,11 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/lorite-morning-briefing.service
+# Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
+[Unit]
+Description=Morning briefing: daily-note LLM summaries + vault git audit (headless Claude Code)
+
+[Service]
+Type=oneshot
+ExecStart=%h/git/dotfiles/tools/lorite/morning_briefing.sh
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+TimeoutStartSec=30min
+# Already-written today → quick exit 0; failures show in `journalctl --user -u lorite-morning-briefing`

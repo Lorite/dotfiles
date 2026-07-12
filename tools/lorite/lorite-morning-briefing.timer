@@ -1,0 +1,13 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/lorite-morning-briefing.timer
+# Daily at 06:00; Persistent catches mornings the laptop slept through (fires on
+# next wake/login), and the service's per-day idempotency makes that harmless.
+[Unit]
+Description=Daily 06:00 morning briefing (daily-note summaries + vault git audit)
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+Unit=lorite-morning-briefing.service
+
+[Install]
+WantedBy=timers.target
