@@ -1,6 +1,6 @@
 ---
 name: lorite-morning-briefing
-description: Write the daily 06:00 morning briefing — fill the LLM time-slot summaries of recent daily notes (yesterday first), audit the last 24 h of the Obsidian vault git repo (commits + unstaged changes) for problems, and write a briefing note (ai_chats/briefings/daily/) that reports issues and ends with the reminder to manually review yesterday's daily note. Runs headless via lorite-morning-briefing.timer; also runnable on demand. Use when asked for the morning briefing or to check the vault's recent commits.
+description: Write the daily 06:00 morning briefing — fill the LLM time-slot summaries of recent daily notes (yesterday first), audit the last 24 h of the Obsidian vault git repo (commits + unstaged changes) for problems, delegate to lorite-concept-note-writer to turn the day's new unresolved concept [[links]] into concept notes, and write a briefing note (ai_chats/briefings/daily/) that reports issues and ends with the reminder to manually review yesterday's daily note. Runs headless via lorite-morning-briefing.timer; also runnable on demand. Use when asked for the morning briefing or to check the vault's recent commits.
 argument-hint: "(no args) · force (rewrite today's briefing)"
 ---
 
@@ -46,7 +46,17 @@ python3 ~/git/dotfiles/tools/lorite/obsidian_daily_note.py pending --since <toda
 - If yesterday is `missing`/`unprocessed`: run `obsidian_daily_note.py process <yesterday>` first **only if Obsidian is running** (`obsidian vault` exits 0); otherwise leave it to the hourly `obsidian-daily-note.timer` and report it as pending in the briefing.
 - `summary-todo` dates **older than the 3-day window**: list them in the briefing, don't touch them.
 
-### 3. Write the briefing note
+### 3. Fill in concept notes for the day's new links (delegate — best-effort)
+
+Normal note-taking and the vault's green→`[[wikilink]]` highlight scheme leave **new, unresolved concept links** behind. Turn them into real notes by delegating to the **`lorite-concept-note-writer`** agent in its scan mode:
+
+> Invoke `lorite-concept-note-writer` with: *"scan recent changes — create concept notes for the new unresolved concept links in the last 24 h of vault commits + unstaged/untracked changes."*
+
+The agent does its own work: extracts new `[[links]]` from `git log --since="24 hours ago"` / `git diff` / untracked files, drops the ones that already resolve (fast offline note-name/alias index — **not** the slow `obsidian unresolved` scan), **filters to genuine concepts** (skipping dates, media/attachment names, template placeholders, and people/works/places), web-researches each, and writes it under `work/concepts/…` or `personal/concepts/…` in the vault's concept schema (append-only if a note already exists). No per-day cap — the 24 h window bounds it.
+
+**Best-effort and non-blocking:** if the agent errors, spawning is unavailable, or the Obsidian app is down, capture whatever it reports (or note "concept-note pass skipped") and carry on — **never fail the briefing over concept notes**. Collect its created/skipped summary for the briefing note.
+
+### 4. Write the briefing note
 
 Create `ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no Obsidian needed), frontmatter as in `templates/ai_note.md` (`created`, `source: ai`), then:
 
@@ -60,6 +70,10 @@ Create `ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no Obsidian
 - Commits reviewed: <n> (<shas>), unstaged files: <n>
 - ✅ No issues found — or one bullet per finding: **file** (sha) — what's wrong
 
+## 🧩 Concept notes (new [[links]] → notes)
+- Created: <n> — [[Note A]] · [[Note B]] … (or "none new")
+- Skipped: <grouped counts — not a concept (people/works/dates) / already exists / couldn't ground> (or omit if none)
+
 ## ⏳ Older pending
 - (older summary-todo dates, and anything else left for a human)
 
@@ -69,9 +83,9 @@ Create `ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no Obsidian
 
 Keep it scannable — it's read over coffee, possibly on an e-reader. Only claims backed by this run's command output; anything unverified is labeled as such.
 
-### 4. Log
+### 5. Log
 
-Append a one-line entry to the AI-chat diary per the `lorite-ai-chat-diary` skill (`ai_chats/diary/daily/AI Chat - <today>.md`), wikilinking the briefing note. Skip the per-task-note detail log for routine runs; log detail only when the audit found real issues.
+Append a one-line entry to the AI-chat diary per the `lorite-ai-chat-diary` skill (`ai_chats/diary/daily/AI Chat - <today>.md`), wikilinking the briefing note (and any concept notes created in step 3). Skip the per-task-note detail log for routine runs; log detail only when the audit found real issues.
 
 ## Troubleshooting
 

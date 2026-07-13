@@ -70,6 +70,7 @@ Choose `work/concepts/<domain-path>/<Concept Name>.md` (personal topics → `per
 Split the path (minus filename) on `/`; find the `concepts` segment. **Base tags** = the segments up to and including `concepts` (e.g. `work`, `concepts`). **Deepest tag** = the segments after `concepts` joined with `/`. Final `tags` = base tags + the single deepest tag. Example: `work/concepts/engineering/robotics/state_estimation/Foo.md` → `tags: [work, concepts, engineering/robotics/state_estimation]`.
 
 ### 3. Write the file in the exact template schema
+**Schema owner: `templates/concepts/concept.md`** (single source of truth for the frontmatter fields + section order; the `generate_concept_content.js` QuickAdd filler and `lorite-concept-note-writer` emit the same schema — if it changes, change the template first and mirror here).
 Frontmatter (datetimes `YYYY-MM-DDTHH:mm`, local time from the `time` tool / `date "+%Y-%m-%dT%H:%M"`):
 
 ```yaml
