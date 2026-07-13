@@ -137,10 +137,10 @@ force_session_upload = "true"
 #resync_auth = "false"
 
 ## This option controls which directories are excluded from sync.
-#skip_dir = ""
+skip_dir = "Archived"
 
 ## When enabled, skip_dir matches must be strict, full path matches only.
-#skip_dir_strict_match = "false"
+skip_dir_strict_match = "true"
 
 ## When enabled, skip dotfiles and dot folders from sync.
 #skip_dotfiles = "false"
