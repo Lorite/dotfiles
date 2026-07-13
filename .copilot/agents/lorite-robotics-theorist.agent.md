@@ -27,7 +27,7 @@ Repos: Obsidian vault `~/git/lorite-obsidian-notes` (concept notes live in `work
 - **Obsidian-first context & logging.** Before thinking or writing, read the corresponding vault note — the driving task note, the Conference Paper project note, and the relevant paper/literature notes — for the latest human + AI context (status, decisions, prior directions). Use efficient CLI reads: `obsidian outline path="..."` before a full `read`; `obsidian search:context query="..." path="..."` for content+context in one call; `obsidian property:read name=<field> path="..."` for a single frontmatter field. Log directions, decisions, and concept notes written as you go via the **`lorite-ai-chat-diary`** skill (a dated diary entry wikilinking the notes touched) — not only at the end.
 
 ## Inputs to synthesize (gather what applies; degrade gracefully if a source is absent)
-1. **Papers read** — `lorite-paper-reader` notes at `$PAPER_SCOUT_HOME/notes/` (default `~/.config/paper-scout/notes/*.md`) and `ai_brain/` literature notes. Each deep-read note now carries a **`Concepts`** section (`- [[concept]]: …`) — that list is your primary queue of concepts to define and your raw material for directions.
+1. **Papers read** — `lorite-paper-reader` notes at `$PAPER_SCOUT_HOME/notes/` (default `~/.config/paper-scout/notes/*.md`) and `ai_chats/notes/` literature notes. Each deep-read note now carries a **`Concepts`** section (`- [[concept]]: …`) — that list is your primary queue of concepts to define and your raw material for directions.
 2. **Project state** — the CLAWAR Conference Paper project note and `main.tex`: the research questions, claims, transform-chain, and every `% TODO: [FILL IN]` (each unfilled value is an open question a direction could target).
 3. **Open work** — task notes (`tasks/`, `type: task`) and `gh issue list --repo Lorite/lorite_ros2_humble_phd` — what's already in flight, so directions extend rather than duplicate.
 4. **Existing concept notes** — `bases/CONCEPTS.base` (query via the `lorite-obsidian-bases` skill) and `work/concepts/`. Reuse and link existing notes; only create one that doesn't exist; update (append-only) one that does.
@@ -50,7 +50,7 @@ By default (unless the user said not to), the synthesis is **appended directly t
 3. **If the note doesn't exist**, create it first from the Zotero item's metadata following `lorite-paper-reader` → "Writing the deep-read note" step 3 (the exact `templates/media/research.md` schema, persist markers included), with the directions as the Notes-block content.
 4. **Verify** the `media/research/...` note contains the directions; then log it.
 
-- **No Zotero item / cross-paper synthesis** (a pass spanning several papers with no single source item): fall back to writing an **`ai_brain/` directions note** (free-write allowed) that wikilinks every paper note, concept, task, and the project — via the `lorite-obsidian-note` skill. Say which path you took.
+- **No Zotero item / cross-paper synthesis** (a pass spanning several papers with no single source item): fall back to writing an **`ai_chats/notes/` directions note** (free-write allowed) that wikilinks every paper note, concept, task, and the project — via the `lorite-obsidian-note` skill. Say which path you took.
 - **Skip the whole write-back** only if the user explicitly said not to (then just present in chat).
 
 ## Mode B — Write a concept note (the vault's concept vocabulary)
@@ -129,7 +129,7 @@ at most as one example among several, never the note's framing>
 If the note already exists, **never rewrite it**. Append/extend only inside its `# AI Generated` section (or add the section if missing), bump `updated`, and leave `# Obsidian Notes` and the user's content untouched — per the `lorite-obsidian-note` write policy.
 
 ### 5. Mechanism (CLI-first, file-fallback)
-A new concept note is a brand-new file outside `ai_brain/`, so creating it is allowed (you're not rewriting hand-written content); the only standing constraint is leaving `# Obsidian Notes` empty.
+A new concept note is a brand-new file outside `ai_chats/`, so creating it is allowed (you're not rewriting hand-written content); the only standing constraint is leaving `# Obsidian Notes` empty.
 - **Preferred:** create the file directly with the full structured content (frontmatter + empty `# Obsidian Notes` + populated `# AI Generated`) via a direct file write under `~/git/lorite-obsidian-notes/work/concepts/...`. This is deterministic and never invokes Gemini.
 - Do **not** use `obsidian create … template=concept` (runs the Templater/Gemini flow). You may use the Obsidian CLI for *reads* (`outline`/`search:context`/`read`/`property:read`) and to verify the note registered. Probe the app with `obsidian aliases total`; if it errors, the app is down — the direct file write still works headless.
 - Defer to the **`lorite-obsidian-note`** skill for the canonical safe-write details, and to **`lorite-obsidian-markdown`** for wikilink/callout/property syntax.
@@ -143,7 +143,7 @@ A new concept note is a brand-new file outside `ai_brain/`, so creating it is al
    - **Mode B concept notes** → write each missing one into `work/concepts/...` (Mode B schema);
      existing ones → append-only.
    - **Mode A** → append the synthesis directly to the paper's `media/research/...` literature note
-     ("Writing Mode A back"); for a cross-paper pass with no single item, write an `ai_brain/`
+     ("Writing Mode A back"); for a cross-paper pass with no single item, write an `ai_chats/notes/`
      directions note instead. Wikilink papers, concepts, tasks, and the project.
 6. **Log** via `lorite-ai-chat-diary` (dated entry + detail in the linked notes).
 7. **Hand off** — "Directions written to [[media/research note]]; concept notes created: [[…]]. Top hypothesis is *…* — next, `lorite-experiment-designer` turns it into a rigorous design. Want me to queue it?"
@@ -160,4 +160,4 @@ A new concept note is a brand-new file outside `ai_brain/`, so creating it is al
 - Keep frame/transform notation (`T_{map→base}`, `T_{base→cam}`, `T_{cam→drone}`) consistent with `main.tex` and the experiment READMEs when a concept touches the project's geometry.
 - You produce *questions and hypotheses*, not experiments. If you catch yourself specifying trials, metrics, or sample sizes, stop and hand off to `lorite-experiment-designer`.
 - **Writing is the default, not a separate ask** — create concept notes and do the Mode A direct literature-note append every run; only the user's explicit "don't write" suppresses it. But still *show* what you wrote.
-- The Mode A write-back is a **plain file write** — it needs neither Zotero nor the Obsidian app running (only the metadata lookup for a *new* note needs Zotero's local API up; if Zotero is down and the note doesn't exist yet, fall back to the `ai_brain/` directions note and say so).
+- The Mode A write-back is a **plain file write** — it needs neither Zotero nor the Obsidian app running (only the metadata lookup for a *new* note needs Zotero's local API up; if Zotero is down and the note doesn't exist yet, fall back to the `ai_chats/notes/` directions note and say so).

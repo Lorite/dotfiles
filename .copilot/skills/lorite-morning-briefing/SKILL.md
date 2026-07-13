@@ -1,6 +1,6 @@
 ---
 name: lorite-morning-briefing
-description: Write the daily 06:00 morning briefing — fill the LLM time-slot summaries of recent daily notes (yesterday first), audit the last 24 h of the Obsidian vault git repo (commits + unstaged changes) for problems, and write an ai_brain briefing note that reports issues and ends with the reminder to manually review yesterday's daily note. Runs headless via lorite-morning-briefing.timer; also runnable on demand. Use when asked for the morning briefing or to check the vault's recent commits.
+description: Write the daily 06:00 morning briefing — fill the LLM time-slot summaries of recent daily notes (yesterday first), audit the last 24 h of the Obsidian vault git repo (commits + unstaged changes) for problems, and write a briefing note (ai_chats/briefings/daily/) that reports issues and ends with the reminder to manually review yesterday's daily note. Runs headless via lorite-morning-briefing.timer; also runnable on demand. Use when asked for the morning briefing or to check the vault's recent commits.
 argument-hint: "(no args) · force (rewrite today's briefing)"
 ---
 
@@ -10,7 +10,7 @@ Runs every morning at 06:00 (systemd user timer `lorite-morning-briefing.timer` 
 
 ## Idempotency
 
-Today's briefing is `ai_brain/<today> AI Brain - Morning Briefing.md`. If it already exists, stop immediately (report "already written") — unless invoked with `force`, in which case overwrite it (it's an `ai_brain/` note, free-write zone).
+Today's briefing is `ai_chats/briefings/daily/AI Briefing - <today>.md`. If it already exists, stop immediately (report "already written") — unless invoked with `force`, in which case overwrite it (it's in `ai_chats/`, the free-write zone).
 
 ## Procedure
 
@@ -48,10 +48,10 @@ python3 ~/git/dotfiles/tools/lorite/obsidian_daily_note.py pending --since <toda
 
 ### 3. Write the briefing note
 
-Create `ai_brain/<today> AI Brain - Morning Briefing.md` directly (no Obsidian needed), frontmatter as in `templates/ai_brain.md` (`created`, `source: ai_brain`), then:
+Create `ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no Obsidian needed), frontmatter as in `templates/ai_note.md` (`created`, `source: ai`), then:
 
 ```markdown
-# <today> AI Brain - Morning Briefing
+# AI Briefing - <today>
 
 ## 📝 Daily note summaries
 - (per date: summary written / lint skipped (Obsidian closed) / still pending processing; wikilink each date, e.g. [[<yesterday>]])

@@ -70,7 +70,7 @@ For every note wikilinked in the entry, file the same detail you gave the user i
 
   <full detail: what was done, decisions, findings, exact numbers, next steps — wikilink liberally>
   ```
-  If the note **already has** a `# AI Generated` H1, add **only** the `## [[<date>]] - [[AI Chat - <date>]]` subsection under it (don't duplicate the H1). For a brand-new `ai_brain/` note, the detail can be the note body itself (use the `lorite-obsidian-note` skill's `ai_brain` template) and the diary entry just links to it.
+  If the note **already has** a `# AI Generated` H1, add **only** the `## [[<date>]] - [[AI Chat - <date>]]` subsection under it (don't duplicate the H1). For a brand-new `ai_chats/notes/` note, the detail can be the note body itself (use the `lorite-obsidian-note` skill's `ai_note` template) and the diary entry just links to it.
 
 - **Diary = index; linked notes = full detail.** Don't put the long detail in the diary note; the linked note should stand on its own without re-reading the chat.
 

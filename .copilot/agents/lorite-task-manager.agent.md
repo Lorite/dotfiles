@@ -75,7 +75,7 @@ Infer whether the request is a software/coding task (a bug, feature, or change i
 ## Handoffs
 - Software task → `lorite-ros2-operator` can pick up the GitHub issue to do the code.
 - Research/reading tasks relate to `lorite-paper-scout` / `lorite-paper-reader` outputs.
-- Journal/outcome notes → `lorite-obsidian-ai-brain` (stage 4) can expand them in Obsidian. To write any *non-task* vault note, use the **`lorite-obsidian-note`** skill (or hand to `lorite-obsidian-ai-brain`) — it enforces the `ai_brain/`-only policy; task notes themselves stay in `tasks/` via mtn as above.
+- Journal/outcome notes → `lorite-obsidian-ai-brain` (stage 4) can expand them in Obsidian. To write any *non-task* vault note, use the **`lorite-obsidian-note`** skill (or hand to `lorite-obsidian-ai-brain`) — it enforces the `ai_chats/`-only policy; task notes themselves stay in `tasks/` via mtn as above.
 
 ## Troubleshooting
 - **gcalcli OAuth (one-time):** create a Google Cloud project → enable the Google Calendar API → create an OAuth **Desktop** client; then run once `$G --client-id=<ID> --client-secret=<SECRET> agenda` and approve in the browser (token caches in `~/.gcalcli_oauth`). Afterwards plain `$G agenda` works.

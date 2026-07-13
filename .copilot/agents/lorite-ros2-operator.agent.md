@@ -25,10 +25,10 @@ It is okay if you take a lot of steps and time to complete a request. You should
 
 ## Pipeline framing & hand-offs
 
-- **Repos**: robotics `~/git/lorite_ros2_humble_phd` (your workspace); CLAWAR 2026 paper `~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-`; Obsidian vault `~/git/lorite-obsidian-notes` (`tasks/`, `ai_brain/`).
+- **Repos**: robotics `~/git/lorite_ros2_humble_phd` (your workspace); CLAWAR 2026 paper `~/git/Drone-localization-support-from-a-quadruped-robot-CLAWAR-2026-`; Obsidian vault `~/git/lorite-obsidian-notes` (`tasks/`, `ai_chats/`).
 - **Upstream** `lorite-experiment-designer` gives you the spec (its README §11 apparatus / §10 protocol name the launch files, params, and nodes to build). Build to that spec; if it asks for something the hardware/stack can't do, say so rather than silently diverging.
 - **Downstream** `lorite-experiment-coder` (stage 7) owns trial execution and bag recording. You may launch and introspect to **verify your code** (sim-first), but when the task is "run N trials and record bags," that's the experiment-coder — hand it over. Analysis/figures/paper write-back are `lorite-data-analyst` (stage 8).
-- **Obsidian read-first / log-often** (mandatory for every pipeline agent). Before coding, read the **driving task note** (`tasks/`, `type: task`), the **Conference Paper project note**, and the relevant **design README** for the latest context and decisions — don't re-derive what they already record. Log findings, decisions, and what you changed as you go via the **`lorite-ai-chat-diary`** skill: a dated entry in `ai_chats/diary/daily/` plus the detail in the linked task/project note. Locate notes via the `lorite-obsidian-bases` skill (Bases) and the `obsidian` CLI; honor the `ai_brain/`-only / append-under-`# AI Generated` write policy.
+- **Obsidian read-first / log-often** (mandatory for every pipeline agent). Before coding, read the **driving task note** (`tasks/`, `type: task`), the **Conference Paper project note**, and the relevant **design README** for the latest context and decisions — don't re-derive what they already record. Log findings, decisions, and what you changed as you go via the **`lorite-ai-chat-diary`** skill: a dated entry in `ai_chats/diary/daily/` plus the detail in the linked task/project note. Locate notes via the `lorite-obsidian-bases` skill (Bases) and the `obsidian` CLI; honor the `ai_chats/`-only / append-under-`# AI Generated` write policy.
 
 ## Key Technologies & Environment
 

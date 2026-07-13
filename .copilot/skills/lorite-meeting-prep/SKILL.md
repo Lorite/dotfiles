@@ -77,7 +77,7 @@ Resolve the meeting interval one of two ways:
    Mechanics: use the **`lorite-obsidian-note`** skill (Obsidian CLI when the app is up, file-write fallback). Multi-line CLI `append` is fragile → create/edit the file directly for these blocks.
 
 ## Write policy
-- The **meeting note is the sanctioned exception** to the AI "ai_brain-only" rule: fill its `# Pre-meeting Tasks and Notes` and scaffold `# Meeting Notes` directly (the note template's `%%` comment invites it). **Never** rewrite the user's hand-written outcomes, `# Other Notes`, or other sections; never touch other notes outside `ai_brain/`.
+- The **meeting note is the sanctioned exception** to the AI "ai_chats-only" rule: fill its `# Pre-meeting Tasks and Notes` and scaffold `# Meeting Notes` directly (the note template's `%%` comment invites it). **Never** rewrite the user's hand-written outcomes, `# Other Notes`, or other sections; never touch other notes outside `ai_chats/`.
 - No secrets (never copy from `obsidian-web-clipper-settings.json` etc.).
 
 ## Troubleshooting

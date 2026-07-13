@@ -73,10 +73,10 @@ Notes from real usage:
      - `obsidian search query="..." path="work"`
      - `obsidian search query="..." path="diary"`
 
-5. Write output into `ai_brain/`
-   - Create a new AI Brain note using the `ai_brain` template and append the meeting summary.
+5. Write output into `ai_chats/notes/`
+   - Create a new AI note using the `ai_note` template and append the meeting summary.
    - File naming:
-     - `ai_brain/YYYY-MM-DD AI Brain - Meeting Summary - <Meeting Title>.md`
+     - `ai_chats/notes/YYYY-MM-DD Meeting Summary - <Meeting Title>.md`
 
    Implementation tip (CLI ergonomics):
    - Multi-line `obsidian append ... content="..."` can be fragile due to shell quoting and special characters.
@@ -103,8 +103,8 @@ Notes from real usage:
 
 ## Notes
 
-- Never modify notes outside `ai_brain/`.
-- If you must write outside `ai_brain/`, append under `AI Generated` with `## Prompt` and `## AI Generated Answer` only.
+- Never modify notes outside `ai_chats/`.
+- If you must write outside `ai_chats/`, append under `AI Generated` with `## Prompt` and `## AI Generated Answer` only.
 - Do not include secrets (avoid copying anything from `obsidian-web-clipper-settings.json`).
 
 ## Troubleshooting
