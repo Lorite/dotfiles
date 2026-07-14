@@ -1,0 +1,26 @@
+# Canonical copy of the home-server Remote Control systemd *user* unit (Obsidian vault).
+# Sibling of claude-rc.service (dotfiles); both share the wrapper claude-rc-loop.sh, which
+# takes [WORKDIR] [PREFIX] args. Each Remote Control server is bound to one directory, so
+# this second unit is what makes the vault appear as its own "New session" workspace in
+# claude.ai/code / the Claude app alongside dotfiles.
+# Install on the server at ~/.config/systemd/user/claude-rc-vault.service, then:
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now claude-rc-vault.service
+# Control: systemctl --user {status,restart,stop} claude-rc-vault   (needs
+#   XDG_RUNTIME_DIR=/run/user/$(id -u) over a non-login SSH session).
+# Boot-start is already covered by `loginctl enable-linger lorite` (set for claude-rc).
+# Type=oneshot + RemainAfterExit keeps the daemonized tmux server alive without systemd
+# trying to track/kill it; the wrapper's loop provides the actual restart resilience.
+[Unit]
+Description=Claude Code Remote Control - Obsidian vault (tmux session: vault)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/tmux new-session -d -s vault %h/.local/bin/claude-rc-loop.sh %h/git/lorite-obsidian-notes vault
+ExecStop=/usr/bin/tmux kill-session -t vault
+
+[Install]
+WantedBy=default.target

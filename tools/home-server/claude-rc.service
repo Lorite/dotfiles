@@ -1,4 +1,6 @@
-# Canonical copy of the home-server Remote Control systemd *user* unit.
+# Canonical copy of the home-server Remote Control systemd *user* unit (dotfiles workspace).
+# Its sibling claude-rc-vault.service serves the Obsidian vault; both share the wrapper
+# claude-rc-loop.sh, which takes [WORKDIR] [PREFIX] args (one server == one app workspace).
 # Install on the server at ~/.config/systemd/user/claude-rc.service, then:
 #   sudo loginctl enable-linger lorite          # run at boot without a login
 #   systemctl --user daemon-reload
@@ -15,7 +17,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/tmux new-session -d -s phd %h/.local/bin/claude-rc-loop.sh
+ExecStart=/usr/bin/tmux new-session -d -s phd %h/.local/bin/claude-rc-loop.sh %h/git/dotfiles phd
 ExecStop=/usr/bin/tmux kill-session -t phd
 
 [Install]
