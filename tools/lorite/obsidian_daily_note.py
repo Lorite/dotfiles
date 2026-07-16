@@ -75,8 +75,13 @@ def wait_for(predicate, timeout: float, interval: float = 1.0, what: str = "cond
 
 
 def step_create(date: str) -> None:
-    if note_path(date).exists():
+    p = note_path(date)
+    if p.exists() and p.read_text(encoding="utf-8").strip():
         return
+    # An existing 0-byte / whitespace-only stub (left by an interrupted create)
+    # blocks Templater — `obsidian create` no-ops on an existing path — and is
+    # then treated as "processed" forever. Remove it so the template can expand.
+    p.unlink(missing_ok=True)
     obs("create", f"path={vault_rel(date)}")
     # Templater expands the daily template on creation; wait until it did.
     wait_for(
@@ -149,10 +154,13 @@ def cmd_pending(since: str | None) -> None:
         else:
             content = p.read_text(encoding="utf-8")
             flags = []
-            if "%% run start" in content:
-                flags.append("unprocessed")
-            if "- In the morning, TODO." in content:
-                flags.append("summary-todo")
+            if not content.strip():
+                flags.append("empty")  # 0-byte stub — needs a fresh create+process
+            else:
+                if "%% run start" in content:
+                    flags.append("unprocessed")
+                if "- In the morning, TODO." in content:
+                    flags.append("summary-todo")
             if flags:
                 print(f"{date}\t{','.join(flags)}")
         day += dt.timedelta(days=1)
@@ -167,8 +175,11 @@ def cmd_auto(lookback: int) -> None:
     for offset in range(lookback):
         date = (yesterday - dt.timedelta(days=offset)).isoformat()
         p = note_path(date)
-        if p.exists() and "%% run start" not in p.read_text(encoding="utf-8"):
-            continue  # already processed (a TODO summary is the LLM step, not ours)
+        if p.exists():
+            content = p.read_text(encoding="utf-8")
+            if content.strip() and "%% run start" not in content:
+                continue  # already processed (a TODO summary is the LLM step, not ours)
+            # empty stub or leftover %% run %% blocks → (re)process below
         try:
             cmd_process(date)
         except Exception as e:  # keep going: one bad day must not block the rest
