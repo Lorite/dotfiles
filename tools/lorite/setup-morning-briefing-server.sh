@@ -28,6 +28,23 @@ warn() { printf '\033[1;33m[setup] WARN:\033[0m %s\n' "$*"; }
 say "pulling latest dotfiles"
 git -C "$DOTFILES" pull --ff-only --quiet || warn "dotfiles pull failed (using current checkout)"
 
+# Sync the Claude agents this briefing delegates to (lorite-concept-note-writer).
+# ~/.claude/skills is symlinked to dotfiles (live), but agents are COPIED with a
+# Copilot→Claude tool-name translation, so reuse install.sh's own sync function.
+if [ -d "$HOME/.claude/agents" ] || [ -L "$HOME/.claude/skills" ]; then
+    FNS="$(mktemp)"
+    awk '/^(print_info|print_success|print_warning|print_error|backup_path|normalize_frontmatter_for_claude|sync_copilot_to_claude)\(\)/,/^}/' \
+        "$DOTFILES/install.sh" > "$FNS" 2>/dev/null || true
+    if grep -q sync_copilot_to_claude "$FNS"; then
+        ( GREEN=""; YELLOW=""; RED=""; BLUE=""; NC=""; DOTFILES_DIR="$DOTFILES"
+          # shellcheck disable=SC1090
+          source "$FNS"
+          sync_copilot_to_claude "$DOTFILES/.copilot/agents" "$HOME/.claude/agents" "Copilot agents" ) \
+          && say "synced Claude agents (~/.claude/agents)" || warn "agent sync failed (concept notes will be skipped — non-blocking)"
+    fi
+    rm -f "$FNS"
+fi
+
 # 1. Read-only side clone for the commit audit (Syncthing does NOT sync .git/)
 if [ ! -d "$CLONE/.git" ]; then
     say "cloning vault history → $CLONE"
@@ -60,8 +77,10 @@ EOF
 systemctl --user daemon-reload
 say "installed service + timer + 03:00 drop-in"
 
-# 4. Enable only when Claude Code is actually available (the briefing IS claude -p)
-if command -v claude >/dev/null 2>&1; then
+# 4. Enable only when Claude Code is actually available (the briefing IS claude -p).
+# Check ~/.local/bin explicitly — a non-login shell often lacks it on PATH, and the
+# service itself sets PATH=%h/.local/bin:... so it WILL find claude at run time.
+if command -v claude >/dev/null 2>&1 || [ -x "$HOME/.local/bin/claude" ]; then
     systemctl --user enable --now lorite-morning-briefing.timer
     say "ENABLED lorite-morning-briefing.timer — next run:"
     systemctl --user list-timers lorite-morning-briefing.timer --no-pager || true
