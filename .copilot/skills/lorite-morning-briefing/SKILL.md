@@ -71,33 +71,24 @@ python3 ~/git/dotfiles/tools/lorite/obsidian_daily_note.py pending --since <toda
 - If yesterday is `missing`/`unprocessed`: the daily note's `%% run %%` blocks (tasks/calendar/weather/STT) are filled by the **Obsidian app**, so only `obsidian_daily_note.py process <yesterday>` (GUI, `$OBSIDIAN_GUI=1`) can do it. When `$OBSIDIAN_GUI=0`, **do not** try to process — a summary needs the note's generated sections; report it as "pending processing" and leave it to the laptop's hourly `obsidian-daily-note.timer`. (By 03:00 the server almost always sees an already-processed note via Syncthing.)
 - `summary-todo` dates **older than the 3-day window**: list them in the briefing, don't touch them.
 
-### 3. Fill in concept notes for the day's new links (delegate — best-effort)
+### 3. Write the briefing note — do this BEFORE the concept-note pass
 
-Normal note-taking and the vault's green→`[[wikilink]]` highlight scheme leave **new, unresolved concept links** behind. Turn them into real notes by delegating to the **`lorite-concept-note-writer`** agent in its scan mode:
+**Order is load-bearing.** The concept-note pass (step 4) can be slow or get killed at the headless `claude -p` background-task ceiling, so the briefing MUST already exist on disk before you start it — otherwise a long concept pass leaves you with *no briefing at all*. Write the briefing note here, with the concept section as a placeholder you'll fill in step 5.
 
-> Invoke `lorite-concept-note-writer` with: *"scan recent changes — create concept notes for the new unresolved concept links in the last 24 h. Git-history root = `$VAULT_GIT`, ref = `$AUDIT_REF`; write notes into `$VAULT`. If `$AUDIT_REF` is empty, fall back to scanning notes in `$VAULT` modified in the last 24 h (mtime)."*
-
-Pass the concrete `$VAULT`, `$VAULT_GIT`, `$AUDIT_REF` values in the prompt (the subagent doesn't inherit your shell env). The agent does its own work: extracts new `[[links]]` from `git -C "$VAULT_GIT" log "$AUDIT_REF" --since="24 hours ago"` / diffs / (headless) recently-modified files, drops the ones that already resolve (fast offline note-name/alias index — **not** the slow `obsidian unresolved` scan), **filters to genuine concepts** (skipping dates, media/attachment names, template placeholders, and people/works/places), web-researches each, and writes it under `work/concepts/…` or `personal/concepts/…` in the vault's concept schema (append-only if a note already exists). No per-day cap — the 24 h window bounds it.
-
-**Best-effort and non-blocking:** if the agent errors, spawning is unavailable, or the Obsidian app is down, capture whatever it reports (or note "concept-note pass skipped") and carry on — **never fail the briefing over concept notes**. Collect its created/skipped summary for the briefing note.
-
-### 4. Write the briefing note
-
-Create `$VAULT/ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no Obsidian needed), frontmatter as in `templates/ai_note.md` (`created`, `source: ai`), then:
+Create `$VAULT/ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no Obsidian needed), frontmatter as in `templates/ai_note.md` (`created`, `source: ai`):
 
 ```markdown
 # AI Briefing - <today>
 
 ## 📝 Daily note summaries
-- (per date: summary written / lint skipped (Obsidian closed) / still pending processing; wikilink each date, e.g. [[<yesterday>]])
+- (per date: summary written / lint skipped (headless) / still pending processing; wikilink each date, e.g. [[<yesterday>]])
 
 ## 🩺 Vault git check (last 24 h)
-- Commits reviewed: <n> (<shas>), unstaged files: <n>
+- Commits reviewed: <n> (<shas>), working-copy/unstaged files: <n>
 - ✅ No issues found — or one bullet per finding: **file** (sha) — what's wrong
 
 ## 🧩 Concept notes (new [[links]] → notes)
-- Created: <n> — [[Note A]] · [[Note B]] … (or "none new")
-- Skipped: <grouped counts — not a concept (people/works/dates) / already exists / couldn't ground> (or omit if none)
+- _pass running…_  ← placeholder; step 5 replaces this line with the results
 
 ## ⏳ Older pending
 - (older summary-todo dates, and anything else left for a human)
@@ -108,9 +99,25 @@ Create `$VAULT/ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no O
 
 Keep it scannable — it's read over coffee, possibly on an e-reader. Only claims backed by this run's command output; anything unverified is labeled as such.
 
-### 5. Log
+### 4. Fill in concept notes for the day's new links (LAST heavy step — best-effort)
 
-Append a one-line entry to the AI-chat diary per the `lorite-ai-chat-diary` skill (`ai_chats/diary/daily/AI Chat - <today>.md`), wikilinking the briefing note (and any concept notes created in step 3). Skip the per-task-note detail log for routine runs; log detail only when the audit found real issues.
+Normal note-taking and the vault's green→`[[wikilink]]` highlight scheme leave **new, unresolved concept links** behind. Turn them into real notes by delegating to the **`lorite-concept-note-writer`** agent in its scan mode. **Run it synchronously (`run_in_background: false`)** — a backgrounded subagent gets terminated at the `claude -p` background-wait ceiling (that's what left an early version with no briefing).
+
+> Invoke `lorite-concept-note-writer` with: *"scan recent changes — create concept notes for the new unresolved concept links in the last 24 h. Git-history root = `<the $VAULT_GIT value>`, ref = `<the $AUDIT_REF value>`; write notes into `<the $VAULT value>`. If the ref is empty, scan notes in `$VAULT` modified in the last 24 h (mtime). **Cap at ~15 notes this run**; list any beyond that as pending so a big backlog can't blow the time budget."*
+
+Pass the concrete `$VAULT`, `$VAULT_GIT`, `$AUDIT_REF` values in the prompt (the subagent doesn't inherit your shell env). The agent extracts new `[[links]]`, drops the ones that already resolve (fast offline note-name/alias index — **not** the slow `obsidian unresolved` scan), **filters to genuine concepts** (skipping dates, media/attachment names, template placeholders, and people/works/places), web-researches each, and writes it under `work/concepts/…` or `personal/concepts/…` in the vault's concept schema (append-only if a note already exists).
+
+**Best-effort and non-blocking:** if the agent errors, is unavailable, or runs out of budget, capture whatever it reports (or note "concept-note pass skipped/incomplete") and carry on — the briefing from step 3 already stands. **Never let this step prevent or delay the briefing.**
+
+### 5. Finalize — fill the concept section + log
+
+1. Replace the `_pass running…_` placeholder in the briefing's `## 🧩 Concept notes` section (best-effort Edit) with the results:
+   ```markdown
+   - Created: <n> — [[Note A]] · [[Note B]] … (or "none new")
+   - Skipped: <grouped counts — not a concept / already exists / couldn't ground> · Deferred: <n over the cap> (omit lines that are zero)
+   ```
+   If the concept pass was skipped/killed, set it to `- (concept-note pass skipped this run)` — don't leave the placeholder.
+2. Append a one-line entry to the AI-chat diary per the `lorite-ai-chat-diary` skill (`ai_chats/diary/daily/AI Chat - <today>.md`), wikilinking the briefing note (and any concept notes created). Skip the per-task-note detail log for routine runs; log detail only when the audit found real issues.
 
 ## Troubleshooting
 

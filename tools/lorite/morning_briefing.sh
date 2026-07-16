@@ -62,6 +62,10 @@ else
 fi
 
 export VAULT VAULT_GIT AUDIT_REF OBSIDIAN_GUI
+# Give a long-running delegated agent (the concept-note pass) headroom before the
+# print-mode background-wait ceiling cuts it — the skill runs it synchronously and
+# AFTER the briefing is already on disk, so this is just insurance, not correctness.
+export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS="${CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS:-1200000}"  # 20 min
 echo "morning-briefing: mode OBSIDIAN_GUI=$OBSIDIAN_GUI VAULT=$VAULT VAULT_GIT=$VAULT_GIT AUDIT_REF=${AUDIT_REF:-<none>}"
 
 # Headless permissions: local tools + web + subagents. `Task` lets the briefing
