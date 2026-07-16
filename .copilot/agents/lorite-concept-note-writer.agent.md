@@ -29,24 +29,26 @@ The user names a concept, pastes a list, or hands you `[[wikilinks]]` to define 
 ### Mode 2 — scan recent vault changes (the daily `lorite-morning-briefing` use)
 Find the **new, unresolved, concept-worthy** `[[links]]` the user introduced in the last 24 h and create notes for them. This is the mode the morning briefing invokes.
 
-1. **Collect newly-added links** from committed (last 24 h) + staged + unstaged + untracked changes:
+**Roots (from the caller, e.g. the morning briefing; default to the vault when unset).** `$VAULT` = content root (build the index + write notes here — on the home server it's the Syncthing copy). `$VAULT_GIT` = git-history root (`$VAULT` on the laptop; a separate fetched clone on the server, since Syncthing excludes `.git/`). `$AUDIT_REF` = ref to scan (`HEAD` laptop / `origin/main` server / empty = no git).
+
+1. **Collect newly-added links.** From git when `$AUDIT_REF` is set, **plus** an mtime scan of `$VAULT` for recently-changed notes (this catches links the user added in uncommitted edits that reached the server only as synced files, not commits):
    ```bash
-   cd ~/git/lorite-obsidian-notes
-   { git log --since="24 hours ago" -p -M --unified=0 -- '*.md';   # -M = rename-aware; without it a big reorg commit is minutes-slow
-     git diff          --unified=0 -- '*.md';
-     git diff --cached --unified=0 -- '*.md';
-     git ls-files -z --others --exclude-standard -- '*.md' \
-       | while IFS= read -r -d '' f; do sed 's/^/+/' "$f"; done;   # -z / read -d '' = safe for the vault's spaced filenames
+   VAULT="${VAULT:-$HOME/git/lorite-obsidian-notes}"; VAULT_GIT="${VAULT_GIT:-$VAULT}"; AUDIT_REF="${AUDIT_REF:-HEAD}"
+   SINCE="$(date -d '24 hours ago' '+%Y-%m-%dT%H:%M:%S')"   # ISO — portable across GNU find AND bfs ('24 hours ago' fails on bfs)
+   { [ -n "$AUDIT_REF" ] && git -C "$VAULT_GIT" log "$AUDIT_REF" --since="24 hours ago" -p -M --unified=0 -- '*.md';  # -M = rename-aware; without it a big reorg commit is minutes-slow
+     [ "$VAULT_GIT" = "$VAULT" ] && { git -C "$VAULT" diff --unified=0 -- '*.md'; git -C "$VAULT" diff --cached --unified=0 -- '*.md'; }  # working tree only exists where the repo is the content copy (laptop)
+     find "$VAULT" -name '*.md' -newermt "$SINCE" -not -path '*/.git/*' -print0 \
+       | while IFS= read -r -d '' f; do sed 's/^/+/' "$f"; done;   # -print0 / read -d '' = safe for the vault's spaced filenames; covers untracked + synced-but-uncommitted
    } | grep -E '^\+' \
      | grep -oE '\[\[[^]|#^]+' | sed -E 's/^\[\[//; s/[[:space:]]+$//' \
      | sort -u
    ```
-   (`-M` keeps this **fast** even when the window includes a large rename/reorg commit; the `-z` untracked loop is required because vault filenames contain spaces.)
-2. **Drop targets that already resolve** — fast, offline, no Obsidian app needed. Build the existing-note index once and keep only candidates whose name is absent from it:
+   (`-M` keeps the git scan **fast** even when the window includes a large rename/reorg commit; the mtime `find` replaces the old `git ls-files --others` untracked loop and additionally covers the headless/Syncthing case where new links arrive as file changes with no local commit.)
+2. **Drop targets that already resolve** — fast, offline, no Obsidian app needed. Build the existing-note index from **`$VAULT`** (all notes, incl. freshly-synced ones) and keep only candidates whose name is absent from it:
    ```bash
-   find . -type f -name '*.md' -not -path './.git/*' | sed -E 's#.*/##; s/\.md$//' | tr 'A-Z' 'a-z' | sort -u > /tmp/vault_notes.txt
+   find "$VAULT" -type f -name '*.md' -not -path '*/.git/*' | sed -E 's#.*/##; s/\.md$//' | tr 'A-Z' 'a-z' | sort -u > /tmp/vault_notes.txt
    ```
-   (Use a filesystem `find`, **not** `git ls-files` — the latter misses *untracked* notes, including ones you just created this run, so you'd try to recreate them.) A candidate is unresolved when its **lowercased** name isn't in that list. Before actually creating a note, double-check it doesn't already exist as a file *or* alias (`find . -iname "<Name>.md" -not -path './.*'`; and scan for the name under an `aliases:` key), so you never duplicate. **Do not use `obsidian unresolved` as the gate** — with ~1000+ unresolved links it enumerates the whole graph and can take minutes (it timed out in testing). The offline index above is the reliable headless path; `obsidian unresolved` is at most an optional cross-check when the app is up and fast.
+   (Use a filesystem `find`, **not** `git ls-files` — the latter misses *untracked* notes, including ones you just created this run, so you'd try to recreate them.) A candidate is unresolved when its **lowercased** name isn't in that list. Before actually creating a note, double-check it doesn't already exist as a file *or* alias (`find "$VAULT" -iname "<Name>.md" -not -path '*/.git/*'`; and scan for the name under an `aliases:` key), so you never duplicate. **Do not use `obsidian unresolved` as the gate** — with ~1000+ unresolved links it enumerates the whole graph and can take minutes (it timed out in testing). The offline index above is the reliable headless path; `obsidian unresolved` is at most an optional cross-check when the app is up and fast.
 3. **Filter to genuine concepts** (next section) and **create a note for every one** — no per-day cap; the 24 h window is the bound. Everything you skip goes in the report so nothing is silently lost.
 
 ## What is (and isn't) a concept — the filter
@@ -127,7 +129,7 @@ Body — `# Obsidian Notes` present and **empty** (user space); everything you w
 - **Flashcards** follow the vault's `obsidian-spaced-repetition` **folder-deck** format (**no `#flashcards` tag**): single-line `Q :: A` (`:::` bidirectional), or multi-line `Q` / `?` / `A` on their own lines (`??` bidirectional), or cloze `==term==`. Blank line between cards; 4–6 cards covering definition, mechanism, use, key facts. (`::` is *inline, same line*; `?` goes on *its own line* for multi-line cards.)
 
 ## Mechanism (CLI-read, file-write; headless-safe)
-- **Write** each new note as a plain file under `~/git/lorite-obsidian-notes/(work|personal)/concepts/…` with the full frontmatter + empty `# Obsidian Notes` + populated `# AI Generated`. Deterministic, never invokes Gemini, works with the Obsidian app closed.
+- **Write** each new note as a plain file under `$VAULT/(work|personal)/concepts/…` (`$VAULT` defaults to `~/git/lorite-obsidian-notes`; on the home server it's the Syncthing copy, so writes sync back) with the full frontmatter + empty `# Obsidian Notes` + populated `# AI Generated`. Deterministic, never invokes Gemini, works with the Obsidian app closed.
 - **Existence checks are offline-first** — use the filesystem `find` name index + `find -iname` + `aliases:` grep (above); these work with the app closed. The `obsidian` CLI (`outline`, `search:context`, `property:read`) is fine for *reading* a specific note when the app is up (probe with `obsidian aliases total`), but don't depend on it, and avoid the slow `obsidian unresolved` graph scan.
 - Defer to the **`lorite-obsidian-note`** skill for safe-write details and **`lorite-obsidian-markdown`** for wikilink/callout/property syntax.
 

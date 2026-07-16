@@ -18,6 +18,7 @@ This is the **single, canonical way** to write notes into the Obsidian vault (`~
     note's `# 🎯 Task Description` when the subtask is **verifiably done** (evidence stated in the
     journal entry you write alongside). Toggle only the checkbox state — never edit, reword, or
     reorder the item text, and never untick a box the user checked.
+  - **High Level TODOs exception (task notes):** a task note may carry an **AI-owned** `## High Level TODOs` subsection at the **end** of its `# 🎯 Task Description` (after the user's own bullets/checkboxes, before the next heading); create it lazily the first time you have a forward plan to record. Unlike the user's hand-written checklist above it — which you may only tick — **this list is yours to maintain**: **add** a new `- [ ]` (nestable — indent to nest), **complete** `- [ ]` → `- [x]` at the same evidence bar as the checkbox exception (verifiably done, logged in the journal), and **remove** by striking the text `~~like this~~` rather than deleting the line (abandoned / superseded / no-longer-relevant — keep the trail). Never migrate the user's hand-written subtasks into it; the two lists stay separate. It holds the **living forward plan** (what's left) — distinct from the `# 📓 Journal / Work Log` dated history (what happened) — so refresh it whenever you log to the note.
   - **Status exception (task notes):** you may set the `status` frontmatter field to **todo /
     investigating / in-progress / blocked / pending-review / cancelled** as the work state actually
     changes — notably **`pending-review`** when the deliverable is finished and awaits the user's
@@ -102,6 +103,7 @@ Insert at the **top** of the `# 📓 Journal / Work Log` section (newest-first),
 
 ## Conventions
 - Use wikilinks `[[Note]]` for everything linkable; link liberally. Use callouts/properties per the `lorite-obsidian-markdown` skill. Put sources under `## Sources` (CLI/Bases/Web).
+- **YAML-safe frontmatter.** Unquoted text fields (`description`, `short_description`, `title`, `aliases`, …) break the note's frontmatter if they contain a **colon-then-space (`: `)** or **begin with** `"` `'` `[` `{` `-` `>` `|` `@` `` ` `` `#`. Write an em dash ` — ` where you'd use a colon (incl. book/paper subtitles), and reword so a value never opens with a quoted phrase. If a `: ` or leading quote is unavoidable, single-quote-wrap the whole value and double every internal `'`.
 - Keep titles human-readable and filesystem-safe; date prefix `YYYY-MM-DD` for `ai_chats/notes/` notes.
 - Pre-2026-07-13 notes in `ai_chats/notes/` keep their historical `YYYY-MM-DD AI Brain - <Title>` names (from the retired `ai_brain/` folder) — don't rename them; new notes drop the "AI Brain" prefix.
 

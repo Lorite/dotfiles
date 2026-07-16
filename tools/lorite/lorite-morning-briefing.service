@@ -7,5 +7,9 @@ Description=Morning briefing: daily-note LLM summaries + vault git audit (headle
 Type=oneshot
 ExecStart=%h/git/dotfiles/tools/lorite/morning_briefing.sh
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Host-specific overrides (optional; '-' = ok if absent). The home server writes
+# LORITE_VAULT_GIT=%h/git/lorite-obsidian-notes-audit here (the side clone used for
+# the commit audit, since Syncthing excludes .git/). Laptop has no file → defaults.
+EnvironmentFile=-%h/.config/lorite/morning-briefing.env
 TimeoutStartSec=30min
 # Already-written today → quick exit 0; failures show in `journalctl --user -u lorite-morning-briefing`
