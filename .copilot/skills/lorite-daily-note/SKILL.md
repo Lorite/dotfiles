@@ -36,6 +36,8 @@ python3 ~/git/dotfiles/tools/lorite/obsidian_daily_note.py finish <YYYY-MM-DD>
 
 The **`obsidian-daily-note.timer`** systemd user timer (canonical units in `~/git/dotfiles/tools/lorite/`, installed + enabled by `install.sh`) runs `obsidian_daily_note.py auto` hourly: it creates + processes every missing/unprocessed note from **yesterday** back 7 days (never today — its data is still accumulating), and no-ops quietly when Obsidian isn't running or nothing is pending. It does **not** write LLM summaries — when invoked for summaries, first `pending` to find `summary-todo` dates, then do the summary + `finish` loop. Control: `systemctl --user {status,start} obsidian-daily-note.{timer,service}`; logs via `journalctl --user -u obsidian-daily-note`.
 
+`auto` also runs **`refresh-stt`** (callable standalone: `obsidian_daily_note.py refresh-stt [--lookback N]`, default 10 days; file-only, works without Obsidian): the user back-fills SimpleTimeTracker entries on the phone days late, so it re-renders each recent day's rows from `.android-simpletimetracking/stt_records_automatic.csv` (byte-identical to `scripts/daily/simple_time_tracker.js`) and **inserts only the missing lines** by `(start, end)` time pair into the note's STT section — existing lines and their wikilinks are never touched; late-inserted lines stay plain text (no Virtual Linker pass re-runs). Summaries of topped-up days are **not** auto-rewritten — redo one on request from the enlarged section.
+
 ## Backfill (many dates)
 
 ```bash

@@ -31,11 +31,19 @@ Usage:
       # quietly when Obsidian isn't running. Run by obsidian-daily-note.timer
       # (systemd user unit, canonical copy in this directory). Does NOT write
       # the LLM summary — that stays with the lorite-daily-note skill.
+      # Also tops up recent notes' SimpleTimeTracker sections (see below).
+  obsidian_daily_note.py refresh-stt [--lookback N]
+      # insert SimpleTimeTracker entries the user back-filled in the app AFTER
+      # a note was processed (its STT section is otherwise frozen at process
+      # time). Insert-only by (start, end) time pair — existing lines and their
+      # wikilinks are never modified. File-only; also run hourly via `auto`.
 """
 
 import argparse
+import csv
 import datetime as dt
 import json
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -44,6 +52,9 @@ VAULT = Path.home() / "git/lorite-obsidian-notes"
 DAILY_DIR = VAULT / "diary/daily"
 SENTINEL = VAULT / ".process_daily_note_done"
 QUICKADD_PROCESS_CMD = "quickadd:choice:a8895b3d-1db5-4476-8c7d-9c5a0eca8a6c"
+STT_CSV = VAULT / ".android-simpletimetracking/stt_records_automatic.csv"
+STT_HEADING = "# 📑 [[Android SimpleTimeTracker App]] Logs"
+STT_LINE_RE = re.compile(r"^- (\d\d:\d\d)–(\d\d:\d\d) — ")
 
 
 def obs(*args: str, check: bool = True) -> str:
@@ -171,7 +182,77 @@ def cmd_pending(since: str | None) -> None:
         day += dt.timedelta(days=1)
 
 
+def stt_lines_for(date: str) -> list[tuple[tuple[str, str], str]]:
+    """((start, end), rendered bullet) for every CSV record starting on `date`,
+    formatted byte-identically to scripts/daily/simple_time_tracker.js (which
+    renders dataview's undefined for empty CSV fields as the literal string
+    "undefined")."""
+    fmt = lambda s: s if s else "undefined"
+    hhmm = lambda ts: ts[11:16]
+    out = []
+    with STT_CSV.open(newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            start = (row["time started"] or "").strip()
+            name = (row["activity name"] or "").strip()
+            if not start.startswith(date) or "Still" in name:
+                continue
+            comment = (row["comment"] or "").strip()
+            comment_r = f"[[{comment}]]" if name == "Task" and comment else fmt(comment)
+            key = (hhmm(start), hhmm((row["time ended"] or "").strip()))
+            out.append((key, f"- {key[0]}–{key[1]} — {fmt((row['categories'] or '').strip())} — {fmt(name)} — {comment_r}."))
+    return out
+
+
+def cmd_refresh_stt(lookback: int) -> None:
+    """Top up the STT section of already-processed notes with entries the user
+    back-filled in the app after the note was processed. Insert-only: existing
+    lines (incl. their Virtual Linker / media wikilinks) are never touched, so
+    a repeated (start, end) pair is matched as a multiset. Pure file I/O — no
+    Obsidian needed."""
+    today = dt.date.today()
+    for offset in range(1, lookback + 1):
+        date = (today - dt.timedelta(days=offset)).isoformat()
+        p = note_path(date)
+        if not p.exists():
+            continue
+        content = p.read_text(encoding="utf-8")
+        if not content.strip() or "%% run start" in content:
+            continue  # unprocessed — the normal pipeline still owns it
+        lines = content.split("\n")
+        try:
+            h = lines.index(STT_HEADING)
+        except ValueError:
+            continue
+        end = h + 1
+        while end < len(lines) and lines[end].strip() != "---":
+            end += 1
+        budget = {}
+        for ln in lines[h + 1:end]:
+            m = STT_LINE_RE.match(ln)
+            if m:
+                budget[m.groups()] = budget.get(m.groups(), 0) + 1
+        added = 0
+        for key, rendered in stt_lines_for(date):
+            if budget.get(key, 0) > 0:
+                budget[key] -= 1
+                continue
+            pos = next((i for i in range(h + 1, end)
+                        if (m := STT_LINE_RE.match(lines[i])) and m.group(1) > key[0]),
+                       None)
+            if pos is None:  # after the last bullet, or just before --- if none exist
+                pos = next((i + 1 for i in range(end - 1, h, -1) if STT_LINE_RE.match(lines[i])), end)
+            lines.insert(pos, rendered)
+            end += 1
+            added += 1
+        if added:
+            if lines[end - 1].strip():  # keep the house-style blank line before ---
+                lines.insert(end, "")
+            p.write_text("\n".join(lines), encoding="utf-8")
+            print(f"refresh-stt: [{date}] +{added} entries")
+
+
 def cmd_auto(lookback: int) -> None:
+    cmd_refresh_stt(10)  # file-only: runs even when Obsidian is closed
     res = subprocess.run(["obsidian", "vault"], capture_output=True, text=True)
     if res.returncode != 0:
         print("auto: Obsidian not running — skipping")
@@ -201,6 +282,8 @@ def main() -> None:
     s.add_argument("--since", default=None, help="first date to check (default: from last existing note)")
     s = sub.add_parser("auto")
     s.add_argument("--lookback", type=int, default=7, help="days before today to catch up (default 7)")
+    s = sub.add_parser("refresh-stt", help="insert late-entered SimpleTimeTracker entries into recent processed notes")
+    s.add_argument("--lookback", type=int, default=10, help="days before today to top up (default 10)")
     args = ap.parse_args()
 
     if args.cmd == "pending":
@@ -208,6 +291,9 @@ def main() -> None:
         return
     if args.cmd == "auto":
         cmd_auto(args.lookback)
+        return
+    if args.cmd == "refresh-stt":
+        cmd_refresh_stt(args.lookback)
         return
     dt.date.fromisoformat(args.date)  # validate
     {"process": cmd_process, "finish": step_finish}[args.cmd](args.date)
