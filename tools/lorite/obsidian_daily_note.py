@@ -81,6 +81,11 @@ def step_create(date: str) -> None:
     # An existing 0-byte / whitespace-only stub (left by an interrupted create)
     # blocks Templater — `obsidian create` no-ops on an existing path — and is
     # then treated as "processed" forever. Remove it so the template can expand.
+    # Delete through the app, not os.unlink: the app's vault index keeps the
+    # just-unlinked path for a moment, so an immediate `create` dedup-suffixes
+    # into "<date> 1.md" instead of the real path.
+    if p.exists():
+        obs("delete", f"path={vault_rel(date)}", check=False)
     p.unlink(missing_ok=True)
     obs("create", f"path={vault_rel(date)}")
     # Templater expands the daily template on creation; wait until it did.
