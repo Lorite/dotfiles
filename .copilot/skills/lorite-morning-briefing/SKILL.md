@@ -70,6 +70,7 @@ python3 ~/git/dotfiles/tools/lorite/obsidian_daily_note.py pending --since <toda
 - **Lint (`obsidian_daily_note.py finish <date>`) only when `$OBSIDIAN_GUI=1`** — it drives the Obsidian Linter via the CLI. When `$OBSIDIAN_GUI=0` (server), **skip it**: the summary edit is small and the note was already linted by the laptop's pipeline; note "lint skipped (headless)" in the briefing. On the server, writing the file into `$VAULT` is enough — Syncthing carries it back to the laptop.
 - If yesterday is `missing`/`unprocessed`: the daily note's `%% run %%` blocks (tasks/calendar/weather/STT) are filled by the **Obsidian app**, so only `obsidian_daily_note.py process <yesterday>` (GUI, `$OBSIDIAN_GUI=1`) can do it. When `$OBSIDIAN_GUI=0`, **do not** try to process — a summary needs the note's generated sections; report it as "pending processing" and leave it to the laptop's hourly `obsidian-daily-note.timer`. (By 03:00 the server almost always sees an already-processed note via Syncthing.)
 - `summary-todo` dates **older than the 3-day window**: list them in the briefing, don't touch them.
+- **Media-note pass (GUI only)**: for each date you summarize, when `$OBSIDIAN_GUI=1` also run the `lorite-daily-note` skill's **"Media notes"** procedure — unlinked `— Media — Movie/Series —` titles in the SimpleTimeTracker section get resolved against existing `media/movies|series` notes (alias added when the note exists) or created via the Media DB plugin (`obsidian eval`), then the line gets its wikilink. When `$OBSIDIAN_GUI=0`, skip and note "media pass skipped (headless)". Ambiguous titles are never auto-created — they go in the briefing for the user.
 
 ### 3. Write the briefing note — do this BEFORE the concept-note pass
 
@@ -82,6 +83,9 @@ Create `$VAULT/ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no O
 
 ## 📝 Daily note summaries
 - (per date: summary written / lint skipped (headless) / still pending processing; wikilink each date, e.g. [[<yesterday>]])
+
+## 🎬 Media notes
+- (per date: created [[Note]] / linked existing [[Note]] (alias added) / skipped-ambiguous "<line>" / media pass skipped (headless) — omit the section when there were no Media Movie/Series lines)
 
 ## 🩺 Vault git check (last 24 h)
 - Commits reviewed: <n> (<shas>), working-copy/unstaged files: <n>

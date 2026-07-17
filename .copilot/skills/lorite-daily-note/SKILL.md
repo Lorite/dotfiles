@@ -62,6 +62,26 @@ Target: the `# ⁉️ Daily Questions` → `### 📌 Summary` section — replac
 - The note must contain no `%% run start` text before summarizing (`process` guarantees this).
 - All-day calendar events render with a bogus current-time stamp (`HH:mm–HH:mm` identical, e.g. "02:17–02:17 — Whit Monday.") — treat them as all-day facts, not timed events.
 
+## Media notes (movies & series in the SimpleTimeTracker logs)
+
+After `process`, the `# 📑 [[Android SimpleTimeTracker App]] Logs` section may contain `— Media — Movie — <title>…` / `— Media — Series — <title>…` lines whose title stayed **plain text** — Virtual Linker only links existing note names/aliases, so a first-time watch has nothing to link to. YOU (the agent) close that gap per date, right after `process` / alongside the summary. **GUI-only** (drives the live app via `obsidian eval` + needs network for OMDb): skip headless and report "media pass skipped".
+
+1. **Detect** — in the STT section only, lines matching `— Media — (Movie|Series) — ` where the *title segment* (text after that subtype dash, up to the next ` — `, ` at `, or trailing `.`) contains no `[[`. Only Movie/Series — never Social Media / Music / Videogame / YouTube lines.
+2. **Clean the title** — strip venue suffixes ("… at Imperial cinema"), episode markers ("— S1:E6 - …", "S05 E20"), and fix obvious typos ("Tom Raider" → "Tomb Raider") to form the search query. Keep a `(year)` if the log has one.
+3. **Resolve against the vault FIRST** (duplicate guard) — fuzzy-match the cleaned title against `ls media/movies media/series` basenames **and** their `aliases:` frontmatter (case/punctuation-insensitive, ignore the ` (year)` suffix). A match means the note exists but wasn't linkable (e.g. "Westworld" vs `Westworld (2016–2022).md` with no alias): **add the bare mention as an alias** to that note's frontmatter (so future Virtual Linker runs link it natively) and go to step 5 — do NOT create.
+4. **Create via the Media DB plugin** (the user's sanctioned creation path — full frontmatter, template, cover image, aliases):
+
+   ```bash
+   # search (movies+series both come from OMDbAPI); filter by type, eyeball the candidates
+   obsidian eval code="(async () => { const p = app.plugins.plugins['obsidian-media-db-plugin']; const r = await p.apiManager.query('<query>', ['OMDbAPI']); return JSON.stringify(r.filter(m => m.type === '<movie|series>').slice(0, 5).map(m => ({ title: m.title, year: m.year, id: m.id }))); })()"
+   # create from the confident hit's id
+   obsidian eval code="(async () => { const p = app.plugins.plugins['obsidian-media-db-plugin']; const d = await p.apiManager.queryDetailedInfoById('<id>', 'OMDbAPI'); await p.createMediaDbNoteFromModel(d, { attachTemplate: true, openNote: false }); return d.title + ' (' + d.year + ')'; })()"
+   ```
+
+   **Confidence rule**: create only when one candidate's title matches the cleaned title (case/punctuation-insensitive) *and* the year matches if the log gives one; sequels/specials with near-identical titles ("The Devil Wears Prada" vs "… 2") make title-only matching unsafe — when ambiguous, create nothing and report the line for the user to handle. The created basename follows the plugin's file-name template `{{ title }} ({{ year }})` — verify with `ls` after creating. Gotchas: apostrophes in titles terminate the JS string (escape them); `openNote` is overridden by the plugin's `openNoteInNewTab` setting, so tabs may open in the app — harmless.
+5. **Link the line** — replace the plain title text in the daily note with `[[<note basename>|<original text>]]` (display text unchanged), STT section only. Then `finish <date>` to lint.
+6. **Report** per date: created / linked-existing (alias added) / skipped-ambiguous — in the briefing's media line or to the user.
+
 ## Troubleshooting
 
 - The macro writes `.process_daily_note_done` (vault root): `<path>\t<ok|error: …>\t<debug json>`. `error: Obsidian window is not rendering` → make the Obsidian window visible and rerun. Debug fields: `rafBefore/rafAfter` (window painting), `sourceMode`, `editorShown`, `wasTyping` (Virtual Linker's stuck-isTyping guard), `retoggled`, per-chunk `seen=/converted=` counts.
