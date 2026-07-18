@@ -94,6 +94,9 @@ Create `$VAULT/ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no O
 ## 🧩 Concept notes (new [[links]] → notes)
 - _pass running…_  ← placeholder; step 5 replaces this line with the results
 
+## 📚 KOReader highlights
+- _import running…_  ← placeholder; step 5 replaces this with the import summary (omit the section if there was no export folder / nothing new)
+
 ## ⏳ Older pending
 - (older summary-todo dates, and anything else left for a human)
 
@@ -113,7 +116,9 @@ Pass the concrete `$VAULT`, `$VAULT_GIT`, `$AUDIT_REF` values in the prompt (the
 
 **Best-effort and non-blocking:** if the agent errors, is unavailable, or runs out of budget, capture whatever it reports (or note "concept-note pass skipped/incomplete") and carry on — the briefing from step 3 already stands. **Never let this step prevent or delay the briefing.**
 
-### 5. Finalize — fill the concept section + log
+### 4b. Import KOReader highlights (best-effort, after the briefing exists)
+
+Invoke the **`lorite-koreader-highlights`** skill to ingest any new KOReader highlight exports (classify by colour, format, append to the matching book / Zotero literature note / inbox, and route vocabulary to the SR decks). Same **best-effort, non-blocking** contract as step 4 — the briefing already stands. On a host where the export folder (`<vault>/Book Exports/koreader/`) isn't synced, its parser reports the dir missing and this is a no-op; note that and move on. Keep the per-book/per-category counts for the step-5 fill.
 
 1. Replace the `_pass running…_` placeholder in the briefing's `## 🧩 Concept notes` section (best-effort Edit) with the results:
    ```markdown
@@ -121,7 +126,8 @@ Pass the concrete `$VAULT`, `$VAULT_GIT`, `$AUDIT_REF` values in the prompt (the
    - Skipped: <grouped counts — not a concept / already exists / couldn't ground> · Deferred: <n over the cap> (omit lines that are zero)
    ```
    If the concept pass was skipped/killed, set it to `- (concept-note pass skipped this run)` — don't leave the placeholder.
-2. Append a one-line entry to the AI-chat diary per the `lorite-ai-chat-diary` skill (`ai_chats/diary/daily/AI Chat - <today>.md`), wikilinking the briefing note (and any concept notes created). Skip the per-task-note detail log for routine runs; log detail only when the audit found real issues.
+2. Replace the `_import running…_` placeholder in the `## 📚 KOReader highlights` section with the import summary (`- Imported: <n> highlights across <m> books → [[Note]] · … · <k> vocab cards; <j> to the inbox`), or delete the whole section if there was no export folder / nothing new. If the import was skipped/killed, set it to `- (KOReader import skipped this run)`.
+3. Append a one-line entry to the AI-chat diary per the `lorite-ai-chat-diary` skill (`ai_chats/diary/daily/AI Chat - <today>.md`), wikilinking the briefing note (and any concept notes created). Skip the per-task-note detail log for routine runs; log detail only when the audit found real issues.
 
 ## Troubleshooting
 
