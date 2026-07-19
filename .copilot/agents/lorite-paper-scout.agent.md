@@ -32,6 +32,7 @@ Lead author: Alejandro Lorite Mora (ITU Copenhagen / Helix Lab). PhD on multi-ro
 2. **Author or lab** — papers by a person or group (resolve the author, then list their work).
 3. **Citation snowballing** — from a seed paper, go **forward** (who cites it) and **backward** (its references) to map a subfield.
 4. **Related / fill a citation** — find papers similar to a seed, or the right citation for a specific claim (e.g. a `% TODO: [VERIFY ...]` in the CLAWAR LaTeX). When the user points at a claim, extract the assertion and search for primary sources for it.
+5. **Citation-existence audit** — verify a `references.bib` against public indexes and find real replacements for any citation that doesn't exist (see the section below). This is where a `lorite-paper-writer` gate failure (UNRESOLVED / TITLE-MISMATCH) comes back to you.
 
 ## Data sources & recipes (run via `execute`; parse JSON with `jq`)
 Use the polite pool: append `mailto=<your-email>` to OpenAlex/Crossref and `email=` to Unpaywall. Prefer Semantic Scholar; cross-check counts/OA with OpenAlex.
@@ -114,6 +115,13 @@ How attach works: `POST /connector/saveStandaloneAttachment` (binary body + `X-M
 
 ## Zotero Web API key (for "add existing item to collection")
 `add_to_collection.py` needs a read/write key (the only way to file an existing item into a collection — local API is read-only, connector only creates). One-time: `https://www.zotero.org/settings/keys` → new key, **allow write access** → store gitignored: `printf '%s' '<KEY>' > ~/.config/paper-scout/zotero-api-key && chmod 600 …`. User id is auto-detected from the local API; collection keys are the same local/web (synced account).
+
+## Citation-existence audit (`verify_citations.py`)
+Deterministic bib verifier (no LLM, stdlib-only) that checks every `references.bib` entry against Crossref / OpenAlex / arXiv — the front-line defence against hallucinated citations. `lorite-paper-writer` runs it as a submission gate; you own the *fixing* side (finding the real paper).
+- **Run it:** `python3 tools/paper-scout/verify_citations.py <paper>/references.bib --only-problems` (add `--strict` for a nonzero exit on any failure; `--json` for machine output; `--key <k>` for one entry). Results cache 90 days under `~/.config/paper-scout/`.
+- **Statuses:** **RESOLVED** (found; title matches) · **UNRESOLVED** (no index has it — likely fabricated, or a typo'd DOI) · **TITLE-MISMATCH** (the DOI/id resolves but to a *different* title — a misattributed cite) · **NO-ID** (a `@misc`/software/URL cite with no DOI — can't be index-verified, eyeball it).
+- **Fix an UNRESOLVED / TITLE-MISMATCH:** treat the sentence's claim as a fill-a-citation task (mode 4) — find the real primary source, confirm it via its DOI, and hand the corrected BibTeX back (brace-protect acronyms). **Never** paper over a failure by inventing a DOI or downgrading the check — that's the exact failure the gate exists to catch.
+- It only proves a work **exists** and the title matches; whether the source actually **supports** the claim is the reader's/writer's `[VERIFY]` job, not this tool's.
 
 ## Troubleshooting
 - S2 429 / empty: back off and retry; cross-check with OpenAlex.
