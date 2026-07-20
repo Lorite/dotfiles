@@ -387,7 +387,11 @@ fi
 
 # Update package list
 print_info "Updating package list..."
-sudo apt-get update -qq
+if sudo -n apt-get update -qq 2>/dev/null; then
+	print_success "Package list updated"
+else
+	print_warning "sudo not available — skipping apt-get update (run with sudo on a fresh machine)"
+fi
 
 # Install essential packages
 print_info "Installing essential packages..."
@@ -407,8 +411,11 @@ PACKAGES=(
 
 for package in "${PACKAGES[@]}"; do
 	if ! dpkg -l | grep -q "^ii  $package "; then
-		sudo apt-get install -y "$package"
-		print_success "Installed $package"
+		if sudo -n apt-get install -y "$package" 2>/dev/null; then
+			print_success "Installed $package"
+		else
+			print_warning "Could not install $package (no sudo) — install manually if needed"
+		fi
 	else
 		print_success "$package already installed"
 	fi
