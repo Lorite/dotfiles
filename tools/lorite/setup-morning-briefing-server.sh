@@ -7,7 +7,8 @@
 #   1. a read-only side clone of the vault (git audit source — Syncthing excludes .git/)
 #   2. the host env file pointing the briefing at that clone
 #   3. the systemd user service + timer, with a 03:00 drop-in override
-#   4. enables the timer ONLY if `claude` is installed; otherwise prints the manual step
+#   4. enables the timer ONLY when OpenCode or Claude Code is installed (OpenCode first,
+#      Claude fallback — the briefing uses tools/lorite/lorite-llm.sh)
 #
 # Run on the server:  ssh <server> 'bash ~/git/dotfiles/tools/lorite/setup-morning-briefing-server.sh'
 set -euo pipefail
@@ -77,18 +78,23 @@ EOF
 systemctl --user daemon-reload
 say "installed service + timer + 03:00 drop-in"
 
-# 4. Enable only when Claude Code is actually available (the briefing IS claude -p).
-# Check ~/.local/bin explicitly — a non-login shell often lacks it on PATH, and the
-# service itself sets PATH=%h/.local/bin:... so it WILL find claude at run time.
-if command -v claude >/dev/null 2>&1 || [ -x "$HOME/.local/bin/claude" ]; then
+# 4. Enable only when OpenCode or Claude Code is available (the briefing uses lorite-llm.sh
+# which prefers opencode, falls back to claude). Check ~/.local/bin explicitly — a non-login
+# shell often lacks it on PATH, and the service itself sets PATH=%h/.local/bin:...
+has_llm=0
+if command -v opencode >/dev/null 2>&1 || [ -x "$HOME/.opencode/bin/opencode" ]; then
+    has_llm=1
+elif command -v claude >/dev/null 2>&1 || [ -x "$HOME/.local/bin/claude" ]; then
+    has_llm=1
+fi
+if [[ $has_llm -eq 1 ]]; then
     systemctl --user enable --now lorite-morning-briefing.timer
     say "ENABLED lorite-morning-briefing.timer — next run:"
     systemctl --user list-timers lorite-morning-briefing.timer --no-pager || true
     say "test now:  systemctl --user start lorite-morning-briefing.service"
 else
-    warn "Claude Code (\`claude\`) is NOT installed — timer NOT enabled."
-    warn "Install + authenticate it, then re-run this script to enable the timer:"
-    warn "  1) install:   curl -fsSL https://claude.ai/install.sh | bash   (or your usual method)"
-    warn "  2) auth:      claude   (log in once interactively over ssh -t), or set ANTHROPIC_API_KEY"
-    warn "  3) re-run:    bash ~/git/dotfiles/tools/lorite/setup-morning-briefing-server.sh"
+    warn "No LLM client found (opencode preferred, claude fallback) — timer NOT enabled."
+    warn "Install OpenCode (preferred):  curl -fsSL https://opencode.ai/install | bash"
+    warn "Or install Claude Code:         curl -fsSL https://claude.ai/install.sh | bash"
+    warn "Then re-run: bash ~/git/dotfiles/tools/lorite/setup-morning-briefing-server.sh"
 fi

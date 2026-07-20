@@ -582,6 +582,24 @@ for opencode_path in '$HOME/.local/bin' '$HOME/.opencode/bin'; do
 	fi
 done
 
+# lorite-llm wrapper: OpenCode (Big Pickle) with Claude fallback.
+# Installed to ~/.local/bin so it's available system-wide (used by morning_briefing.sh, etc.).
+print_info "Installing lorite-llm wrapper..."
+mkdir -p "$HOME/.local/bin"
+cp "$DOTFILES_DIR/tools/lorite/lorite-llm.sh" "$HOME/.local/bin/lorite-llm"
+chmod +x "$HOME/.local/bin/lorite-llm"
+print_success "Installed lorite-llm -> ~/.local/bin/lorite-llm"
+
+# lorite-llm.conf: env-based defaults (LLM_CLIENT, LLM_MODEL) for all users of lorite-llm.
+# Users can override these in ~/.config/environment.d/lorite-llm.conf (not tracked).
+mkdir -p "$HOME/.config/environment.d"
+if [ ! -f "$HOME/.config/environment.d/lorite-llm.conf" ]; then
+    cp "$DOTFILES_DIR/.config/environment.d/lorite-llm.conf" "$HOME/.config/environment.d/lorite-llm.conf"
+    print_success "Installed lorite-llm.conf -> ~/.config/environment.d/"
+else
+    print_success "lorite-llm.conf already present (not overwriting — edit manually if needed)"
+fi
+
 # Setup Copilot, OpenCode, and Claude config.
 print_info "Setting up GitHub Copilot, OpenCode, and Claude configuration..."
 mkdir -p "$DOTFILES_DIR/.copilot/agents"

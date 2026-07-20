@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Canonical copy: ~/git/dotfiles/tools/lorite/morning_briefing.sh
-# Headless Claude Code run of the lorite-morning-briefing skill — daily-note LLM
-# summaries + vault git audit + concept notes + briefing note in ai_chats/briefings/.
-# Report-only on git; idempotent per day. Runs on TWO kinds of host:
+# Headless OpenCode-first (Claude fallback) run of the lorite-morning-briefing skill —
+# daily-note LLM summaries + vault git audit + concept notes + briefing note in
+# ai_chats/briefings/. Report-only on git; idempotent per day. Runs on TWO kinds of host:
 #
 #   * Laptop (GUI):    Obsidian app available → drives the CLI for lint; the vault
 #                      dir is itself the git repo. OnCalendar 06:00.
@@ -62,16 +62,23 @@ else
 fi
 
 export VAULT VAULT_GIT AUDIT_REF OBSIDIAN_GUI
-# Give a long-running delegated agent (the concept-note pass) headroom before the
-# print-mode background-wait ceiling cuts it — the skill runs it synchronously and
-# AFTER the briefing is already on disk, so this is just insurance, not correctness.
-export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS="${CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS:-1200000}"  # 20 min
+
+# Background-wait ceiling (20 min). OpenCode reads its own env var; Claude Code reads
+# CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS. Set both so whichever client fires gets it.
+export OPENCODE_PRINT_BG_WAIT_CEILING_MS=1200000
+export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=1200000
+
 echo "morning-briefing: mode OBSIDIAN_GUI=$OBSIDIAN_GUI VAULT=$VAULT VAULT_GIT=$VAULT_GIT AUDIT_REF=${AUDIT_REF:-<none>}"
 
 # Headless permissions: local tools + web + subagents. `Task` lets the briefing
 # delegate to the lorite-concept-note-writer agent (step 3), and WebSearch/WebFetch
 # let that agent research concepts to ground the notes it writes. Still report-only
 # on git; writes ai_chats/ + daily-note summaries + concept notes (work|personal/concepts).
-exec claude -p "/lorite-morning-briefing" \
-    --allowedTools "Bash,Read,Write,Edit,Glob,Grep,TodoWrite,Skill,Task,WebSearch,WebFetch" \
-    --max-turns 150
+
+# Use lorite-llm wrapper: OpenCode (Big Pickle) → Claude fallback (Sonnet).
+LLM="$HOME/git/dotfiles/tools/lorite/lorite-llm.sh"
+echo "morning-briefing: detected client $("$LLM" -p 2>/dev/null || echo unknown)"
+
+exec "$LLM" -p "/lorite-morning-briefing" \
+     --allowedTools Bash,Read,Write,Edit,Glob,Grep,TodoWrite,Skill,Task,WebSearch,WebFetch \
+     --max-turns 150
