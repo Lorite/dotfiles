@@ -623,6 +623,30 @@ else
 	print_warning "No systemd user session — skipped zotero-obsidian-sync.timer (headless server?)"
 fi
 
+# The home server is the single owner of the Obsidian-DRIVING workflow timers
+# (daily-note + morning-briefing): they run headless there (Xvfb, via the wrapper)
+# so they don't fight the laptop's live app or double-process the same daily note
+# over Syncthing. Detect it by hostname; override with DOTFILES_VAULT_PROCESSOR=1|0.
+is_vault_processor() {
+	if [ -n "${DOTFILES_VAULT_PROCESSOR:-}" ]; then
+		[ "$DOTFILES_VAULT_PROCESSOR" = 1 ]
+		return
+	fi
+	case "$(hostname | tr '[:upper:]' '[:lower:]')" in
+		*thinkcentre*|*m720q*) return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+# On-demand headless-Obsidian wrapper: lets pipeline commands drive the Obsidian
+# CLI even with no GUI (Xvfb), used by the daily-note service and runnable by hand
+# on the home server. Passthrough when Obsidian is already up; no-op-safe elsewhere.
+mkdir -p "$HOME/.local/bin"
+if cp "$DOTFILES_DIR/tools/home-server/with-headless-obsidian.sh" "$HOME/.local/bin/with-headless-obsidian.sh"; then
+	chmod +x "$HOME/.local/bin/with-headless-obsidian.sh"
+	print_success "Installed with-headless-obsidian.sh -> ~/.local/bin"
+fi
+
 # Obsidian daily-note pipeline for the previous day (create + run + strip + link
 # + lint; no LLM summary). Canonical unit copies live in tools/lorite/; the timer
 # runs hourly and no-ops when Obsidian is closed or yesterday is already done.
@@ -632,8 +656,13 @@ if systemctl --user show-environment >/dev/null 2>&1; then
 		"$DOTFILES_DIR/tools/lorite/obsidian-daily-note.timer" \
 		"$HOME/.config/systemd/user/"
 	systemctl --user daemon-reload
-	systemctl --user enable --now obsidian-daily-note.timer
-	print_success "Enabled obsidian-daily-note.timer (hourly, processes yesterday's daily note)"
+	if is_vault_processor; then
+		systemctl --user enable --now obsidian-daily-note.timer
+		print_success "Enabled obsidian-daily-note.timer (hourly, home server, headless)"
+	else
+		systemctl --user disable --now obsidian-daily-note.timer 2>/dev/null || true
+		print_success "obsidian-daily-note.timer left disabled here (runs on the home server)"
+	fi
 else
 	print_warning "No systemd user session — skipped obsidian-daily-note.timer (headless server?)"
 fi
@@ -648,8 +677,13 @@ if systemctl --user show-environment >/dev/null 2>&1; then
 		"$DOTFILES_DIR/tools/lorite/lorite-morning-briefing.timer" \
 		"$HOME/.config/systemd/user/"
 	systemctl --user daemon-reload
-	systemctl --user enable --now lorite-morning-briefing.timer
-	print_success "Enabled lorite-morning-briefing.timer (daily 06:00 briefing)"
+	if is_vault_processor; then
+		systemctl --user enable --now lorite-morning-briefing.timer
+		print_success "Enabled lorite-morning-briefing.timer (home server, ~03:00)"
+	else
+		systemctl --user disable --now lorite-morning-briefing.timer 2>/dev/null || true
+		print_success "lorite-morning-briefing.timer left disabled here (runs on the home server)"
+	fi
 else
 	print_warning "No systemd user session — skipped lorite-morning-briefing.timer (headless server?)"
 fi

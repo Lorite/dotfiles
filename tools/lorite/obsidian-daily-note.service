@@ -5,6 +5,11 @@ Description=Create + process yesterday's Obsidian daily note (Templater, Run, st
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 %h/git/dotfiles/tools/lorite/obsidian_daily_note.py auto
+# Routed through with-headless-obsidian.sh: on the laptop (Obsidian already up) it
+# is a passthrough; on the headless home server it launches Obsidian under Xvfb for
+# the run and stops it after — so `auto` (and its refresh-stt enrichment: media-note
+# creation + Virtual Linker bracketing) works with no GUI. Degrades to file-only if
+# Obsidian can't be brought up.
+ExecStart=%h/.local/bin/with-headless-obsidian.sh /usr/bin/python3 %h/git/dotfiles/tools/lorite/obsidian_daily_note.py auto
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 # Obsidian closed → script exits 0 quietly; real failures show in `journalctl --user -u obsidian-daily-note`

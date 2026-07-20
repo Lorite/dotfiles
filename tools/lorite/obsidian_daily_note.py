@@ -56,6 +56,85 @@ STT_CSV = VAULT / ".android-simpletimetracking/stt_records_automatic.csv"
 STT_HEADING = "# 📑 [[Android SimpleTimeTracker App]] Logs"
 STT_LINE_RE = re.compile(r"^- (\d\d:\d\d)–(\d\d:\d\d) — ")
 
+# SimpleTimeTracker "activity name" -> Media DB media type, for the entries whose
+# comment names a catalogable work. Only these activities are looked up / created;
+# everything else (Social Media, YouTube, Read, …) is left to Virtual Linker to
+# bracket if a note already exists, and is never queried or auto-created. Extend
+# this table to cover more media kinds.
+STT_ACTIVITY_MEDIA_TYPE = {
+    "Series": "series",
+    "Movie": "movie",
+    "Film": "movie",
+    "Videogame": "videogame",
+    "Book": "book",
+    "Manga": "comic_or_manga",
+    "Comic": "comic_or_manga",
+    "Boardgame": "boardgame",
+}
+# Titles that matched no Media DB entry (or errored) land here for the user to
+# resolve by hand — we never guess a wrong note.
+REVIEW_QUEUE = VAULT / "ai_chats/notes/STT media to triage.md"
+
+# Runs in the Obsidian app via `obsidian eval`. Given a title + media type it:
+# resolves existing notes (by name OR alias) to avoid duplicates; else queries
+# the type's Media DB providers, takes an EXACT normalized-title match only
+# (never a fuzzy guess), creates the note, and injects the bare title as an alias
+# so its year-suffixed filename still resolves and Virtual Linker will bracket the
+# log line. Returns a JSON status. Placeholders %TITLE%/%TYPE% are json-substituted.
+MEDIA_CREATE_JS = r"""(async () => {
+  const title = %TITLE%, mtype = %TYPE%;
+  const p = app.plugins.plugins["obsidian-media-db-plugin"];
+  if (!p || !p.apiManager) return JSON.stringify({status: "error", err: "media-db not loaded"});
+  // Diacritic- + case-insensitive so "Pokemon" matches an accented "Pokémon" alias.
+  const norm0 = s => (s == null ? "" : String(s)).normalize("NFD")
+                       .replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const ntitle = norm0(title);
+  // Existing? The (already-cleaned) title exactly equals the note's filename, its filename
+  // without a trailing " (year)" (Media DB names notes "Title (2013–2016)"), or any alias.
+  // Exact match, not substring, so "…on Android" can't false-match [[Android]].
+  const eq = c => norm0(c) === ntitle;
+  const existing = app.vault.getMarkdownFiles().find(f => {
+    if (eq(f.basename) || eq(f.basename.replace(/\s*\(\d{4}[^)]*\)\s*$/, ""))) return true;
+    const al = app.metadataCache.getFileCache(f)?.frontmatter?.aliases;
+    const arr = Array.isArray(al) ? al : (al ? [al] : []);
+    return arr.some(eq);
+  });
+  if (existing) return JSON.stringify({status: "exists", path: existing.path});
+  const am = p.apiManager;
+  const apis = am.apis.filter(a => (a.types || []).includes(mtype)).map(a => a.apiName);
+  if (!apis.length) return JSON.stringify({status: "no-provider"});
+  // A provider with a missing/invalid API key can hang forever; cap every call.
+  const withTimeout = (promise, ms) => Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error("provider timeout")), ms)),
+  ]);
+  let results;
+  try { results = await withTimeout(am.query(title, apis), 15000); }
+  catch (e) { return JSON.stringify({status: "error", err: String(e)}); }
+  const norm = s => (s == null ? "" : String(s)).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const nt = norm(title);
+  const pick =
+       (results || []).find(r => r.type === mtype && norm(r.title) === nt)
+    || (results || []).find(r => r.type === mtype && norm(r.englishTitle) === nt)
+    || (results || []).find(r => norm(r.title) === nt);
+  if (!pick) return JSON.stringify({status: "no-match", count: (results || []).length});
+  let detailed;
+  try { detailed = await withTimeout(am.queryDetailedInfo(pick), 15000); }
+  catch (e) { return JSON.stringify({status: "error", err: String(e)}); }
+  const before = new Set(app.vault.getMarkdownFiles().map(f => f.path));
+  try { await p.createMediaDbNotes([detailed]); }
+  catch (e) { return JSON.stringify({status: "error", err: String(e)}); }
+  const created = app.vault.getMarkdownFiles().find(f => !before.has(f.path));
+  if (!created) return JSON.stringify({status: "error", err: "no note after create"});
+  try {
+    await app.fileManager.processFrontMatter(created, fm => {
+      const a = new Set(Array.isArray(fm.aliases) ? fm.aliases : (fm.aliases ? [fm.aliases] : []));
+      a.add(title); fm.aliases = [...a];
+    });
+  } catch (e) { /* alias is best-effort; the note still exists */ }
+  return JSON.stringify({status: "created", path: created.path, matched: pick.title, year: pick.year});
+})()"""
+
 
 def obs(*args: str, check: bool = True) -> str:
     res = subprocess.run(["obsidian", *args], capture_output=True, text=True)
@@ -203,12 +282,166 @@ def stt_lines_for(date: str) -> list[tuple[tuple[str, str], str]]:
     return out
 
 
+def obsidian_reachable() -> bool:
+    """True if the Obsidian CLI answers — the app is up, either the laptop's live
+    instance or headless (Xvfb) on the server behind with-headless-obsidian.sh."""
+    return subprocess.run(["obsidian", "eval", "code=1"],
+                          capture_output=True, text=True).returncode == 0
+
+
+def _eval_json(js: str, timeout: float = 45) -> dict:
+    """Run JS via `obsidian eval` and parse its `=> <json>` result (the plugin
+    also logs unrelated lines, so scan from the bottom for the JSON line). Always
+    returns a dict; a subprocess timeout (e.g. a media provider that hangs on a
+    missing API key) yields {"status": "error", ...} instead of blocking."""
+    try:
+        res = subprocess.run(["obsidian", "eval", f"code={js}"],
+                             capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "err": f"eval timeout ({timeout:.0f}s)"}
+    for line in reversed(res.stdout.strip().splitlines()):
+        line = line.strip()
+        if line.startswith("=> "):
+            line = line[3:]
+        try:
+            return json.loads(line)
+        except (ValueError, TypeError):
+            continue
+    return {"status": "error", "err": f"no JSON from eval: {res.stdout.strip()[:200]!r}"}
+
+
+def parse_stt_fields(line: str):
+    """(category, activity, comment) for an STT bullet, else None. Shape:
+    `- HH:MM–HH:MM — <cat> — <activity> — <comment>.`; the comment itself may
+    contain ' — ' (e.g. a series title + episode)."""
+    if not STT_LINE_RE.match(line):
+        return None
+    body = line[2:].rstrip()
+    if body.endswith("."):
+        body = body[:-1]
+    parts = body.split(" — ")
+    if len(parts) < 4:
+        return None
+    return parts[1], parts[2], " — ".join(parts[3:])
+
+
+def create_or_check_media(title: str, mtype: str) -> dict:
+    """Resolve/create the Media DB note for the cleaned `title` of `mtype` (see MEDIA_CREATE_JS)."""
+    js = (MEDIA_CREATE_JS.replace("%TITLE%", json.dumps(title))
+                         .replace("%TYPE%", json.dumps(mtype)))
+    return _eval_json(js)
+
+
+def wait_vault_indexed(timeout: float = 40) -> None:
+    """A freshly launched (headless) Obsidian builds the metadata/alias index
+    asynchronously; existence checks and Virtual Linker are unreliable until it is
+    populated. Poll until ~all markdown files are cached (or the count stops
+    growing), so we don't miss an existing note and duplicate/mis-queue it."""
+    deadline = time.monotonic() + timeout
+    prev = -1
+    js = ('(()=>{try{const c=app.metadataCache.getCachedFiles?app.metadataCache.getCachedFiles().length:0;'
+          'return JSON.stringify({c,t:app.vault.getMarkdownFiles().length,ready:!!app.workspace.layoutReady});}'
+          'catch(e){return JSON.stringify({c:0,t:0,ready:false});}})()')
+    while time.monotonic() < deadline:
+        r = _eval_json(js, timeout=10)
+        c, t, ready = r.get("c", 0), r.get("t", 0), r.get("ready", False)
+        if ready and t and c >= t * 0.95:
+            return
+        if c > 0 and c == prev:  # stabilized even if slightly under the threshold
+            return
+        prev = c
+        time.sleep(1)
+
+
+def append_review_queue(items: list) -> None:
+    """Append unresolved (title, type, why) media titles to the triage note, deduped."""
+    REVIEW_QUEUE.parent.mkdir(parents=True, exist_ok=True)
+    existing = REVIEW_QUEUE.read_text(encoding="utf-8") if REVIEW_QUEUE.exists() else (
+        "---\ntags:\n  - ai_generated\n---\n\n# STT media to triage\n\n"
+        "SimpleTimeTracker media with no confident Media DB match — resolve by hand "
+        "(the pipeline never guesses a wrong note).\n\n"
+    )
+    new = [f"- [ ] {t} ({m}) — {why}" for t, m, why in items
+           if f"] {t} ({m})" not in existing]
+    if new:
+        if not existing.endswith("\n"):
+            existing += "\n"
+        REVIEW_QUEUE.write_text(existing + "\n".join(dict.fromkeys(new)) + "\n", encoding="utf-8")
+        print(f"refresh-stt: queued {len(new)} media title(s) for triage")
+
+
+def enrich_stt_media(date: str) -> bool:
+    """Create Media DB notes for unlinked media rows in the note's STT section
+    (routed by activity via STT_ACTIVITY_MEDIA_TYPE; exact-title match only, else
+    queued for triage). Returns True if a relink pass is warranted (a note was
+    created, or an existing note now resolves a still-plain row)."""
+    lines = read(date).split("\n")
+    try:
+        h = lines.index(STT_HEADING)
+    except ValueError:
+        return False
+    end = h + 1
+    while end < len(lines) and lines[end].strip() != "---":
+        end += 1
+    already_queued = REVIEW_QUEUE.read_text(encoding="utf-8") if REVIEW_QUEUE.exists() else ""
+    seen, queued, relink = set(), [], False
+    for ln in lines[h + 1:end]:
+        if "[[" in ln:
+            continue  # already linked
+        fields = parse_stt_fields(ln)
+        if not fields:
+            continue
+        _cat, activity, comment = fields
+        mtype = STT_ACTIVITY_MEDIA_TYPE.get(activity)
+        if not mtype:
+            continue  # not a catalogable media activity
+        # Title for the DB query: drop the episode/track suffix, then strip common
+        # free-text cruft ("Play … on Android"). Existing-note detection uses the
+        # full `comment` (substring match), so this only matters for genuinely-new media.
+        title = comment.split(" — ")[0].strip()
+        title = re.sub(r"^(?:Play|Playing|Watch|Watching|Read|Reading|Listen(?:ing)? to)\s+",
+                       "", title, flags=re.I)
+        title = re.sub(r"\s+on (?:the )?(?:Android|iOS|iPhone|iPad|PC|Steam|Nintendo Switch|"
+                       r"Switch|PS[45]|Xbox|the Switch)\b.*$", "", title, flags=re.I).strip()
+        if not title or title == "undefined":
+            continue
+        if (title, mtype) in seen:
+            continue
+        seen.add((title, mtype))
+        if f"] {title} ({mtype})" in already_queued:
+            continue  # already pending triage — don't re-query a known miss every run
+        res = create_or_check_media(title, mtype)
+        st = res.get("status")
+        if st == "created":
+            relink = True  # a new note to bracket → relink is worth it
+            print(f"refresh-stt: [{date}] created media note {res.get('path')}")
+        elif st == "exists":
+            # The note already exists; Virtual Linker will bracket it on the next
+            # relink triggered by added/created content. Don't force a relink just
+            # for this — a row Virtual Linker keeps missing would relink every run.
+            pass
+        elif st in ("no-match", "no-provider"):
+            queued.append((title, mtype, st))  # genuinely not in any DB → triage
+        else:  # "error" = transient (index not ready, provider hiccup) → retry next run
+            print(f"refresh-stt: [{date}] media '{title}' ({mtype}) transient {res}")
+    if queued:
+        append_review_queue(queued)
+    if relink:
+        time.sleep(2)  # let new notes settle into the metadata / linker index
+    return relink
+
+
 def cmd_refresh_stt(lookback: int) -> None:
     """Top up the STT section of already-processed notes with entries the user
-    back-filled in the app after the note was processed. Insert-only: existing
-    lines (incl. their Virtual Linker / media wikilinks) are never touched, so
-    a repeated (start, end) pair is matched as a multiset. Pure file I/O — no
-    Obsidian needed."""
+    back-filled in the app after the note was processed. Insertion is insert-only
+    (existing lines and their wikilinks are never touched; a repeated (start, end)
+    pair is matched as a multiset) and always runs, even with Obsidian closed.
+    When Obsidian IS reachable it additionally enriches the topped-up notes:
+    creates Media DB notes for new media rows (else queues them) and re-runs the
+    daily-note macro so Virtual Linker brackets the newly inserted entities."""
+    reachable = obsidian_reachable()
+    if reachable:
+        wait_vault_indexed()  # a fresh headless launch indexes asynchronously
     today = dt.date.today()
     for offset in range(1, lookback + 1):
         date = (today - dt.timedelta(days=offset)).isoformat()
@@ -249,6 +482,17 @@ def cmd_refresh_stt(lookback: int) -> None:
                 lines.insert(end, "")
             p.write_text("\n".join(lines), encoding="utf-8")
             print(f"refresh-stt: [{date}] +{added} entries")
+        if reachable:
+            # Enrich (create media notes / queue) then relink so Virtual Linker
+            # brackets the new entities. Skip when nothing changed and there is
+            # nothing to enrich (relink is idempotent but not free).
+            relink = enrich_stt_media(date)
+            if added or relink:
+                try:
+                    step_process(date)
+                    print(f"refresh-stt: [{date}] re-linked STT entities")
+                except Exception as e:  # a bad relink must not block other days
+                    print(f"refresh-stt: [{date}] relink failed: {e}")
 
 
 def cmd_auto(lookback: int) -> None:
