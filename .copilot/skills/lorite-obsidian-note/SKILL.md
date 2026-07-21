@@ -101,6 +101,17 @@ Insert at the **top** of the `# 📓 Journal / Work Log` section (newest-first),
 <the answer>
 ```
 
+## Images & diagrams (embedding visual output the agent created)
+When the work produced a visual — an architecture/flow diagram, a data plot, a screenshot, a schematic — put it **inside** the note, don't just describe it or leave it in another repo. Choose the path by type:
+
+- **Text-expressible diagrams → embed inline as a fenced code block, no file.** Obsidian renders **Mermaid** natively: drop a fenced ` ```mermaid ` flowchart / sequence / graph / class / state block straight into the note. This is the **default** for agent-drawn diagrams — editable, diffable, theme-aware, and it survives git. Prefer it over exporting an image whenever the diagram can be expressed as Mermaid. Use the `lorite-mermaid-gantt` skill for gantt/roadmap styling and the `lorite-obsidian-markdown` skill for Mermaid syntax.
+- **Binary images (matplotlib/plot `.pdf`·`.png`, screenshots, exported `.svg`/draw.io) → save into the vault attachment folder, then embed with a wikilink.** The vault's attachment folder is **`attachments/`** at the vault root (`attachmentFolderPath`), and embeds are **wikilink-style** (Obsidian default — matches every existing embed):
+  1. Write the file into `~/git/lorite-obsidian-notes/attachments/ai_chats/` with a **descriptive, collision-safe name** — `YYYY-MM-DD <task-slug> <what-it-shows>.png` — **not** a random hash or "Pasted image …", so it's identifiable in the flat folder. Prefer **vector** (`.pdf`/`.svg`) for plots/figures, `.png` for screenshots. A `attachments/ai_chats/` subfolder is fine when dropping several.
+  2. Embed it where the detail refers to it with a bare-filename wikilink — `![[<filename>.png]]` (the wikilink resolves across folders) — and add a one-line *italic caption* under it stating the takeaway, so the figure is a standalone argument.
+  - **draw.io** (`obsidian-diagrams-net`) and **Excalidraw** (`obsidian-excalidraw-plugin`) are both installed and render in-app — save the `.drawio`/`.svg` / `.excalidraw.md` under `attachments/ai_chats/` and embed the same way.
+- **Never** paste base64 image data into a note, and never embed a path *outside* the vault (`![[/home/…]]` won't resolve) — copy the file into `attachments/ai_chats/` first. Figures a data/analysis run left in another repo (e.g. the robotics `results/<timestamp>_*/`) must be **copied into `attachments/ai_chats/`** to appear in the note.
+- **Mechanism:** the image file itself is always a **direct file write** (the `obsidian` CLI writes note text, not binaries); the `![[…]]` embed line goes into the note via the same positioned edit you use for the journal entry — on both the CLI and file-fallback paths.
+
 ## Conventions
 - Use wikilinks `[[Note]]` for everything linkable; link liberally. Use callouts/properties per the `lorite-obsidian-markdown` skill. Put sources under `## Sources` (CLI/Bases/Web).
 - **YAML-safe frontmatter.** Unquoted text fields (`description`, `short_description`, `title`, `aliases`, …) break the note's frontmatter if they contain a **colon-then-space (`: `)** or **begin with** `"` `'` `[` `{` `-` `>` `|` `@` `` ` `` `#`. Write an em dash ` — ` where you'd use a colon (incl. book/paper subtitles), and reword so a value never opens with a quoted phrase. If a `: ` or leading quote is unavoidable, single-quote-wrap the whole value and double every internal `'`.
