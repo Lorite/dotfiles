@@ -8,6 +8,8 @@ argument-hint: "<short summary of what was done> + which notes to link (task / p
 
 The **single, canonical way** to record what was worked on, so any later session can reconstruct context fast. Used by `lorite-obsidian-ai-brain`, every PhD-pipeline agent (`lorite-paper-scout`, `lorite-paper-reader`, `lorite-task-manager`, `lorite-experiment-designer`, …), and the user directly. Two parts: a lightweight **diary entry** (the index) and the **full detail in the linked note(s)**.
 
+> [!important] **The split is the whole point — get it right (a common failure).** The **corresponding *task note* Journal is where the full detail lives** (findings, decisions + *why*, numbers, commit hashes, replicate commands, next steps — written to stand alone). The **daily AI-chat diary gets ONLY a short high-level entry** — 2–4 sentences + `[[wikilinks]]`. It is an *index that points at the task notes*, not the record. **Never write long detail into the diary while leaving the task note thin.** And write the task note **as you go**, not just at wrap-up — during long debugging sessions especially, log each substantive step to the task note when it happens.
+
 Vault: `~/git/lorite-obsidian-notes`. Dates are `yyyy-MM-dd`, times `HH:mm` (current local time — get it from the `time` tool or `date "+%H:%M"`).
 
 ## When to use
