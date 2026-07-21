@@ -131,6 +131,7 @@ def build_note(item, coll_paths, today, highlights_md=None):
         f"url: {d.get('url','')}",
         f"zotero: zotero://select/library/items/{d['key']}",
         "type: research",
+        "status: new",
         "publish: true",
         "publish_mode: external",
         "personal_rating: ",
