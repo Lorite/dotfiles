@@ -15,11 +15,12 @@ For the whole anchored session, the user steers and the AI works:
 - **Decision points, not drip-questions.** Confirm the task pick (step 1, an explicit `/lorite` argument that matches an existing task note counts as confirmed) and honor each routed agent's own approval gates; between those, make the minor calls yourself and note them. When a fork genuinely needs the user, present one batched proposal with a recommendation first.
 - **The routing table is a set of triggers.** When the work matches a row, route to that agent/skill rather than improvising the same job inline; when no row matches, inline is correct — don't delegate for the sake of it.
 - **Logs are resumable state.** Diary + note entries are how the user *and future AI sessions* resume the work and audit the process — log decisions with their why, exact replication commands, and only claims backed by this session's tool output (unverified → say so in the log).
+- **Stopping the timer is the AI's job, not the user's.** The timer is started without being asked, so it must be stopped without being asked. **The moment the work on the anchored task is finished — deliverable done, or the user pivots to something else — stop it** (step 6) as part of wrapping up, in the same turn, alongside the closing log and the `status` update. Do not wait for `/lorite stop`, do not ask "shall I stop the timer?", and never end a turn reporting completed work while the timer is still running. `/lorite stop` is a convenience for the user, not the only trigger. A timer left running past the work silently inflates the day's tracking, which is exactly the harm the "wrong activity pollutes the day" note warns about.
 
 ## When to use
 - **At the start of any work session** — PhD research, a side-project, life admin, a meeting, writing, anything you track — before doing the work, so it's anchored and timed.
 - **When the task changes** mid-session — stop the old timer, re-anchor, start a new one.
-- **At wrap-up** — `/lorite stop`: stop the timer and write the closing diary log.
+- **At wrap-up** — stop the timer and write the closing diary log. Triggered **either** by the user (`/lorite stop`) **or** by the AI noticing the work is done / the user has moved on — whichever comes first (see the session contract).
 - **To log already-finished work** — e.g. "create a task for what we did, log it, mark done": skip the live timer and back-fill a finished block with `add_record` (step 3, retrospective mode).
 
 ## Procedure
@@ -94,7 +95,7 @@ You (base session) can invoke any agent or skill — match the work to it and ha
 
 ### 6. Switch task / wrap up
 - **Switch**: `/lorite stop`, then `/lorite <new task>` (step 1) — or just start the new activity, which the flow treats as switching the running activity.
-- **Stop / wrap up**:
+- **Stop / wrap up** — **run this yourself as soon as the work ends; don't wait to be asked** (see the session contract). Concretely, stop when any of these is true: the task's deliverable is finished, the user says the equivalent of "that's it"/"thanks", the user pivots to an unrelated task (stop, then re-anchor), or the session is otherwise ending:
 
   ```bash
   python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py stop
@@ -104,6 +105,7 @@ You (base session) can invoke any agent or skill — match the work to it and ha
 
 ## Notes & gotchas
 - **Confirm the task before starting the timer** — a wrong activity pollutes the day's tracking.
+- **A timer left running is the same pollution.** Starting is gated on the user's confirmation; stopping is not gated on anything — the AI stops it the moment the work ends. If you're unsure whether the session is over, stop it anyway: a re-`start` costs nothing, whereas hours of phantom time on a finished task have to be corrected by hand.
 - **Bases need the Obsidian app running** for the CLI; if it's down, fall back to reading `tasks/*.md` frontmatter directly and say so.
 - **This is the live, prospective complement** to the vault's retrospective `scripts/daily_time_tracker.py` (which buckets a day's activity into finished blocks). Both go through the same Automate flow; this skill's `start`/`stop` run the timer live, while `add_record` (and the vault script) back-fill finished blocks. The flow branches on `payload.action`.
 - **Degrade gracefully** — missing timer, missing task, or app down should never block the actual work; note the gap and carry on.
