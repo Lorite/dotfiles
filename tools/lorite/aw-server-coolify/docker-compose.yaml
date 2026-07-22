@@ -1,0 +1,41 @@
+# aw-server-rust (central store) + aw-sync (imports the laptop's Syncthing'd
+# buckets) for the home server, deployable in Coolify.
+#
+# SECURITY: aw-server has NO auth and NO HTTPS. Do NOT give this a public domain
+# in Coolify. Access only over Tailscale — the port below is bound to the
+# server's Tailscale IP (100.72.103.27), not 0.0.0.0.
+services:
+  aw-server:
+    build:
+      context: .
+      args:
+        AW_VERSION: v0.13.2
+    restart: unless-stopped
+    command: ["--host", "0.0.0.0", "--port", "5600"]
+    volumes:
+      - aw-data:/data
+    ports:
+      # Tailscale IP of the ThinkCentre ONLY. Never "5600:5600" (that is public).
+      - "100.72.103.27:5600:5600"
+
+  aw-sync:
+    build:
+      context: .
+      args:
+        AW_VERSION: v0.13.2
+    restart: unless-stopped
+    # Share aw-server's network namespace so aw-sync reaches it on 127.0.0.1.
+    # This deliberately avoids inter-container DNS/routing, which some hosts block
+    # via firewall (verified: the loopback path works where aw-server:5600 timed out).
+    network_mode: "service:aw-server"
+    entrypoint: ["aw-sync"]
+    command: ["--host", "127.0.0.1", "--port", "5600", "--sync-dir", "/sync", "daemon"]
+    volumes:
+      # Host path where Syncthing delivers the laptop's ~/ActivityWatchSync.
+      # Set this to the real folder on the server (Coolify: persistent storage / bind mount).
+      - /home/lorite/ActivityWatchSync:/sync
+    depends_on:
+      - aw-server
+
+volumes:
+  aw-data:
