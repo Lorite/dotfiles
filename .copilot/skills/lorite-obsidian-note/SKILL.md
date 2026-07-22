@@ -24,6 +24,19 @@ This is the **single, canonical way** to write notes into the Obsidian vault (`~
     changes — notably **`pending-review`** when the deliverable is finished and awaits the user's
     review. **Never set `done`** (completion is the user's call), and don't touch other frontmatter.
     Log the change + evidence in the journal entry.
+  - **Outcome & Learnings exception (task notes) — fill it when you set `pending-review`.** The
+    task template ships a `# ✅ Outcome & Learnings` section with three placeholder subsections
+    (`## Outcome` · `## Learnings` · `## Next Steps`, each holding a bare `- TODO`). **When — and
+    only when — you transition the task to `status: pending-review`** (its deliverable is finished),
+    fill all three by **distilling the note's own `# 📓 Journal / Work Log`** (synthesize what the
+    journal already records; don't re-derive the work): **Outcome** = what was delivered and the end
+    state; **Learnings** = the load-bearing findings, decisions + *why*, and gotchas worth carrying
+    forward; **Next Steps** = what's left / follow-ups (mirror the open `## High Level TODOs`).
+    Grounding still applies — only claims backed by the journal/session output; mark anything
+    unverified as such. **Replace the `- TODO` placeholder only**; if a subsection already holds the
+    user's hand-written text, append beneath it under an `_(AI generated)_` line rather than
+    overwriting (never rewrite the user's content). Missing section/subsections → add them under the
+    template's headings. Use a **direct file edit** for this positioned fill.
   - **Any other note**: append a top-level `# AI Generated` section containing exactly `## Prompt`
     and `## AI Generated Answer`.
 - **Never write secrets** into notes (e.g. nothing from `obsidian-web-clipper-settings.json`).

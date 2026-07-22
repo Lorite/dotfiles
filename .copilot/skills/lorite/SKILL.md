@@ -101,7 +101,7 @@ You (base session) can invoke any agent or skill — match the work to it and ha
   python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py stop
   ```
 
-  then write the closing `lorite-ai-chat-diary` entry summarizing the session. If no live timer was ever running (e.g. retrospective logging), back-fill the block with `add_record` (step 3) instead of `stop`. **Update the task's `status`** to reflect where the work landed (allowed agent values: todo / investigating / in-progress / blocked / pending-review / cancelled — never `done`): set **`pending-review`** when the session finished the task's deliverable and it now awaits the user's review; leave `in-progress` when work continues next session.
+  then write the closing `lorite-ai-chat-diary` entry summarizing the session. If no live timer was ever running (e.g. retrospective logging), back-fill the block with `add_record` (step 3) instead of `stop`. **Update the task's `status`** to reflect where the work landed (allowed agent values: todo / investigating / in-progress / blocked / pending-review / cancelled — never `done`): set **`pending-review`** when the session finished the task's deliverable and it now awaits the user's review; leave `in-progress` when work continues next session. **When you set `pending-review`, also fill the task note's `# ✅ Outcome & Learnings` subsections** (`## Outcome` / `## Learnings` / `## Next Steps`) by distilling its `# 📓 Journal / Work Log` — the closing act of finishing a task, per the `lorite-ai-chat-diary` skill (Part 2).
 
 ## Notes & gotchas
 - **Confirm the task before starting the timer** — a wrong activity pollutes the day's tracking.
