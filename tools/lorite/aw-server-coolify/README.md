@@ -13,11 +13,49 @@ healthy, and `aw-sync` reaches the server over the shared network namespace.
 
 ## ⚠️ Security — read this first
 
-aw-server has **no authentication and no HTTPS**. **Do NOT assign a public domain**
-to this service in Coolify. Access is Tailscale-only: the compose binds the port to
-the ThinkCentre's Tailscale IP (`100.72.103.27:5600`), never `0.0.0.0`. Data reaches
-the server over Syncthing (encrypted), so the server is never network-exposed to pull
-from the laptop.
+aw-server has **no authentication and no HTTPS of its own** — so it must never be
+exposed raw. It always sits behind something that adds those. Pick an access mode:
+
+- **Option A — Tailscale-only (most private, default in this compose).** The port
+  is bound to the ThinkCentre's Tailscale IP (`100.72.103.27:5600`), never `0.0.0.0`.
+  No public attack surface at all; reachable only from your tailnet devices.
+- **Option B — public `aw.lorite.eu` behind a login.** A reverse proxy (Coolify's
+  Traefik) terminates **HTTPS** and enforces **auth** in front; aw-server stays
+  internal and only ever sees authenticated requests. See "Option B" below.
+
+Either way, data reaches the server over **Syncthing** (encrypted), so the server is
+never network-exposed to *pull* from the laptop.
+
+## Option B — public at aw.lorite.eu behind a login
+
+You keep the same image; you just change how it's fronted. In the compose, **remove
+the `ports:` host binding** on `aw-server` (Traefik reaches it on Coolify's internal
+network — no host port needed) and instead:
+
+1. **Coolify UI → the `aw-server` service → Domains:** set `https://aw.lorite.eu`,
+   container port `5600`. Coolify provisions a Let's Encrypt certificate and the
+   Traefik router automatically → you now have HTTPS.
+2. **Add Basic Auth** (single user/password). Generate a bcrypt hash on any machine:
+   ```bash
+   htpasswd -nbB admin 'a-long-unique-password'      # apache2-utils
+   # -> admin:$2y$05$....   (copy the whole line)
+   ```
+   Then add it as a Traefik middleware, following Coolify's official guide
+   (handles the compose router wiring): https://coolify.io/docs/knowledge-base/proxy/traefik/basic-auth
+   The middleware label looks like (note: **`$` must be doubled to `$$`** in compose):
+   ```yaml
+   labels:
+     - "traefik.http.middlewares.aw-auth.basicauth.users=admin:$$2y$$05$$....hash...."
+     # then attach `aw-auth` to the router Coolify created for aw.lorite.eu (per the guide)
+   ```
+
+**Honest tradeoff:** Basic Auth over HTTPS is fine for a personal dashboard, but it's
+a *single credential* protecting your entire activity history on the public internet —
+use a long, unique password. For stronger auth, put **Authentik/Authelia forward-auth**
+in front instead (Coolify one-click + a forward-auth middleware). And the most private
+option that still gives a nice HTTPS URL without a password is **`tailscale serve`**
+(exposes it at `https://<host>.<tailnet>.ts.net`, reachable only by your own devices) —
+consider that if you don't actually need access from non-Tailscale machines.
 
 ## Deploy in Coolify
 
