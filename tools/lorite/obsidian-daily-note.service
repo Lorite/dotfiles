@@ -2,6 +2,10 @@
 # Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
 [Unit]
 Description=Create + process yesterday's Obsidian daily note (Templater, Run, strip, Virtual Linker, lint)
+# Ensure the ActivityWatch laptop-usage CSVs exist before the note is processed
+# (soft dep: if aw-export fails the note still runs). See aw-daily-export.service.
+Wants=aw-daily-export.service
+After=aw-daily-export.service
 
 [Service]
 Type=oneshot

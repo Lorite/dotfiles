@@ -1,0 +1,15 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/aw-daily-export.timer
+# Daily at 00:20 (yesterday is complete by then) + shortly after boot; Persistent
+# catches days the laptop slept through. The service is also pulled in on demand
+# by obsidian-daily-note.service, so this timer just bounds staleness.
+[Unit]
+Description=Daily ActivityWatch -> Obsidian daily-note CSV export
+
+[Timer]
+OnCalendar=*-*-* 00:20:00
+OnBootSec=3min
+Persistent=true
+Unit=aw-daily-export.service
+
+[Install]
+WantedBy=timers.target

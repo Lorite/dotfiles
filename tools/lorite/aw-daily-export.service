@@ -1,0 +1,17 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/aw-daily-export.service
+# Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
+# Produces the daily note's laptop-usage CSVs from ActivityWatch (replaces the
+# retired linux-simple-app-logger). Pulled in as a dependency of
+# obsidian-daily-note.service so the CSV exists before the note is processed.
+[Unit]
+Description=Export ActivityWatch active-window data to the Obsidian daily-note CSVs
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/git/dotfiles/tools/lorite/aw_daily_export.py --backfill 2
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Optional host override of LORITE_VAULT / AW_SERVER ('-' = ok if absent).
+EnvironmentFile=-%h/.config/lorite/morning-briefing.env
+TimeoutStartSec=2min
+# aw-server down → exits 0 quietly; failures show in
+# `journalctl --user -u aw-daily-export`
