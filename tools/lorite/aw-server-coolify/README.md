@@ -16,12 +16,13 @@ healthy, and `aw-sync` reaches the server over the shared network namespace.
 aw-server has **no authentication and no HTTPS of its own** — so it must never be
 exposed raw. It always sits behind something that adds those. Pick an access mode:
 
-- **Option A — Tailscale-only (most private, default in this compose).** The port
-  is bound to the ThinkCentre's Tailscale IP (`100.72.103.27:5600`), never `0.0.0.0`.
-  No public attack surface at all; reachable only from your tailnet devices.
-- **Option B — public `aw.lorite.eu` behind a login.** A reverse proxy (Coolify's
-  Traefik) terminates **HTTPS** and enforces **auth** in front; aw-server stays
-  internal and only ever sees authenticated requests. See "Option B" below.
+- **Option B — public `aw.lorite.eu` behind a login (the compose default).** A reverse
+  proxy (Coolify's Traefik) terminates **HTTPS** and enforces **Basic Auth** in front;
+  aw-server stays internal and only ever sees authenticated requests. The compose ships
+  the Traefik labels for this; you set `AW_BASIC_AUTH` in Coolify. See "Option B" below.
+- **Option A — Tailscale-only (most private; commented alternative in the compose).**
+  Swap the Traefik labels for the `ports:` binding to the ThinkCentre's Tailscale IP
+  (`100.72.103.27:5600`), never `0.0.0.0`. No public attack surface; tailnet-only.
 
 Either way, data reaches the server over **Syncthing** (encrypted), so the server is
 never network-exposed to *pull* from the laptop.

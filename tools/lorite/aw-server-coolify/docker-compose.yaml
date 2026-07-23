@@ -14,9 +14,24 @@ services:
     command: ["--host", "0.0.0.0", "--port", "5600"]
     volumes:
       - aw-data:/data
-    ports:
-      # Tailscale IP of the ThinkCentre ONLY. Never "5600:5600" (that is public).
-      - "100.72.103.27:5600:5600"
+    # --- Access mode: PUBLIC domain via Coolify/Traefik (aw.lorite.eu + Basic Auth) ---
+    # Set AW_BASIC_AUTH in Coolify (env var) to the output of:
+    #   htpasswd -nbB <user> '<password>'        # the whole "user:hash" line
+    # The label only references ${AW_BASIC_AUTH}, so the hash never lands in this public
+    # repo. `https` / `letsencrypt` are Coolify's default Traefik entrypoint + resolver.
+    labels:
+      - traefik.enable=true
+      - 'traefik.http.routers.aw.rule=Host(`aw.lorite.eu`)'
+      - traefik.http.routers.aw.entrypoints=https
+      - traefik.http.routers.aw.tls.certresolver=letsencrypt
+      - traefik.http.services.aw.loadbalancer.server.port=5600
+      - 'traefik.http.middlewares.aw-auth.basicauth.users=${AW_BASIC_AUTH}'
+      - traefik.http.routers.aw.middlewares=aw-auth
+    # --- Alternative: Tailscale-only (no domain, no auth). To use this instead, delete
+    #     the labels above and uncomment the binding below (aw-server has no auth/HTTPS,
+    #     so this IP must be the server's Tailscale IP, never 0.0.0.0): ---
+    # ports:
+    #   - "100.72.103.27:5600:5600"
 
   aw-sync:
     build:
