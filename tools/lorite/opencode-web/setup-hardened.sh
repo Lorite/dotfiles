@@ -336,37 +336,25 @@ fi
 cat <<EOF
 
 ────────────────────────────────────────────────────────────────────────────
-The host side is done and verified. The remaining steps need YOUR Cloudflare
-login, so they are yours to run — as $OWNER, not root:
+The host side is done and verified. Two interactive steps are yours — they open a
+browser and must run as $OWNER, NOT root, because they write to ~/.cloudflared:
 
-  1. Authenticate cloudflared (opens a browser; pick the lorite.eu zone):
-       cloudflared tunnel login
+  cloudflared tunnel login          # pick the zone for $DOMAIN
+  cloudflared tunnel create opencode
 
-  2. Create the tunnel and point the hostname at it:
-       cloudflared tunnel create opencode
-       cloudflared tunnel route dns opencode $DOMAIN
+Then hand the rest to the companion script, which copies the credentials to
+/etc/cloudflared (root:root 0600 — cloudflared.service runs as root, so pointing the
+config at your home directory is what fails), writes and validates config.yml, adds the
+DNS route, starts the service and verifies end to end:
 
-  3. Write /etc/cloudflared/config.yml (replace <TUNNEL-ID> from step 2):
+  sudo $HERE/finish-tunnel.sh $DOMAIN
 
-       tunnel: <TUNNEL-ID>
-       credentials-file: /root/.cloudflared/<TUNNEL-ID>.json
-       ingress:
-         - hostname: $DOMAIN
-           service: http://127.0.0.1:$PORT
-         - service: http_status:404
-
-  4. Run it as a service:
-       sudo cloudflared service install
-       sudo systemctl enable --now cloudflared
-
-  5. Cloudflare dashboard -> Zero Trust -> Access -> Applications
-       * Add a self-hosted application for $DOMAIN
-       * Identity provider: Google  (Settings -> Authentication -> add Google first)
-       * Policy: Allow, include -> Emails -> your address
-       * Session duration: 24 h is the default; raise it if the login gets annoying
-
-  6. Verify from a browser that is NOT signed in (private window):
-       https://$DOMAIN  -> Cloudflare login page, NOT OpenCode
+Last step, in the Cloudflare dashboard -> Zero Trust:
+  * Settings -> Authentication: add Google as a login method
+  * Access -> Applications: add a self-hosted app for $DOMAIN, enable Google on it
+  * Policy: Action Allow, Include -> Emails -> your address
+    (Access is deny-by-default; "That account does not have access" means no Allow
+     policy matched. Zero Trust -> Logs -> Access shows the exact identity presented.)
 
 Nothing is reachable from the internet until step 4 completes.
 ────────────────────────────────────────────────────────────────────────────

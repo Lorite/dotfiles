@@ -4,8 +4,23 @@ Publishes `opencode web` from `lorite-thinkcentre-m720q` so you can drive a codi
 from the phone. **Use the hardened path:**
 
 ```bash
+# 1. host side: service user, bind mounts, backend, cloudflared
 sudo ~/git/dotfiles/tools/lorite/opencode-web/setup-hardened.sh opencode.lorite.eu
+
+# 2. interactive, as yourself (writes to ~/.cloudflared — NOT as root)
+cloudflared tunnel login
+cloudflared tunnel create opencode
+
+# 3. wire the tunnel up and verify end to end
+sudo ~/git/dotfiles/tools/lorite/opencode-web/finish-tunnel.sh opencode.lorite.eu
 ```
+
+Then, in the Cloudflare dashboard → Zero Trust: add **Google** under *Settings →
+Authentication*, create a self-hosted **Access application** for the hostname with Google
+enabled, and give it a policy of **Action: Allow, Include → Emails → your address**.
+Access is deny-by-default — *"That account does not have access"* means you authenticated
+but no Allow policy matched; *Zero Trust → Logs → Access* shows the exact identity
+presented, which is the fastest way to find the mismatch.
 
 | | `setup-hardened.sh` **(use this)** | `setup.sh` *(superseded)* |
 |---|---|---|
@@ -110,7 +125,9 @@ Coolify still owns the certificate and the proxy; only the process is outside it
 |------|------|
 | `../opencode-serve.service` | systemd **user** unit running `opencode serve`, bound to the bridge gateway |
 | `opencode.yaml` | Traefik dynamic config (router + Basic Auth + HTTPS redirect + backend) |
-| `setup.sh` | resolves the gateway, writes creds, installs both, opens ufw, verifies |
+| `setup-hardened.sh` | service user, ACLs, bind mounts, backend service, installs cloudflared |
+| `finish-tunnel.sh` | credentials → /etc/cloudflared, config.yml, DNS route, service, verify |
+| `setup.sh` | *superseded* — Traefik path: gateway, creds, ufw, verify |
 | `~/.config/lorite/opencode-serve.env` | **not in git**, mode 600 — bind address + backend credentials |
 | `/data/coolify/proxy/dynamic/opencode.htpasswd` | Traefik's bcrypt users file |
 
@@ -140,3 +157,22 @@ systemctl --user status opencode-serve
 journalctl --user -u opencode-serve -n 50
 docker logs coolify-proxy --tail 50 | grep -i acme        # certificate trouble
 ```
+
+
+## Why OpenCode's own Basic Auth stays on, under Access
+
+Access is much stronger than a password, so the second layer looks redundant — until Access
+isn't there. The only network path to the backend is the tunnel (it binds `127.0.0.1`), so
+the question is whether Access can stop being in front of it. It can: the Access
+application gets deleted or renamed, a policy is set to **Bypass** instead of Allow, or a
+second hostname is added to the tunnel's ingress without a matching app. In each case the
+tunnel keeps serving and Access is simply absent.
+
+That is not hypothetical here. Between `finish-tunnel.sh` completing and the Access policy
+being created, `opencode.lorite.eu` was publicly reachable and answered **401** — the Basic
+Auth layer doing exactly this job, in production, on day one.
+
+Cost is one prompt per browser session (browsers cache it; a password manager autofills
+it). To remove it anyway, strip the `OPENCODE_SERVER_*` lines from `/etc/opencode-web.env`
+and restart — but leave the file itself, because the unit requires it to exist so the
+service can never come up unauthenticated by accident.
