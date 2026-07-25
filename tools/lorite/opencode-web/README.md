@@ -143,6 +143,7 @@ to maintain — Cloudflare terminates TLS at its edge.
 
 ## Gotchas found the hard way
 
+- **git refuses the vault for the service user — "dubious ownership".** The vault repo is owned by `lorite`; the service runs as `opencode-web`, and git ≥ 2.35.2 treats another user's repo as not-a-repo unless `safe.directory` allows it. OpenCode then silently falls back to the catch-all `global` project (worktree `/`), which presents as *no projects, empty picker, chats that never respond* — while every git check run as `lorite` passes. `setup-hardened.sh` now writes `safe.directory` entries for both bind views into the service user's `~/.gitconfig`. When verifying anything about this service, run it **as `opencode-web`**, not as the owner.
 - **`ufw` is active and drops docker-bridge → host traffic.** Without the scoped
   `ufw allow from <coolify subnet> to <gateway> port <port>` rule, Traefik gets a
   connection *timeout* and the site 504s with nothing useful in the logs. `setup.sh`

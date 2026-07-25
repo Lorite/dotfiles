@@ -179,6 +179,26 @@ if [[ -d "/srv/$SVC_USER/skills" ]]; then
     echo "    skills: read-only  (/srv/$SVC_USER/skills)"
 fi
 
+# ── 3a½. Let the service account SEE the vault's git repo ───────────────────────
+# The vault is a git repo owned by $OWNER, but the service runs as $SVC_USER — and git
+# >= 2.35.2 refuses a repo owned by another user ("detected dubious ownership") unless
+# safe.directory says otherwise. Without this, OpenCode cannot derive a project from the
+# vault and collapses it into the catch-all `global` project (worktree /), which breaks
+# the web UI's project list and file picker. Found 2026-07-25: every git verification had
+# run as $OWNER, so the failure only existed for the service user and was invisible.
+step "Granting the service user git access to the vault (safe.directory)"
+GITCFG="$SVC_HOME/.gitconfig"
+[[ -f "$GITCFG" ]] || install -o "$SVC_USER" -g "$SVC_USER" -m 0644 /dev/null "$GITCFG"
+for p in "$SVC_HOME/vault" "/srv/$SVC_USER/vault"; do
+    if git config --file "$GITCFG" --get-all safe.directory 2>/dev/null | grep -qx "$p"; then
+        echo "    already present: $p"
+    else
+        git config --file "$GITCFG" --add safe.directory "$p"
+        echo "    added: $p"
+    fi
+done
+chown "$SVC_USER:$SVC_USER" "$GITCFG"   # git config rewrites via rename, dropping the owner
+
 # ── 3b. Tighten secret files that were world-readable ───────────────────────────
 # Found on this host 2026-07-25: several .env / .secrets files at mode 0664 under a 0755
 # home. Harmless while `lorite` was the only account; not harmless once a service account
