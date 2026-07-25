@@ -143,6 +143,7 @@ to maintain — Cloudflare terminates TLS at its edge.
 
 ## Gotchas found the hard way
 
+- **Never open `/app` in the browser — the URL is a base64 directory since ≥ 1.18.5.** The web UI's routes are `/<base64-of-directory>/session/<id>`, and the UI base64-decodes the first path segment: `atob("app")` = `j\x9a` = `j�`, so `https://opencode.lorite.eu/app` means "open directory `j�`" — the picker dies (`Failed to init file picker: Invalid path j�`), chats never respond (`prompt_async failed … realPath (…/j�)`), and no amount of server-state or browser-storage wiping helps because the poison re-enters from the URL on every visit. The old UI really did live at `/app`, which is why the habit (and these docs, previously) existed. **Browser URL is the root: `https://opencode.lorite.eu/`.** (`curl` status probes against any path are still fine — the server serves the SPA for every route.)
 - **git refuses the vault for the service user — "dubious ownership".** The vault repo is owned by `lorite`; the service runs as `opencode-web`, and git ≥ 2.35.2 treats another user's repo as not-a-repo unless `safe.directory` allows it. OpenCode then silently falls back to the catch-all `global` project (worktree `/`), which presents as *no projects, empty picker, chats that never respond* — while every git check run as `lorite` passes. `setup-hardened.sh` now writes `safe.directory` entries for both bind views into the service user's `~/.gitconfig`. When verifying anything about this service, run it **as `opencode-web`**, not as the owner.
 - **`ufw` is active and drops docker-bridge → host traffic.** Without the scoped
   `ufw allow from <coolify subnet> to <gateway> port <port>` rule, Traefik gets a
@@ -162,8 +163,8 @@ to maintain — Cloudflare terminates TLS at its edge.
 ## Verify
 
 ```bash
-curl -I https://opencode.lorite.eu/app                    # expect 401
-curl -I -u <user>:<pass> https://opencode.lorite.eu/app   # expect 200
+curl -I https://opencode.lorite.eu/                       # expect 401 (302 with Access in front)
+curl -I -u <user>:<pass> https://opencode.lorite.eu/      # expect 200
 systemctl --user status opencode-serve
 journalctl --user -u opencode-serve -n 50
 docker logs coolify-proxy --tail 50 | grep -i acme        # certificate trouble
