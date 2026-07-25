@@ -1,0 +1,35 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/opencode-serve.service
+# Installed to ~/.config/systemd/user/ by tools/lorite/opencode-web/setup.sh.
+#
+# Runs `opencode serve` as a HOST service (not a Coolify container) because OpenCode
+# needs the host's git repos, Obsidian vault, `obsidian` CLI, headless-Obsidian Xvfb
+# and Python tooling — none of which exist inside a container image.
+#
+# It binds to the Coolify docker-network GATEWAY, not 0.0.0.0: that makes it reachable
+# from coolify-proxy (Traefik) and from the host, but NOT from the LAN, Tailscale or
+# the internet directly. Public access is Traefik's job, and Traefik enforces Basic
+# Auth in front. OpenCode's own Basic Auth is enabled too, so a Traefik misconfiguration
+# does not expose an unauthenticated agent.
+[Unit]
+Description=OpenCode headless server (web UI behind Coolify/Traefik)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# OPENCODE_BIND_ADDR is written by setup.sh after resolving the coolify bridge gateway.
+# OPENCODE_SERVER_USERNAME / OPENCODE_SERVER_PASSWORD live in the same file (mode 600,
+# never in git). Without them OpenCode serves the UI unauthenticated — so the unit
+# refuses to start if the file is missing (no leading '-').
+EnvironmentFile=%h/.config/lorite/opencode-serve.env
+Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=%h
+ExecStart=%h/.opencode/bin/opencode serve --hostname ${OPENCODE_BIND_ADDR} --port ${OPENCODE_PORT}
+Restart=on-failure
+RestartSec=10
+# The agent can run shell commands; keep it out of the obvious places it has no business in.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

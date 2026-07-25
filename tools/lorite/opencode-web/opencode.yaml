@@ -1,0 +1,69 @@
+# Traefik dynamic configuration for the OpenCode web UI.
+#
+# Install to /data/coolify/proxy/dynamic/opencode.yaml on the home server (that host dir
+# is bind-mounted into coolify-proxy at /traefik, and Traefik watches it — no restart
+# needed). tools/lorite/opencode-web/setup.sh does this for you.
+#
+# Placeholders substituted by setup.sh:
+#   __DOMAIN__       public hostname, e.g. opencode.lorite.eu
+#   __BACKEND_URL__  http://<coolify-bridge-gateway>:<port>, e.g. http://10.0.1.1:4096
+#
+# Auth is deliberately DOUBLE: Traefik Basic Auth here, and OpenCode's own
+# OPENCODE_SERVER_USERNAME/PASSWORD on the backend. This is a shell-capable coding agent
+# on the machine that also holds the Obsidian vault, Nextcloud, Immich and Home Assistant —
+# a single misconfigured layer must not be enough to reach it.
+http:
+  routers:
+    # HTTPS: the real entry point. Certificate via Coolify's existing Let's Encrypt
+    # resolver (Cloudflare DNS-01), so no port-80 challenge is needed.
+    opencode:
+      rule: "Host(`__DOMAIN__`)"
+      entryPoints:
+        - https
+      middlewares:
+        - opencode-auth
+        - opencode-headers
+      service: opencode
+      tls:
+        certResolver: letsencrypt
+
+    # HTTP: redirect only — never serves the app.
+    opencode-http:
+      rule: "Host(`__DOMAIN__`)"
+      entryPoints:
+        - http
+      middlewares:
+        - opencode-https-redirect
+      service: opencode
+
+  middlewares:
+    opencode-auth:
+      basicAuth:
+        # bcrypt hashes, one per line, generated with `htpasswd -nbB`. Kept in a separate
+        # file so no '$' escaping is needed and the hash never lands in this config.
+        usersFile: "/traefik/dynamic/opencode.htpasswd"
+        realm: "OpenCode"
+        removeHeader: true
+
+    opencode-https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    opencode-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "no-referrer"
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+
+  services:
+    opencode:
+      loadBalancer:
+        # The host-side systemd service (see tools/lorite/opencode-serve.service).
+        servers:
+          - url: "__BACKEND_URL__"
+        passHostHeader: true
