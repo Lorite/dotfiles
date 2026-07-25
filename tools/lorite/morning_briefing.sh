@@ -75,10 +75,13 @@ echo "morning-briefing: mode OBSIDIAN_GUI=$OBSIDIAN_GUI VAULT=$VAULT VAULT_GIT=$
 # let that agent research concepts to ground the notes it writes. Still report-only
 # on git; writes ai_chats/ + daily-note summaries + concept notes (work|personal/concepts).
 
-# Use lorite-llm wrapper: OpenCode (Big Pickle) → Claude fallback (Sonnet).
+# Use the lorite-llm wrapper: Claude (Sonnet) by default, OpenCode as fallback.
+# NOTE: pass the wrapper's OWN flags (--skill/--allowed-tools/--max-turns), never the
+# raw client flags — `-p` here used to collide with the wrapper's client probe, which
+# silently turned every run from 2026-07-21 to 2026-07-25 into a 2-second no-op.
 LLM="$HOME/git/dotfiles/tools/lorite/lorite-llm.sh"
-echo "morning-briefing: detected client $("$LLM" -p 2>/dev/null || echo unknown)"
+echo "morning-briefing: detected client $("$LLM" --which 2>/dev/null || echo unknown)"
 
-exec "$LLM" -p "/lorite-morning-briefing" \
-     --allowedTools Bash,Read,Write,Edit,Glob,Grep,TodoWrite,Skill,Task,WebSearch,WebFetch \
+exec "$LLM" --skill lorite-morning-briefing \
+     --allowed-tools Bash,Read,Write,Edit,Glob,Grep,TodoWrite,Skill,Task,WebSearch,WebFetch \
      --max-turns 150
