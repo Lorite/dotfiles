@@ -141,8 +141,17 @@ to maintain — Cloudflare terminates TLS at its edge.
 | `/etc/opencode-web.env` | **not in git**, mode 640 root:opencode-web — backend credentials |
 | `/etc/cloudflared/config.yml` + `<id>.json` | tunnel config and credentials (0600 root) |
 
+## Opening the app
+
+The front door is the **project's base64 route** (bookmark it):
+`https://opencode.lorite.eu/L2hvbWUvb3BlbmNvZGUtd2ViL3ZhdWx0` — that token is
+`base64("/home/opencode-web/vault")` without padding. The root URL only shows the project
+sidebar, and the "Add project" picker cannot help (see gotchas below).
+
 ## Gotchas found the hard way
 
+- **The vault must be a git repo *with at least one commit*, readable by the service user.** OpenCode's project id IS the root-commit SHA: `git init` alone leaves the directory on the hidden `global` catch-all project (empirically verified — no-commit repo → `id:"global"`, one empty commit → real id). The server clone has a deliberately **empty** root commit (`4debe23`) so this unfiltered clone never carries vault content; never commit real files there without `scripts/install-git-filters.sh`.
+- **The "Add project" picker always says "No folders found" — upstream, not us.** On 1.18.5 the dialog searches `directory=$HOME`, and fff refuses to index home directories ("Can not run certain FFF features in a file system root or home directories", fff#588). Reproduced on a healthy laptop instance. Use the base64 project URL instead.
 - **Never open `/app` in the browser — the URL is a base64 directory since ≥ 1.18.5.** The web UI's routes are `/<base64-of-directory>/session/<id>`, and the UI base64-decodes the first path segment: `atob("app")` = `j\x9a` = `j�`, so `https://opencode.lorite.eu/app` means "open directory `j�`" — the picker dies (`Failed to init file picker: Invalid path j�`), chats never respond (`prompt_async failed … realPath (…/j�)`), and no amount of server-state or browser-storage wiping helps because the poison re-enters from the URL on every visit. The old UI really did live at `/app`, which is why the habit (and these docs, previously) existed. **Browser URL is the root: `https://opencode.lorite.eu/`.** (`curl` status probes against any path are still fine — the server serves the SPA for every route.)
 - **git refuses the vault for the service user — "dubious ownership".** The vault repo is owned by `lorite`; the service runs as `opencode-web`, and git ≥ 2.35.2 treats another user's repo as not-a-repo unless `safe.directory` allows it. OpenCode then silently falls back to the catch-all `global` project (worktree `/`), which presents as *no projects, empty picker, chats that never respond* — while every git check run as `lorite` passes. `setup-hardened.sh` now writes `safe.directory` entries for both bind views into the service user's `~/.gitconfig`. When verifying anything about this service, run it **as `opencode-web`**, not as the owner.
 - **`ufw` is active and drops docker-bridge → host traffic.** Without the scoped
