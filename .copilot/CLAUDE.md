@@ -15,13 +15,9 @@ These agents and skills are tuned for **Claude Opus 4.8** (they degrade graceful
 - **Narration: brief signposts while working, a re-grounding summary at the end.** One line when you find something load-bearing or change direction; skip play-by-play. The final summary leads with the outcome and is written for a reader who didn't watch the session — the same standard as the vault log.
 - **Full spec up front.** When handing work to a subagent, pass the complete task spec plus the corresponding vault note in the first message — don't drip-feed context across turns.
 
-## Agents
+## Agents and skills
 
-Custom agents are located in `~/.claude/agents/`.
-
-## Skills
-
-Custom skills are located in `~/.claude/skills/`. These are automatically detected by Claude Code, OpenCode, and GitHub Copilot.
+Both are authored **once** in `~/git/dotfiles/.copilot/` (`agents/`, `skills/`) and propagated to Claude Code, OpenCode, and Copilot by that repo's `install.sh`. The copies under `~/.claude/`, `~/.config/opencode/`, and `~/.copilot/` are **generated — never hand-edit them**; edit `.copilot/` and re-run `./install.sh`.
 
 ## Obsidian note sync (PhD-pipeline agents)
 
@@ -31,7 +27,7 @@ The Obsidian vault (`~/git/lorite-obsidian-notes`) is the running record of ever
   - `obsidian outline path="..."` — structure before committing to a full `read`; the heading tree shows which section matters.
   - `obsidian search:context query="..." path="..."` — finds content and returns matching lines + context in one call; prefer over `search` (paths only) followed by `read`.
   - `obsidian property:read name=<field> path="..."` — single frontmatter field (e.g. `status`, `type`, `projects`) without reading the whole file.
-- **Log to it frequently.** Record findings, decisions, and progress as you go (not only at the end) via the **`lorite-ai-chat-diary`** skill — it writes a dated entry in `ai_chats/diary/daily/AI Chat - <date>` and files the full detail in the linked note(s) where their type dictates (task notes → a dated `### AI generated` entry inside `# 📓 Journal / Work Log`; other notes → a `# AI Generated` section), on top of the `lorite-obsidian-note` safe-write policy (`ai_chats/`-only writes; elsewhere append-only, never rewriting hand-written content — with four task-note exceptions: **subtask checkboxes may be ticked** when the work is verifiably done (box only, never the item text); an **AI-owned `## High Level TODOs` subsection** at the end of `# 🎯 Task Description` may be freely maintained (add / complete / strike-through `~~removed~~` its own items — kept separate from the user's hand-written checklist, holding the living forward plan vs. the Journal's dated history); the **`status` frontmatter may be set** to todo / investigating / in-progress / blocked / **pending-review** / cancelled as the work state changes — `pending-review` when the deliverable is finished and awaits the user's review; **never `done`**, that's the user's call; and when `pending-review` is set, the **`# ✅ Outcome & Learnings` subsections** (`## Outcome` / `## Learnings` / `## Next Steps`) are **filled from the note's Journal**, replacing their `- TODO` placeholders (the closing act of finishing a task). Evidence logged either way).
+- **Log to it frequently.** Record findings, decisions, and progress as you go (not only at the end) via the **`lorite-ai-chat-diary`** skill — a dated entry in `ai_chats/diary/daily/AI Chat - <date>` plus the full detail in the linked note(s). It sits on the `lorite-obsidian-note` safe-write policy: **`ai_chats/` only for free writes; everywhere else append-only, never rewriting hand-written content**. Task notes have four narrow exceptions (ticking subtask boxes, an AI-owned `## High Level TODOs` subsection, setting `status` — **never `done`**, that's the user's call — and filling `# ✅ Outcome & Learnings` when `status: pending-review`); the exact rules live in the two skills, so **read `lorite-ai-chat-diary` before your first vault write of a session**.
 - **"Corresponding note"**, in order: the task note (`tasks/`, `type: task`) driving the work; else the paper's literature note; else the project note (e.g. the Conference Paper project). When unsure, ask, or default to an `ai_chats/notes/` note that wikilinks to the others.
 
 ## Git

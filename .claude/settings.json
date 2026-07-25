@@ -28,6 +28,9 @@
       "devcontainer *"
     ]
   },
+  "permissions": {
+    "defaultMode": "auto"
+  },
   "effortLevel": "high",
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true
