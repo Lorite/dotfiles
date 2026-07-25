@@ -1,0 +1,63 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/opencode-web/opencode-web.service
+# Installed to /etc/systemd/system/ by setup-hardened.sh (which substitutes the
+# __PLACEHOLDERS__). A SYSTEM unit, not a user unit, because it runs as a dedicated
+# account rather than as the logged-in user.
+#
+# Binds 127.0.0.1 only. Reachability comes from the Cloudflare Tunnel, which dials OUT —
+# so there is no inbound port, no firewall rule and no reverse proxy in front.
+[Unit]
+Description=OpenCode web UI (unprivileged, loopback-only, published via Cloudflare Tunnel)
+After=network-online.target __VAULT_MOUNT_UNIT__
+Wants=network-online.target
+Requires=__VAULT_MOUNT_UNIT__
+
+[Service]
+Type=simple
+User=__SVC_USER__
+Group=__SVC_USER__
+WorkingDirectory=/srv/__SVC_USER__/vault
+Environment=HOME=__SVC_HOME__
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+# Credentials for OpenCode's own Basic Auth (the layer under Cloudflare Access).
+# No leading '-': without this file OpenCode would serve the UI unauthenticated, so the
+# unit must refuse to start rather than come up open.
+EnvironmentFile=/etc/opencode-web.env
+ExecStart=/usr/local/bin/opencode serve --hostname 127.0.0.1 --port ${OPENCODE_PORT}
+Restart=on-failure
+RestartSec=10
+
+# This process is an agent that runs arbitrary shell commands on purpose, so the sandbox
+# is what stands between "it edits the vault" and "it edits the system". The dedicated
+# unprivileged account is the primary control; these are the second line.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=tmpfs
+# ...but it still needs its own home and the vault it works on.
+BindPaths=__SVC_HOME__
+BindPaths=/srv/__SVC_USER__
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# The agent has no business reaching the host's docker socket.
+InaccessiblePaths=/var/run/docker.sock
+InaccessiblePaths=/run/docker.sock
+# Belt-and-braces over the ACL exclusion: the vault is bind-mounted in, and it contains a
+# .secrets/ directory (SimpleTimeTracker secret, Google OAuth client-secret JSON). The
+# ACL already denies it; this makes it structurally absent from the namespace too.
+InaccessiblePaths=-/srv/__SVC_USER__/vault/.secrets
+
+[Install]
+WantedBy=multi-user.target

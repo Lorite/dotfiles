@@ -1,11 +1,26 @@
-# OpenCode web UI on the home server (public domain + Traefik Basic Auth)
+# OpenCode web UI on the home server
 
-Publishes `opencode web` from `lorite-thinkcentre-m720q` at a public HTTPS domain behind
-Basic Auth, so you can drive a coding agent from the phone from any network.
+Publishes `opencode web` from `lorite-thinkcentre-m720q` so you can drive a coding agent
+from the phone. **Use the hardened path:**
 
 ```bash
-cd ~/git/dotfiles/tools/lorite/opencode-web && ./setup.sh opencode.lorite.eu
+sudo ~/git/dotfiles/tools/lorite/opencode-web/setup-hardened.sh opencode.lorite.eu
 ```
+
+| | `setup-hardened.sh` **(use this)** | `setup.sh` *(superseded)* |
+|---|---|---|
+| Runs as | dedicated `opencode-web` user | `lorite` — **in the `docker` group, i.e. root** |
+| Listens on | `127.0.0.1` only | Coolify bridge gateway |
+| Reachability | Cloudflare Tunnel — **no inbound port** | Traefik, ports 80/443 open |
+| Auth | Cloudflare Access (Google SSO + MFA) + Basic Auth | two Basic Auth layers |
+| Firewall rules needed | none | a ufw rule for docker→host |
+
+`setup.sh` is kept only as a no-Cloudflare fallback. It works, but it publishes an agent
+running as a docker-group account behind a single password — see the risk section below.
+
+The tunnel is what removes the complexity: because the host dials *out* to Cloudflare,
+nothing listens on a public interface, so there is no reverse proxy, no bridge-gateway
+binding and no firewall rule to get right.
 
 ## ⚠️ Read this before publishing — the blast radius is bigger than "a coding agent"
 
@@ -33,34 +48,45 @@ account is.
   unreachable from LAN, Tailscale and the internet except through Traefik.
 - **`setup.sh` refuses to publish** unless the backend returns `401` without credentials.
 
-### The two things that would actually make this safe
+### Both fixes are implemented in `setup-hardened.sh`
 
-Ranked by how much risk they remove. Neither is done yet.
+The section below is kept because it explains *why* the hardened script does what it does —
+and it still describes `setup.sh` accurately, which is why that path is superseded.
 
-**1. Cap the blast radius — run it as a dedicated, unprivileged user.** This matters more
-than the auth layer, and it is the one fix that survives a credential leak:
+**1. Cap the blast radius — a dedicated, unprivileged user.** This matters more than the
+auth layer, and it is the one fix that survives a credential leak. `setup-hardened.sh`
+creates `opencode-web`: not in `docker`/`sudo`/`adm`/`wheel`, no SSH keys, `nologin` shell.
 
-```bash
-sudo useradd -m -s /bin/bash opencode-web          # NOT in docker, NOT in sudo, no SSH keys
-sudo usermod -aG lorite opencode-web               # only what it must read
-# move the unit + env file to that user, re-run setup.sh as them
-```
-Cost: it loses the `obsidian` CLI/Xvfb session and anything keyed to `lorite`'s home. Worth
-deciding *what the web agent is actually for* — if it's vault edits and light scripting, a
-restricted user covers it; if it's full dev work, keep that on the laptop and don't publish it.
+Access is granted by **ACL, not ownership** — the vault is a Syncthing working copy owned
+by `lorite`, and chowning it would disturb sync. The script adds traverse-only (`--x`) on
+the home and `git/` dirs, `rwX` on the vault (with default ACLs so new files inherit), and
+read-only on `.copilot/skills`. It then *proves* the cap by asserting `opencode-web` cannot
+read `~/.ssh/id_ed25519`, `~/.config/lorite/`, or `/var/run/docker.sock`, and aborts if it can.
 
-**2. Replace Basic Auth with Cloudflare Access.** You already run Cloudflare DNS and
-Traefik already holds a `CF_DNS_API_TOKEN`, so the account and tooling are in place.
-Cloudflare Access gives real SSO (Google), **MFA**, sessions, per-email allowlists and an
-audit log — none of which Basic Auth has — and with a Tunnel the service needs no public
-inbound port at all. Free tier covers this. `cloudflared` is **not currently installed**.
+The systemd unit adds `ProtectSystem=strict`, `ProtectHome=tmpfs` (with `BindPaths` for
+just the vault and its own home), a `@system-service` syscall filter, and explicit
+`InaccessiblePaths` for the docker socket.
 
-Lesser alternatives: **Authentik/Authelia** forward-auth (Coolify one-click; self-hosted
-equivalent of the above, more moving parts), or an `ipAllowList` middleware (see the
-commented block in `opencode.yaml`) if you can live with fixed networks.
+**Scope decision baked in:** the web agent gets **the vault and nothing else**. That covers
+the phone use case (notes, tasks, light scripting). Full dev work stays on the laptop — if
+you find yourself wanting the robotics repo here, that is a decision to revisit
+deliberately, not to fix by widening the ACL.
 
-`tailscale serve` remains the safest option and needs no public exposure — rejected here
-only because off-tailnet access was wanted.
+**2. Cloudflare Access instead of Basic Auth.** Google SSO, MFA from your Google account,
+sessions (24 h default, 15 min–1 month), per-email policy, audit log — and with the Tunnel,
+no public inbound port at all. Free tier covers 50 users / 50 apps; you need one.
+Rejected traffic never reaches the host. OpenCode's own Basic Auth stays underneath as a
+second layer: browsers cache it per session, so it costs one prompt and covers an
+Access/tunnel misconfiguration.
+
+Known limitation, chosen deliberately: **browser-only.** `opencode attach` and any
+scripted/API use get an HTML login redirect instead of the API. Fix if ever needed is a
+Cloudflare **service token** plus a bypass policy. CLI use over SSH/Tailscale is unaffected.
+
+Lesser alternatives: **Authentik/Authelia** forward-auth (Coolify one-click, self-hosted,
+more moving parts), or an `ipAllowList` middleware (commented in `opencode.yaml`) if fixed
+networks are acceptable. `tailscale serve` remains safest of all and needs no public
+exposure — set aside only because off-tailnet access was wanted.
 
 ## Why a host service and not a Coolify container
 
