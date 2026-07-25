@@ -72,15 +72,23 @@ and it still describes `setup.sh` accurately, which is why that path is supersed
 auth layer, and it is the one fix that survives a credential leak. `setup-hardened.sh`
 creates `opencode-web`: not in `docker`/`sudo`/`adm`/`wheel`, no SSH keys, `nologin` shell.
 
-Access is granted by **ACL, not ownership** — the vault is a Syncthing working copy owned
-by `lorite`, and chowning it would disturb sync. The script adds traverse-only (`--x`) on
-the home and `git/` dirs, `rwX` on the vault (with default ACLs so new files inherit), and
-read-only on `.copilot/skills`. It then *proves* the cap by asserting `opencode-web` cannot
-read `~/.ssh/id_ed25519`, `~/.config/lorite/`, or `/var/run/docker.sock`, and aborts if it can.
+**The account never sees the owner's home.** An early version granted a traverse ACL on
+`/home/lorite` so the service could reach the vault by its real path — which silently
+exposed everything world-readable beneath it (`~/.config` is `0775`). Two systemd `.mount`
+units now bind exactly what is needed into the service's own tree instead:
 
-The systemd unit adds `ProtectSystem=strict`, `ProtectHome=tmpfs` (with `BindPaths` for
-just the vault and its own home), a `@system-service` syscall filter, and explicit
-`InaccessiblePaths` for the docker socket.
+```
+/srv/opencode-web/vault   <- the vault           (read/write)
+/srv/opencode-web/skills  <- .copilot/skills     (read-only)
+```
+
+Root sets those up, so no host-path traversal is required. File access still comes from
+ACLs (same inodes through the bind); the vault's `.secrets/` is excluded from the grant.
+Combined with `ProtectHome=tmpfs`, `/home` does not exist inside the service's namespace
+at all — isolation is structural, not a property of permissions further up the tree.
+
+The unit also adds `ProtectSystem=strict`, a `@system-service` syscall filter, and
+`InaccessiblePaths` for the docker socket and the vault's `.secrets/`.
 
 **Scope decision baked in:** the web agent gets **the vault and nothing else**. That covers
 the phone use case (notes, tasks, light scripting). Full dev work stays on the laptop — if
@@ -111,25 +119,27 @@ toolchain in an image and bind-mounting the rest — much more fragile than runn
 binary where the tooling already lives. So:
 
 ```
-phone ──HTTPS──> Traefik (coolify-proxy)  ──HTTP──>  opencode serve
-                 Basic Auth #1                       Basic Auth #2
-                 Let's Encrypt (Cloudflare DNS-01)    systemd user service on the host
-                                                      bound to 10.0.1.x:4096 only
+phone ──HTTPS──> Cloudflare edge ──tunnel──> cloudflared ──HTTP──> opencode serve
+                 Access: Google SSO + MFA    (dials OUT,            Basic Auth
+                 deny-by-default policy       no inbound port)      127.0.0.1:4096
+                                                                   user: opencode-web
 ```
 
-Coolify still owns the certificate and the proxy; only the process is outside it.
+Nothing listens on a public interface, so there is no proxy, certificate or firewall rule
+to maintain — Cloudflare terminates TLS at its edge.
 
 ## Pieces
 
 | File | Role |
 |------|------|
-| `../opencode-serve.service` | systemd **user** unit running `opencode serve`, bound to the bridge gateway |
-| `opencode.yaml` | Traefik dynamic config (router + Basic Auth + HTTPS redirect + backend) |
+| `opencode-web.service` | systemd **system** unit, runs as `opencode-web` on `127.0.0.1` |
+| `../opencode-serve.service` | *superseded* — user unit for the Traefik path |
+| `opencode.yaml` | *superseded* — Traefik dynamic config |
 | `setup-hardened.sh` | service user, ACLs, bind mounts, backend service, installs cloudflared |
 | `finish-tunnel.sh` | credentials → /etc/cloudflared, config.yml, DNS route, service, verify |
 | `setup.sh` | *superseded* — Traefik path: gateway, creds, ufw, verify |
-| `~/.config/lorite/opencode-serve.env` | **not in git**, mode 600 — bind address + backend credentials |
-| `/data/coolify/proxy/dynamic/opencode.htpasswd` | Traefik's bcrypt users file |
+| `/etc/opencode-web.env` | **not in git**, mode 640 root:opencode-web — backend credentials |
+| `/etc/cloudflared/config.yml` + `<id>.json` | tunnel config and credentials (0600 root) |
 
 ## Gotchas found the hard way
 
