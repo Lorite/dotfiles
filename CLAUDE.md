@@ -89,3 +89,12 @@ A PhD chat is usually work on **one task with a corresponding Obsidian note**. T
 - Match each target repo's own `CLAUDE.md`/`AGENTS.md` conventions when working there.
 - Git: commit and push directly to `main` (no feature branches on this repo); conventional commits (`type(scope): description`); run lint/format before committing when available.
 - Shell scripts: keep lines under 120 chars (4-space indentation is set globally).
+
+### The home server runs uutils coreutils, not GNU — two traps (2026-07-25)
+
+`lorite-thinkcentre-m720q` ships `coreutils-from-uutils` (`/usr/bin/test` → `lib/cargo/bin/coreutils/test`). Two behaviours differ from GNU, **both silently**, and both caused real damage on 2026-07-25:
+
+- **Never use `chown -h` on a symlink.** uutils *dereferences* it and chowns the target. This chowned `.copilot/skills`, and then — after being fixed once — chowned the Obsidian vault's root to a service account, locking the user out of their own vault. There is no case in this repo that needs it: **a symlink's own ownership does not affect access**, the target's permissions govern. Create links as the right user, or just leave them root-owned.
+- **Never use `test -r` / `test -w` to check another user's access.** uutils answers from the mode bits alone and **ignores POSIX ACLs**, so a path reachable via an ACL is reported as unreachable. For a security assertion that fails in the dangerous direction. Probe with the real operation instead — `ls -A` / `head -c1` for reads, touch-and-remove for writes.
+
+More generally on that host: a script that grants access must never take ownership away. Assert it (`find <tree> -not -user <owner>`) rather than assume it.
