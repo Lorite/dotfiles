@@ -7,27 +7,60 @@ Basic Auth, so you can drive a coding agent from the phone from any network.
 cd ~/git/dotfiles/tools/lorite/opencode-web && ./setup.sh opencode.lorite.eu
 ```
 
-## ⚠️ Read this before publishing
+## ⚠️ Read this before publishing — the blast radius is bigger than "a coding agent"
 
-`aw.lorite.eu` exposes a **read-only dashboard**. This exposes a **coding agent with shell
-access** on the machine that also runs the Obsidian vault, Nextcloud, Immich and Home
-Assistant. A leaked credential here is remote code execution, not a data leak.
+`aw.lorite.eu` exposes a **read-only dashboard**. This exposes a shell. And the account it
+runs as is not an ordinary one. On `lorite-thinkcentre-m720q`, `lorite` is in:
 
-Mitigations built into this setup:
+| Group | What it grants whoever reaches the web UI |
+|-------|-------------------------------------------|
+| `docker` | **root on the host.** `docker run -v /:/host --privileged` bypasses `sudo` entirely — no password prompt involved |
+| `sudo` | password-gated, so not directly usable — but irrelevant given the line above |
+| — | `~/.ssh/id_ed25519`, the key that reaches the **Lab PC and the AGX Orin** |
 
-- **Two independent Basic Auth layers** — Traefik's, and OpenCode's own
-  (`OPENCODE_SERVER_USERNAME`/`PASSWORD`). Use *different* passwords; either one alone
-  being misconfigured still leaves the agent guarded.
-- **The backend never binds to `0.0.0.0`.** It binds to the Coolify bridge gateway, so it
-  is unreachable from the LAN, Tailscale and the internet — only Traefik and the host can
-  talk to it.
-- **`setup.sh` refuses to publish** if the backend answers anything but `401` without
-  credentials, or if the coolify network can't reach it.
+So the honest statement is: **one Basic Auth password on the public internet guards root
+on the home server, the Obsidian vault, Nextcloud, Immich, Home Assistant, and SSH access
+to the two lab machines.** The auth layer is not the weakest link here — the service
+account is.
 
-The genuinely stronger option, if this becomes more than occasional phone use, is
-**Authentik/Authelia forward-auth** (Coolify one-click) in front of the Traefik router —
-real sessions and MFA instead of one password. The most private option remains
-`tailscale serve`, which needs no public exposure at all.
+### What this setup already does
+
+- **Two independent Basic Auth layers** — Traefik's and OpenCode's own
+  (`OPENCODE_SERVER_USERNAME`/`PASSWORD`). Use *different* passwords.
+- **Rate limiting in front of the auth check**, so the password can't be brute-forced at
+  internet speed (Basic Auth has no lockout of its own).
+- **The backend never binds to `0.0.0.0`** — only the Coolify bridge gateway, so it is
+  unreachable from LAN, Tailscale and the internet except through Traefik.
+- **`setup.sh` refuses to publish** unless the backend returns `401` without credentials.
+
+### The two things that would actually make this safe
+
+Ranked by how much risk they remove. Neither is done yet.
+
+**1. Cap the blast radius — run it as a dedicated, unprivileged user.** This matters more
+than the auth layer, and it is the one fix that survives a credential leak:
+
+```bash
+sudo useradd -m -s /bin/bash opencode-web          # NOT in docker, NOT in sudo, no SSH keys
+sudo usermod -aG lorite opencode-web               # only what it must read
+# move the unit + env file to that user, re-run setup.sh as them
+```
+Cost: it loses the `obsidian` CLI/Xvfb session and anything keyed to `lorite`'s home. Worth
+deciding *what the web agent is actually for* — if it's vault edits and light scripting, a
+restricted user covers it; if it's full dev work, keep that on the laptop and don't publish it.
+
+**2. Replace Basic Auth with Cloudflare Access.** You already run Cloudflare DNS and
+Traefik already holds a `CF_DNS_API_TOKEN`, so the account and tooling are in place.
+Cloudflare Access gives real SSO (Google), **MFA**, sessions, per-email allowlists and an
+audit log — none of which Basic Auth has — and with a Tunnel the service needs no public
+inbound port at all. Free tier covers this. `cloudflared` is **not currently installed**.
+
+Lesser alternatives: **Authentik/Authelia** forward-auth (Coolify one-click; self-hosted
+equivalent of the above, more moving parts), or an `ipAllowList` middleware (see the
+commented block in `opencode.yaml`) if you can live with fixed networks.
+
+`tailscale serve` remains the safest option and needs no public exposure — rejected here
+only because off-tailnet access was wanted.
 
 ## Why a host service and not a Coolify container
 
