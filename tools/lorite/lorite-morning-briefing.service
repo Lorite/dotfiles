@@ -6,7 +6,19 @@ Description=Morning briefing: daily-note LLM summaries + vault git audit (headle
 [Service]
 Type=oneshot
 ExecStart=%h/git/dotfiles/tools/lorite/morning_briefing.sh
-Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
+# Pin Claude for THIS job, against lorite-llm's OpenCode-first default.
+#
+# Measured 2026-07-25, both clients over the same commit (1818999) on the same day:
+#   Claude   — found live Google OAuth accessToken + refreshToken committed in
+#              .obsidian/plugins/tasknotes/data.json, with remediation steps
+#   OpenCode — "✅ No issues found"   (opencode/deepseek-v4-flash-free)
+#
+# The briefing's git audit is a security review, and a false "no issues" is worse than
+# no briefing at all. This is not a claim that OpenCode is unfit generally — it did the
+# briefing BACKFILL well on the same free model. Re-measure once OpenCode Go's paid
+# models (GLM-5.2 / Kimi K2.7 Code) are wired, and drop this line if they pass.
+Environment=LLM_CLIENT=claude
 # Host-specific overrides (optional; '-' = ok if absent). The home server writes
 # LORITE_VAULT_GIT=%h/git/lorite-obsidian-notes-audit here (the side clone used for
 # the commit audit, since Syncthing excludes .git/). Laptop has no file → defaults.

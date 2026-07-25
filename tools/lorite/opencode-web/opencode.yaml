@@ -21,6 +21,9 @@ http:
       entryPoints:
         - https
       middlewares:
+        # Order matters: rate-limit BEFORE auth, so brute-force attempts are throttled
+        # before they ever reach the password check.
+        - opencode-ratelimit
         - opencode-auth
         - opencode-headers
       service: opencode
@@ -44,6 +47,28 @@ http:
         usersFile: "/traefik/dynamic/opencode.htpasswd"
         realm: "OpenCode"
         removeHeader: true
+
+    # Basic Auth has no lockout, no MFA and no session — a single password sent on every
+    # request. Throttle per source IP so it cannot be brute-forced at internet speed.
+    # The UI is chatty (SSE + polling), so this is generous by design; it targets
+    # credential-guessing, not usage.
+    opencode-ratelimit:
+      rateLimit:
+        average: 30
+        burst: 60
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 0
+
+    # Optional: uncomment and list your networks to refuse everything else outright.
+    # This is the single biggest hardening available short of moving to Cloudflare
+    # Access — but it breaks access from arbitrary mobile networks, so it is off.
+    # opencode-ipallow:
+    #   ipAllowList:
+    #     sourceRange:
+    #       - "100.64.0.0/10"      # Tailscale
+    #       - "<your home/office CIDR>"
 
     opencode-https-redirect:
       redirectScheme:

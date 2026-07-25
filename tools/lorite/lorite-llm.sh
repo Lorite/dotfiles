@@ -39,10 +39,13 @@ resolve_claude() {
 OPENCODE_BIN="$(resolve_opencode || true)"
 CLAUDE_BIN="$(resolve_claude || true)"
 
-# Auto-detection prefers Claude: it is the client the lorite skills are written and
-# proven against. OpenCode is opt-in (LLM_CLIENT=opencode) until it has been validated
-# on these workflows — but it is a first-class fallback when Claude fails (e.g. a
-# usage limit, which is exactly what broke the 2026-07-20 morning briefing).
+# Auto-detection prefers OpenCode: the whole point of having it is to keep low-effort
+# work off the Claude quota (a Claude weekly limit is what killed the 2026-07-20 morning
+# briefing). Claude is the automatic fallback.
+#
+# Callers with a job OpenCode has been MEASURED to do badly should pin LLM_CLIENT=claude
+# themselves rather than flipping this default — see lorite-morning-briefing.service,
+# which does exactly that and says why.
 detect_client() {
     case "${LLM_CLIENT:-}" in
         claude)
@@ -52,9 +55,9 @@ detect_client() {
             [[ -n "$OPENCODE_BIN" ]] && { echo opencode; return 0; }
             echo "ERROR: LLM_CLIENT=opencode but opencode is not installed" >&2; return 127 ;;
         "")
-            [[ -n "$CLAUDE_BIN"   ]] && { echo claude;   return 0; }
             [[ -n "$OPENCODE_BIN" ]] && { echo opencode; return 0; }
-            echo "ERROR: neither claude nor opencode is installed" >&2; return 127 ;;
+            [[ -n "$CLAUDE_BIN"   ]] && { echo claude;   return 0; }
+            echo "ERROR: neither opencode nor claude is installed" >&2; return 127 ;;
         *)
             echo "ERROR: unknown LLM_CLIENT='${LLM_CLIENT}' — use 'claude' or 'opencode'" >&2; return 127 ;;
     esac
