@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Lorite <a.lorite.mora@gmail.com>
+Date: Tue, 28 Jul 2026 16:06:28 +0200
+Subject: [PATCH] Sort template directory entries so trigger precedence is
+ deterministic
+
+matchTemplate() returns the first template whose trigger matches, but
+readdirSync returns entries in OS order (hash order on ext4), so which of two
+templates with overlapping triggers wins was non-deterministic.
+---
+ src/cli.ts | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/cli.ts b/src/cli.ts
+index 21552a1..0e9718d 100644
+--- a/src/cli.ts
++++ b/src/cli.ts
+@@ -127,7 +127,10 @@ const templateFilePaths = new Map<Template, string>();
+ 
+ function loadTemplatesFromDir(dirPath: string): Template[] {
+ 	const resolved = path.resolve(dirPath);
+-	const files = fs.readdirSync(resolved).filter(f => f.endsWith('.json'));
++	// Sort: matchTemplate() returns the FIRST matching template, so precedence between
++	// templates with overlapping triggers depends on this order. readdirSync returns
++	// entries in OS order (hash order on ext4), which would make matching non-deterministic.
++	const files = fs.readdirSync(resolved).filter(f => f.endsWith('.json')).sort();
+ 	return files.map(f => {
+ 		const raw = fs.readFileSync(path.join(resolved, f), 'utf-8');
+ 		const template: Template = JSON.parse(raw);

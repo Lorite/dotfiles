@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Lorite <a.lorite.mora@gmail.com>
+Date: Fri, 27 Mar 2026 16:52:16 +0100
+Subject: [PATCH] Fix CLI: empty output due to missing browser globals and
+ wrong Defuddle input
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Three bugs:
+1. navigator not defined — add navigator and getComputedStyle stubs to the
+   polyfill banner so sanitizeFileName() and Defuddle work in Node.js
+2. Defuddle receives doc.documentElement instead of doc — pass the Document
+   object directly so title, description, and content are extracted correctly
+3. getComputedStyle missing — stub returns visible styles so Defuddle doesn't
+   fall back to raw HTML
+
+Fixes #745
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+---
+ scripts/build-cli.mjs | 9 +++++++++
+ src/api.ts            | 3 +--
+ src/cli.ts            | 2 +-
+ 3 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/scripts/build-cli.mjs b/scripts/build-cli.mjs
+index 90e10d3..bdcf22c 100644
+--- a/scripts/build-cli.mjs
++++ b/scripts/build-cli.mjs
+@@ -27,6 +27,15 @@ const polyfillBanner = `
+   if (typeof globalThis.document === "undefined") {
+     globalThis.document = _parseHTML("<!DOCTYPE html><html><head></head><body></body></html>").document;
+   }
++  if (typeof globalThis.navigator === "undefined") {
++    var _platform = process.platform === "win32" ? "Win32" : process.platform === "darwin" ? "MacIntel" : "Linux x86_64";
++    globalThis.navigator = { userAgent: "Node.js/" + process.version, platform: _platform, userAgentData: null };
++  }
++  if (typeof globalThis.getComputedStyle === "undefined") {
++    globalThis.getComputedStyle = function() {
++      return { display: "block", visibility: "visible", getPropertyValue: function() { return ""; } };
++    };
++  }
+ })();
+ `.trim();
+ 
+diff --git a/src/api.ts b/src/api.ts
+index cadd3f8..039bbce 100644
+--- a/src/api.ts
++++ b/src/api.ts
+@@ -178,11 +178,10 @@ export async function clip(options: ClipOptions): Promise<ClipResult> {
+ 
+ 	// Use pre-parsed document if provided, otherwise parse
+ 	const doc = parsedDocument ?? documentParser.parseFromString(html, 'text/html');
+-	const documentElement = doc.documentElement || doc;
+ 
+ 	// Extract content with defuddle
+ 	// Cast through unknown: linkedom's Document is structurally compatible but not nominally typed as DOM Document
+-	const defuddle = new DefuddleClass(documentElement as unknown as Document, { url });
++	const defuddle = new DefuddleClass(doc as unknown as Document, { url });
+ 	const defuddleResult = defuddle.parse();
+ 
+ 	// Convert to markdown
+diff --git a/src/cli.ts b/src/cli.ts
+index a9c3331..21552a1 100644
+--- a/src/cli.ts
++++ b/src/cli.ts
+@@ -207,7 +207,7 @@ async function main(): Promise<void> {
+ 			if (hasSchemaTrigs) {
+ 				const DefuddleClass = (await import('defuddle')).default;
+ 				parsedDocument = linkedomParser.parseFromString(html, 'text/html');
+-				const defuddle = new DefuddleClass((parsedDocument.documentElement || parsedDocument) as unknown as Document, { url: args.url });
++				const defuddle = new DefuddleClass(parsedDocument as unknown as Document, { url: args.url });
+ 				const defuddleResult = defuddle.parse();
+ 				matched = matchTemplate(templates, args.url, defuddleResult.schemaOrgData);
+ 			}
