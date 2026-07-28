@@ -44,8 +44,13 @@ carry the fixes ourselves rather than wait.
 2. **Non-deterministic template matching** — `matchTemplate()` returns the *first* trigger
    match, but the CLI reads the template directory with `fs.readdirSync` **unsorted**; on
    ext4 that is hash order. Patch adds `.sort()`.
-3. *(not patched — handled in the exporter)* the filter parser can't read the escaped-quote
-   argument form the extension writes; see below.
+3. **Escaped quotes in filter arguments are silently dropped.** The extension writes
+   `{{words|calc:\"/238\"}}`. The lexer turns `\"` into `"` but keeps the surrounding
+   quotes, so the argument arrives **double-quoted** (`""/238""`); each filter strips only
+   one pair, `calc` then reads `"` as its operator, rejects the argument, and returns the
+   value **unfiltered**. Result: `read_length_minutes` came out as the raw word count
+   (748 instead of 3.14) with only a console warning. Patch collapses the doubling in
+   `evaluateFilter`.
 
 Refresh a patch after upstream moves: build with `--latest`, fix the conflict in the build
 dir, then `git format-patch` back into `patches/`.
@@ -57,17 +62,16 @@ CLI wants one JSON file per template in a directory. This bridges them, reading 
 `template_*` and `property_types` — never `interpreter_settings`, so **API keys cannot
 leak** into the output.
 
-Two things it must keep doing:
+It must keep **numbering the filenames by `template_list` order**. Several templates share
+a trigger — `Wikipedia` and `Wikipedia (person)` have an *identical* regex — and the
+extension breaks the tie by list order. Export them alphabetically and a Wikipedia article
+clips as a **person**.
 
-- **Number the filenames by `template_list` order.** Several templates share a trigger —
-  `Wikipedia` and `Wikipedia (person)` have an *identical* regex — and the extension breaks
-  the tie by list order. Export them alphabetically and a Wikipedia article clips as a
-  **person**.
-- **Unescape filter arguments only.** The extension stores `{{words|calc:\"/238\"}}`; the
-  CLI can't parse that and returns the value **unfiltered**, so `read_length_minutes`
-  silently becomes the raw word count (748 instead of 3.14). But LLM interpreter prompts
-  (`{{"…"}}`) contain `\"` legitimately — unescaping those corrupts the prompt. The rewrite
-  is deliberately narrow.
+Otherwise templates are written **verbatim**. An earlier version rewrote the escaped
+quotes in filter arguments here; don't reintroduce that. Interpreter prompts (`{{"…"}}`)
+contain `\"` legitimately, and a prompt containing `}}` can't be delimited by a regex, so
+the rewrite silently corrupted one. That escaping is now handled inside the CLI by
+patch 0003, where the parser actually knows what is an argument and what is prose.
 
 Re-run it whenever you change templates in the extension.
 

@@ -27,34 +27,13 @@ def slugify(name):
     return slug or "untitled"
 
 
-# The extension stores filter arguments with escaped quotes, e.g.
-#   {{words|calc:\"/238\"}}
-# The headless CLI's filter parser does not strip that escaping: it fails to parse the
-# argument, logs `Invalid calculation value`, and returns the value *unfiltered* — so
-# read_length_minutes silently comes out as the raw word count instead of words/238.
-# Verified on obsidian-clipper 1.7.1: \"/238\" -> 748 (wrong), "/238" and '/238' -> 3.14.
-# Rewrite ONLY filter arguments (`|name:\"arg\"`). Two things must not be touched:
-# interpreter prompts, written as {{"...long prompt..."}}, legitimately contain \" and
-# break if unescaped; and ordinary prose may contain \" as well.
-TEMPLATE_EXPR = re.compile(r"\{\{.*?\}\}", re.DOTALL)
-FILTER_ARG = re.compile(r"\|(\w+):\\\"(.*?)\\\"")
-
-
-def _fix_expr(match):
-    expr = match.group(0)
-    if expr.startswith('{{"'):        # interpreter prompt — leave entirely alone
-        return expr
-    return FILTER_ARG.sub(lambda m: '|%s:"%s"' % (m.group(1), m.group(2)), expr)
-
-
-def unescape_filter_quotes(value):
-    if isinstance(value, str):
-        return TEMPLATE_EXPR.sub(_fix_expr, value)
-    if isinstance(value, list):
-        return [unescape_filter_quotes(v) for v in value]
-    if isinstance(value, dict):
-        return {k: unescape_filter_quotes(v) for k, v in value.items()}
-    return value
+# NOTE: templates are exported VERBATIM. Do not "fix" the escaped quotes the extension
+# writes in filter arguments ({{words|calc:\"/238\"}}). An earlier version rewrote them
+# here because the CLI's parser choked on them, but doing it at this level is unsafe:
+# interpreter prompts ({{"...."}}) legitimately contain \", and a prompt containing }}
+# cannot be delimited by a regex, so the rewrite silently corrupted one of them.
+# The escaping is now handled properly inside the CLI itself — see
+# patches/0003-Unescape-quotes-in-filter-arguments.patch.
 
 
 def main():
@@ -101,7 +80,7 @@ def main():
             slug = "%s-%d" % (slug, seen[slug])
         name = "%03d-%s.json" % (idx, slug)
         with open(os.path.join(tpl_dir, name), "w") as fh:
-            json.dump(unescape_filter_quotes(tpl), fh, indent=2, ensure_ascii=False)
+            json.dump(tpl, fh, indent=2, ensure_ascii=False)
         written += 1
 
     prop_types = data.get("property_types")

@@ -1,0 +1,23 @@
+diff --git a/src/utils/renderer.ts b/src/utils/renderer.ts
+index ad8edad..447f4ed 100644
+--- a/src/utils/renderer.ts
++++ b/src/utils/renderer.ts
+@@ -670,6 +670,18 @@ async function evaluateFilter(expr: FilterExpression, state: RenderState): Promi
+ 		if (argValue === undefined && arg.type === 'identifier') {
+ 			argValue = arg.name;
+ 		}
++		// The settings export escapes quotes inside filter arguments, e.g.
++		//   {{words|calc:\"/238\"}}
++		//   {{schema:@VideoObject:duration|replace:"PT",\"\",\"S\",\"\"}}
++		// The lexer turns \" into " but keeps the surrounding quotes, yielding a
++		// DOUBLE-quoted literal (""/238""). Each filter then strips only one pair, so calc
++		// sees "/238" and reads '"' as its operator: the argument is rejected and the value
++		// is returned UNFILTERED — silently wrong output rather than an error. Collapse the
++		// doubling back to a normal quoted string.
++		if (typeof argValue === 'string' && argValue.length >= 4
++			&& argValue.startsWith('""') && argValue.endsWith('""')) {
++			argValue = argValue.slice(1, -1);
++		}
+ 		args.push(argValue);
+ 	}
+ 
