@@ -33,10 +33,26 @@ print_warning() {
 	echo -e "${YELLOW}⚠${NC} $1"
 }
 
+# Clear a stale <path>.backup before `mv` writes to it.
+#
+# Critical: if <path>.backup is a SYMLINK TO A DIRECTORY, `mv <path> <path>.backup`
+# dereferences it and moves <path> *inside* that directory instead of replacing the
+# link. Because every skills backup here points back at .copilot/skills, that silently
+# created a self-referential .copilot/skills/skills -> .copilot/skills on every run,
+# making the source tree infinitely recursive. `rm -rf` on a symlink removes the link
+# itself, never the target (no trailing slash — that would follow it).
+clear_backup() {
+	local backup=$1
+	if [ -e "$backup" ] || [ -L "$backup" ]; then
+		rm -rf "$backup"
+	fi
+}
+
 # Function to backup existing file
 backup_file() {
 	local file=$1
 	if [ -f "$file" ] || [ -L "$file" ]; then
+		clear_backup "${file}.backup"
 		mv "$file" "${file}.backup"
 		print_warning "Backed up existing $file to ${file}.backup"
 	fi
@@ -46,6 +62,7 @@ backup_file() {
 backup_path() {
 	local path=$1
 	if [ -e "$path" ] || [ -L "$path" ]; then
+		clear_backup "${path}.backup"
 		mv "$path" "${path}.backup"
 		print_warning "Backed up existing $path to ${path}.backup"
 	fi
