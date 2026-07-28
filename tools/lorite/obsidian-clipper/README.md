@@ -75,9 +75,36 @@ patch 0003, where the parser actually knows what is an argument and what is pros
 
 Re-run it whenever you change templates in the extension.
 
+## YouTube — use `youtube-enrich.py`, not the CLI directly
+
+```bash
+./youtube-enrich.py "https://www.youtube.com/watch?v=..." -o note.md
+```
+
+The CLI alone cannot do YouTube properly. It runs no JavaScript, and the JSON-LD in the
+served HTML has only `name`, `thumbnailUrl`, `uploadDate` — **no `embedUrl`, `author` or
+`duration`** — so the template's `url`, `channel` and `duration` render **empty**, the
+`aliases` line starts with a dangling `"— "`, and `{{transcript}}` (a browser-extension
+variable that does not exist in the CLI) leaves the Transcript section blank.
+
+So `youtube-enrich.py` lets obsidian-clipper build the note from your real template, then
+fills the gaps from `yt-dlp`: `url`, `channel`, `duration`, the alias, and the transcript
+as `[mm:ss](url&t=Ns) text` lines under the template's own `# Transcript` heading — the
+timestamp form the AI-summary prompt in that template asks for.
+
+It only ever fills frontmatter keys that rendered **empty**, so it cannot clobber a value
+the template got right. Auto-captions roll (each cue repeats the previous line plus a
+word), so the VTT parser drops repeats — otherwise the transcript is several times longer
+than the real one and much worse as LLM input.
+
+Verified: *Never Gonna Give You Up* → 89 transcript lines; a 12:31 vault video → 378, with
+`url`/`channel`/`duration`/`aliases` all filled. Unavailable videos exit with yt-dlp's own
+message rather than a traceback.
+
 ## Known gaps
 
-- **YouTube**: metadata only, and thin — `url`, `channel`, `duration` all come out empty,
-  and there is no transcript. Needs a `yt-dlp` enrichment step (not built yet).
-- The `first` filter crashes on YouTube (`JSON.parse` on a plain string).
+- The `first` filter crashes on YouTube (`JSON.parse` on a plain string). Harmless — it
+  only affects `thumbnailUrl`, which resolves anyway — but it is noisy on stderr.
 - No JavaScript execution: great for articles/blogs/docs, useless for SPA-rendered pages.
+- `youtube-enrich.py` fills the gaps *after* rendering, so a template that puts the channel
+  inside `noteNameFormat` (the filename) still gets it empty.
