@@ -127,7 +127,12 @@ When the work produced a visual — an architecture/flow diagram, a data plot, a
 
 ## Conventions
 - Use wikilinks `[[Note]]` for everything linkable; link liberally. Use callouts/properties per the `lorite-obsidian-markdown` skill. Put sources under `## Sources` (CLI/Bases/Web).
-- **YAML-safe frontmatter.** Unquoted text fields (`description`, `short_description`, `title`, `aliases`, …) break the note's frontmatter if they contain a **colon-then-space (`: `)** or **begin with** `"` `'` `[` `{` `-` `>` `|` `@` `` ` `` `#`. Write an em dash ` — ` where you'd use a colon (incl. book/paper subtitles), and reword so a value never opens with a quoted phrase. If a `: ` or leading quote is unavoidable, single-quote-wrap the whole value and double every internal `'`.
+- **YAML-safe frontmatter — quote first, don't rely on rewording.** Any free-text field (`description`, `short_description`, `title`, `summary`, `aliases` items, …) breaks the note's *entire* property block if its value contains a **colon-then-space (`: `)** or **begins with** `"` `'` `[` `{` `-` `>` `|` `@` `` ` `` `#`. **Default: single-quote-wrap every free-text value you write and double each internal `'`** (`Tracy's` → `'…Tracy''s…'`). Do that mechanically rather than eyeballing whether a given sentence "needs" it — prose fields of 3+ sentences hit this constantly, and the whole note's properties disappear from Obsidian when they do. Rewording (em dash ` — ` in place of a colon) is a nicety on top, never the safeguard.
+  - **Verify after writing** — don't assume; the note renders fine as text while its properties are dead:
+    ```bash
+    python3 -c "import sys,yaml;t=open(sys.argv[1]).read();yaml.safe_load(t[4:t.find(chr(10)+'---',3)]);print('OK',sys.argv[1])" "<note path>"
+    ```
+  - To sweep the whole vault for already-broken notes, see `scripts/check_frontmatter.py` (skips `templates/`, whose unrendered Templater/Clipper syntax is not valid YAML by design).
 - Keep titles human-readable and filesystem-safe; date prefix `YYYY-MM-DD` for `ai_chats/notes/` notes.
 - Pre-2026-07-13 notes in `ai_chats/notes/` keep their historical `YYYY-MM-DD AI Brain - <Title>` names (from the retired `ai_brain/` folder) — don't rename them; new notes drop the "AI Brain" prefix.
 

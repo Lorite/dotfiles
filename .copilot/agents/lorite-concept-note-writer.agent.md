@@ -80,8 +80,8 @@ Frontmatter (datetimes `YYYY-MM-DDTHH:mm`, local time from the `time` tool / `da
 ---
 type: concept
 aliases: []
-short_description: <1–2 sentence tooltip definition>
-description: <4–5 sentence overview with technical + historical context>
+short_description: '<1–2 sentence tooltip definition — ALWAYS single-quoted>'
+description: '<4–5 sentence overview with technical + historical context — ALWAYS single-quoted>'
 tags: [<base tags + deepest nested tag, per the rule above>]
 created: <now>
 updated: <now>
@@ -92,6 +92,14 @@ authors: []
 maturity_level: 1
 ---
 ```
+
+> [!danger] YAML-safe frontmatter — the #1 way this agent breaks the vault
+> `short_description` and `description` are long prose, so they *routinely* contain a **colon-then-space (`: `)** or **open with a `"`** — either one makes Obsidian fail to parse the whole note's properties. **Always single-quote-wrap both fields** (as shown above) and **double every internal `'`** (`Tracy's` → `Tracy''s`). Never leave them bare, no matter how harmless the sentence looks. The same applies to any `aliases:` item or `title:` you write. The Templater path is safe because it JSON-quotes every value (`const q = s => JSON.stringify(...)`); writing the file by hand has no such guard — **you are the guard**.
+>
+> **Verify before you move on.** After writing each note, parse its frontmatter and fix anything that fails — a note that looks fine in your editor can still be broken:
+> ```bash
+> python3 -c "import sys,yaml;t=open(sys.argv[1]).read();yaml.safe_load(t[4:t.find(chr(10)+'---',3)]);print('OK',sys.argv[1])" "<note path>"
+> ```
 
 Body — `# Obsidian Notes` present and **empty** (user space); everything you write under `# AI Generated`, in this order:
 
