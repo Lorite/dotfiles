@@ -113,6 +113,27 @@ Two causes hit this deployment (both fixed, 2026-07-28):
   to guess. Fix: don't hand-write router/service labels; let Coolify generate them and
   only attach middlewares.
 
+### `AxiosError: Request failed with status code 403` popup (data still renders)
+
+`aw-server-rust` keeps a **CORS allowlist** and answers **403** to any request carrying an
+`Origin` it doesn't recognise. Behind a real domain that is every XHR the web UI makes, so
+the page loads from cache/SSR but each request errors. The server log is explicit:
+
+```
+CORS Error: Origin 'https://aw.lorite.eu' is not allowed to request
+No 403 catcher registered. Using Rocket default.
+```
+
+v0.13.2 has **no `--cors` flag** — the allowlist only exists in `config.toml`, which lives
+outside the `/data` volume and would be lost on redeploy. So `docker-entrypoint.sh`
+regenerates it from **`AW_CORS_ORIGINS`** (set in the compose) on every start. To change or
+add an origin, edit that env var and redeploy — never hand-edit config.toml in the
+container.
+
+Verified locally on the built image: with `AW_CORS_ORIGINS=https://aw.lorite.eu`, a request
+sending that Origin returns **200**, while `Origin: https://evil.example.com` still returns
+**403**. Keep it to the exact origins you serve from; do not use a wildcard.
+
 Confirm the backend itself is fine (this path bypasses Traefik entirely):
 
 ```bash

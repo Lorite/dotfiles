@@ -12,6 +12,12 @@ services:
         AW_VERSION: v0.13.2
     restart: unless-stopped
     command: ["--host", "0.0.0.0", "--port", "5600"]
+    environment:
+      # aw-server-rust 403s any request carrying an Origin it doesn't allow, which behind
+      # a real domain is every XHR the web UI makes ("AxiosError: ... status code 403").
+      # The entrypoint turns this into config.toml's `cors = [...]` on every start.
+      # Keep it to the exact origin(s) you serve from — not a wildcard.
+      AW_CORS_ORIGINS: "https://aw.lorite.eu"
     volumes:
       - aw-data:/data
     # --- Access mode: PUBLIC domain via Coolify/Traefik (aw.lorite.eu + Basic Auth) ---

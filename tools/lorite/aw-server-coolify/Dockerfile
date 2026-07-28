@@ -25,11 +25,16 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates libssl3 curl \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=fetch /out/aw-server-rust /out/aw-sync /usr/local/bin/
+# Writes the CORS allowlist into config.toml from $AW_CORS_ORIGINS before starting the
+# server. Without it the web UI gets 403 on every request behind a real domain.
+# aw-sync overrides this entrypoint in the compose, so only aw-server runs it.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh
 # aw-server-rust stores its DB under $XDG_DATA_HOME/activitywatch/aw-server-rust
 ENV XDG_DATA_HOME=/data
 RUN mkdir -p /data
 EXPOSE 5600
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -fsS http://127.0.0.1:5600/api/0/info || exit 1
-ENTRYPOINT ["aw-server-rust"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["--host", "0.0.0.0", "--port", "5600"]
