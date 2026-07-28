@@ -101,6 +101,37 @@ Verified: *Never Gonna Give You Up* → 89 transcript lines; a 12:31 vault video
 `url`/`channel`/`duration`/`aliases` all filled. Unavailable videos exit with yt-dlp's own
 message rather than a traceback.
 
+## Instant phone capture — `inbox-watcher.py`
+
+One-tap capture from any Android device, with no server endpoint and no secret on the
+phone. The phone's only job is to drop a tiny file into the Syncthing-synced vault:
+
+```
+<vault>/ai_chats/inbox/capture-<anything>.md      # content: the shared URL on any line
+```
+
+`inbox-watcher.py` (run by `obsidian-inbox-watcher.timer`, every 2 min) picks stubs up,
+clips the URL headlessly — `youtube-enrich.py` for YouTube, the CLI (with a
+"Website Default" fallback, since the CLI errors on unmatched URLs instead of falling
+back like the extension) for everything else — files the note where the matched
+template's `path` says (`media/videos`, `media/wikis`, …) with a vault-convention
+filename, and moves the stub to `processed/`. Failures go to `failed/` with a `.reason`
+file; existing notes are never overwritten (a ` (2)` suffix is added).
+
+**Phone side (build once per device, in Automate):**
+1. **Content shared** block (makes the flow a share target; set MIME to `text/*`):
+   https://llamalab.com/automate/doc/block/content_shared.html
+2. **File write** block → path `.../<syncthing vault>/ai_chats/inbox/capture-{Now}.md`,
+   content = the shared text. Add the device name to the filename if you want to know
+   which device captured it.
+3. Optional: a **Flow beginning → Toast** for feedback. That's the whole flow — two
+   blocks. Works offline; the capture arrives when Syncthing next syncs.
+
+Why a synced file and not a webhook or `obsidian://`: no auth secret on the phone, no
+public endpoint, no Obsidian app required at capture time, offline-safe — and the vault
+sync already exists. Latency is Syncthing's (seconds when online), which is fine for
+fire-and-forget capture.
+
 ## Known gaps
 
 - The `first` filter crashes on YouTube (`JSON.parse` on a plain string). Harmless — it

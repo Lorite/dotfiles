@@ -1,0 +1,7 @@
+[Unit]
+Description=Enrich URL stubs from the Obsidian capture inbox into full notes
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/git/dotfiles/tools/lorite/obsidian-clipper/inbox-watcher.py
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
