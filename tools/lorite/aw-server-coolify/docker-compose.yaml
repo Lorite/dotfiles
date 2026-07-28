@@ -15,18 +15,31 @@ services:
     volumes:
       - aw-data:/data
     # --- Access mode: PUBLIC domain via Coolify/Traefik (aw.lorite.eu + Basic Auth) ---
-    # Set AW_BASIC_AUTH in Coolify (env var) to the output of:
-    #   htpasswd -nbB <user> '<password>'        # the whole "user:hash" line
-    # The label only references ${AW_BASIC_AUTH}, so the hash never lands in this public
-    # repo. `https` / `letsencrypt` are Coolify's default Traefik entrypoint + resolver.
+    # Set the domain in the Coolify UI (Domains -> https://aw.lorite.eu, port 5600).
+    # Coolify then auto-generates the router, service and TLS labels itself; we only
+    # attach the auth middleware here.
+    #
+    # The middleware itself is defined in Traefik's FILE provider on the server
+    # (/data/coolify/proxy/dynamic/aw.yaml), installed by ./install-traefik-auth.sh.
+    # Two reasons it lives there and not here:
+    #   1. This repo is public — the bcrypt line must never be committed.
+    #   2. Coolify escapes `$` when it re-emits the compose file, so a `${VAR}` in a
+    #      label is NEVER interpolated. The previous
+    #      `...basicauth.users=${AW_BASIC_AUTH}` reached Traefik as the *literal*
+    #      string, which failed with `error parsing BasicUser: ${AW_BASIC_AUTH}`.
+    #      Setting the env var in Coolify does not and cannot fix that.
+    #
+    # FAIL-CLOSED BY DESIGN: if aw.yaml is missing, `aw-auth@file` does not resolve and
+    # Traefik drops the router (503) instead of serving the dashboard without a login.
+    # Never replace this with a middleware that can silently succeed as a no-op.
+    #
+    # NOTE: do NOT re-add `traefik.http.routers.aw.*` / `traefik.http.services.aw.*`
+    # here. Coolify's generated services then make three services for one router and
+    # Traefik refuses to link it: "Router aw cannot be linked automatically with
+    # multiple Services".
     labels:
       - traefik.enable=true
-      - 'traefik.http.routers.aw.rule=Host(`aw.lorite.eu`)'
-      - traefik.http.routers.aw.entrypoints=https
-      - traefik.http.routers.aw.tls.certresolver=letsencrypt
-      - traefik.http.services.aw.loadbalancer.server.port=5600
-      - 'traefik.http.middlewares.aw-auth.basicauth.users=${AW_BASIC_AUTH}'
-      - traefik.http.routers.aw.middlewares=aw-auth
+      - traefik.http.routers.aw.middlewares=aw-auth@file
     # --- Alternative: Tailscale-only (no domain, no auth). To use this instead, delete
     #     the labels above and uncomment the binding below (aw-server has no auth/HTTPS,
     #     so this IP must be the server's Tailscale IP, never 0.0.0.0): ---

@@ -41,14 +41,31 @@ network — no host port needed) and instead:
    htpasswd -nbB admin 'a-long-unique-password'      # apache2-utils
    # -> admin:$2y$05$....   (copy the whole line)
    ```
-   Then add it as a Traefik middleware, following Coolify's official guide
-   (handles the compose router wiring): https://coolify.io/docs/knowledge-base/proxy/traefik/basic-auth
-   The middleware label looks like (note: **`$` must be doubled to `$$`** in compose):
-   ```yaml
-   labels:
-     - "traefik.http.middlewares.aw-auth.basicauth.users=admin:$$2y$$05$$....hash...."
-     # then attach `aw-auth` to the router Coolify created for aw.lorite.eu (per the guide)
+   Then install it **on the server** with the script in this directory — not as a compose
+   label (see "Why not a compose label" below):
+   ```bash
+   ./install-traefik-auth.sh 'admin:$2y$05$....hash....'   # single-quote it: the hash has $
+   # or, to reuse the AW_BASIC_AUTH value already set in Coolify:
+   ./install-traefik-auth.sh
    ```
+   It writes `/data/coolify/proxy/dynamic/aw.yaml` (a Traefik **file-provider** config
+   holding the router, the service and the `aw-auth` middleware). Traefik watches that
+   directory, so it applies within seconds — **no redeploy needed**.
+
+### Why not a compose label
+
+**Coolify escapes `$` when it re-emits the compose file**, so `${VAR}` inside a `labels:`
+entry is *never* interpolated. The earlier
+`traefik.http.middlewares.aw-auth.basicauth.users=${AW_BASIC_AUTH}` therefore reached
+Traefik as the **literal string** `${AW_BASIC_AUTH}` →
+`error parsing BasicUser: ${AW_BASIC_AUTH}` → Traefik dropped the router → the site
+answered **503 "no available server"**. Setting the env var in Coolify does not fix this;
+the value is correct, it just never reaches the label. Hard-coding the hash in the label
+would work, but this repo is public. Hence the file provider.
+
+**Fail-closed by design:** the compose only *references* `aw-auth@file`. If `aw.yaml` is
+missing the middleware does not resolve and Traefik drops the router (503) rather than
+serving your entire activity history with no login. Keep it that way.
 
 **Honest tradeoff:** Basic Auth over HTTPS is fine for a personal dashboard, but it's
 a *single credential* protecting your entire activity history on the public internet —
@@ -68,8 +85,43 @@ consider that if you don't actually need access from non-Tailscale machines.
    - `aw-sync.volumes` — set `/home/lorite/ActivityWatchSync` to the real server path
      from step 1 (or wire it as Coolify persistent storage / bind mount).
    - `aw-server.ports` — confirm `100.72.103.27` is the server's Tailscale IP.
-4. **Do NOT set a public FQDN / domain** for the service (see security note).
+4. **Domain:** for Option A (Tailscale-only) set **no** FQDN. For Option B set
+   `https://aw.lorite.eu`, port `5600`, and run `install-traefik-auth.sh` on the server
+   **before** the site is reachable — the auth middleware must exist first.
 5. **Deploy.** Coolify builds the image and starts both services.
+
+## Troubleshooting
+
+### `no available server` (HTTP 503) at aw.lorite.eu
+
+Traefik's catch-all (`default_redirect_503.yaml`) answering because **no router is
+serving the host**. The container being `healthy` tells you nothing about routing —
+check Traefik, not aw-server:
+
+```bash
+docker logs coolify-proxy --since 24h 2>&1 | grep -iE 'aw-server|aw-auth|level=err'
+```
+
+Two causes hit this deployment (both fixed, 2026-07-28):
+
+- `error parsing BasicUser: ${AW_BASIC_AUTH}` — the `$`-escaping problem above. Fix:
+  `install-traefik-auth.sh`.
+- `Router aw cannot be linked automatically with multiple Services: ["aw",
+  "http-0-…-aw-server", "https-0-…-aw-server"]` — once a domain is set in the Coolify UI,
+  Coolify generates its **own** router *and* service. A hand-written
+  `traefik.http.routers.aw.*` label then has three candidate services and Traefik refuses
+  to guess. Fix: don't hand-write router/service labels; let Coolify generate them and
+  only attach middlewares.
+
+Confirm the backend itself is fine (this path bypasses Traefik entirely):
+
+```bash
+docker exec coolify-proxy wget -qO- http://aw-server:5600/api/0/info     # {"version":"v0.13.2 (rust)"...}
+docker exec coolify-proxy wget -qO- http://aw-server:5600/api/0/buckets/ # laptop buckets
+```
+
+`aw-server` is a stable Docker network alias for the container, so it survives redeploys
+(the container *name* does not — it carries a timestamp suffix).
 
 ## Verify
 
