@@ -1,0 +1,15 @@
+# Canonical copy of the home-server dotfiles auto-pull systemd *user* unit.
+# Fast-forward pulls ~/git/dotfiles daily so the symlinked ~/.claude/CLAUDE.md and skills stay
+# current for Remote Control sessions. Deliberately does NOT run install.sh (see the script
+# header); it flags .copilot/agents/ changes for a manual run instead.
+# Install on the server at ~/.config/systemd/user/dotfiles-pull.service, then:
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now dotfiles-pull.timer
+[Unit]
+Description=Daily fast-forward pull of ~/git/dotfiles (flags agent changes for manual install.sh)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/dotfiles-pull.sh

@@ -1,0 +1,13 @@
+# Canonical copy: ~/git/dotfiles/tools/home-server/dotfiles-pull.timer
+# Daily at 02:30, before the 03:00 morning briefing on this host, so briefing and early phone
+# sessions load the freshest CLAUDE.md and skills. Persistent catches nights the server was off.
+[Unit]
+Description=Daily 02:30 dotfiles fast-forward pull
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+Unit=dotfiles-pull.service
+
+[Install]
+WantedBy=timers.target
