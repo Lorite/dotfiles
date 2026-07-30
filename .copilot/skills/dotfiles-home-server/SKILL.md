@@ -26,6 +26,12 @@ Canonical copies live in **`tools/home-server/`** — the shared wrapper `claude
 
 To add another workspace, drop in a new unit pointing the wrapper at that dir (it must be Claude-Code **workspace-trusted** first — run `claude` once there).
 
+## Dotfiles freshness (dotfiles-pull.timer, added 2026-07-30)
+
+The server's `~/git/dotfiles` does **not** stay current on its own, and its `~/.claude/CLAUDE.md` + skills are symlinks into that checkout, so phone sessions were loading stale rules (caught 2 days behind on 2026-07-30). A daily systemd user timer now fixes that: `dotfiles-pull.timer` runs `dotfiles-pull.sh` at **02:30** (before the 03:00 morning briefing; `Persistent=true`), doing a `git pull --ff-only`. Canonical copies in `tools/home-server/`, live at `~/.local/bin/dotfiles-pull.sh` + `~/.config/systemd/user/dotfiles-pull.{service,timer}`.
+
+It **deliberately never runs `install.sh`** (unattended-run bug history + this host's uutils traps): when a pull changes `.copilot/agents/`, it writes a flag to `~/.local/state/dotfiles-pull/install-sh-needed` and every later run repeats the reminder in its journal — run `install.sh` there manually, then delete the flag. A `--ff-only` failure (diverged checkout) shows as a failed `dotfiles-pull.service`.
+
 **Control:** `tmux attach -t {phd,vault}`; `systemctl --user {status,restart,stop} claude-rc claude-rc-vault` (needs `XDG_RUNTIME_DIR=/run/user/$(id -u)` over SSH).
 
 ## Auth note (401s)
