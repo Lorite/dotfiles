@@ -46,6 +46,12 @@ The Obsidian vault (`~/git/lorite-obsidian-notes`) is the running record of ever
 - Use 4-space indentation for shell scripts
 - Follow existing project conventions
 
-### Prose in source files (README, LaTeX, Markdown, docs)
+### Writing style (applies to ALL output: chat replies, notes, slides, docs, commit messages)
 
-- Never hard-wrap a sentence across multiple source lines ("semantic line breaks" / one-sentence-per-line style). Write one line per paragraph and let it soft-wrap; do not insert manual newlines mid-sentence.
+- **No en dashes (–), no em dashes (—), no semicolons.** Rewrite the sentence instead: use a comma, a period, a colon, or parentheses. Use "to" for ranges ("3 to 5 min", "pages 10 to 12"). Plain hyphens in compound words (read-first, on-robot) are fine.
+
+### Prose in source files (README, LaTeX, Markdown, Slidev slides, docs)
+
+- Never hard-wrap a sentence across multiple source lines ("semantic line breaks" / one-sentence-per-line style / wrapping at ~80 columns). Write one line per paragraph and let it soft-wrap. Do not insert manual newlines mid-sentence.
+- This applies to **every prose context in a source file**: body text, bullet items, Slidev speaker notes and `<!-- comments -->`, blockquotes, Obsidian notes. Bullets and headings are their own lines. Code stays under normal line-length rules.
+- **Do not imitate hard-wrapped text you find in an existing file or template** (many older files and skeletons are wrapped). New and edited prose is always one line per paragraph. When you copy a template that is wrapped, unwrap the prose as you adapt it.
