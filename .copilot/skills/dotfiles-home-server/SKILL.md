@@ -38,6 +38,19 @@ It **deliberately never runs `install.sh`** (unattended-run bug history + this h
 
 **Control:** `tmux attach -t {phd,vault}`; `systemctl --user {status,restart,stop} claude-rc claude-rc-vault` (needs `XDG_RUNTIME_DIR=/run/user/$(id -u)` over SSH).
 
+## Which LLM the nightly jobs use (set 2026-07-31)
+
+Headless jobs go through **`lorite-llm.sh`**, whose built-in default is **OpenCode-first with Claude as fallback** (to keep low-effort work off the Claude quota). The server overrides that in **`~/.config/environment.d/lorite-llm.conf`** (machine-local; `install.sh` never overwrites an existing copy):
+
+```
+LLM_CLIENT=claude
+LLM_MODEL=claude-sonnet-5
+```
+
+So every headless job on this host runs **Claude Sonnet 5** — today that means the morning briefing plus the daily-note LLM summaries it performs (`obsidian_daily_note.py` deliberately does no LLM work itself). The **full model name is pinned rather than the `sonnet` alias**, so a future Sonnet release cannot silently change what runs overnight. Reload with `systemctl --user daemon-reload`, then confirm with `systemctl --user show-environment | grep -i llm`.
+
+**Consequence to remember:** `lorite-llm.sh` only falls back to the other client when `LLM_CLIENT` is **unset**, so pinning it **disables the OpenCode fallback** — a Claude quota limit now fails the job outright instead of retrying. That is precisely the failure that killed the 2026-07-20 briefing. Comment `LLM_CLIENT` out to restore OpenCode-first with fallback. (The briefing unit already pinned `LLM_CLIENT=claude` for itself, so for that job this only adds the model.)
+
 ## Auth note (401s)
 
 The login is a subscription **OAuth** credential in `~/.claude/.credentials.json`. If the phone starts getting **401s**, the access token has expired — re-auth with an **interactive `claude` `/login`** (not `setup-token`), which stores a **refresh token** so it auto-refreshes; a token with no refresh token silently expires and 401s until manually re-logged (hit 2026-07-15).

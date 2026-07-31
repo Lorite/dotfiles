@@ -76,7 +76,10 @@ echo "morning-briefing: mode OBSIDIAN_GUI=$OBSIDIAN_GUI VAULT=$VAULT VAULT_GIT=$
 # let that agent research concepts to ground the notes it writes. Still report-only
 # on git; writes ai_chats/ + daily-note summaries + concept notes (work|personal/concepts).
 
-# Use the lorite-llm wrapper: Claude (Sonnet) by default, OpenCode as fallback.
+# Use the lorite-llm wrapper. NOTE the client is NOT auto-detected for this job: the unit
+# pins LLM_CLIENT=claude (and says why), which also disables the OpenCode fallback, since
+# lorite-llm.sh only falls back when LLM_CLIENT is unset. The MODEL comes from
+# ~/.config/environment.d/lorite-llm.conf — the home server pins claude-sonnet-5 there.
 # NOTE: pass the wrapper's OWN flags (--skill/--allowed-tools/--max-turns), never the
 # raw client flags — `-p` here used to collide with the wrapper's client probe, which
 # silently turned every run from 2026-07-21 to 2026-07-25 into a 2-second no-op.
