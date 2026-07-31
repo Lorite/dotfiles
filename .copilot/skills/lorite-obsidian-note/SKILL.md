@@ -39,6 +39,16 @@ This is the **single, canonical way** to write notes into the Obsidian vault (`~
     template's headings. Use a **direct file edit** for this positioned fill.
   - **Any other note**: append a top-level `# AI Generated` section containing exactly `## Prompt`
     and `## AI Generated Answer`.
+  - **Related-notes exception (task notes — user grant [[2026-07-31]]): the AI finds and maintains
+    the links itself.** A task note may carry an **AI-owned `## Related notes` subsection** at the
+    end of `# 🎯 Task Description` (after `## High Level TODOs` if present; create it lazily): a
+    bullet list of `[[wikilinks]]` to the reference notes this task touches. Populate it by
+    **keyword search over note names, `aliases:`, and `tags`** (plus Bases queries) using the task's
+    own terms, and add any note the session actually consulted or edited. Maintain it like High
+    Level TODOs — add freely, retire by striking `~~[[X]]~~`, never touch the user's own links.
+    These links (anywhere in the task note — the user's, the journal's, or this list) are what put
+    a reference note **in scope for the inline-maintenance exception below**, so keeping this list
+    honest is part of keeping the vault current.
   - **Inline-maintenance exception (reference notes wikilinked from the driving task note — user
     grant [[2026-07-31]]).** Append-only builds a split brain on reference notes: the hand-written
     body keeps stating the outdated fact while the correction sits in an appended section below, and
