@@ -68,6 +68,32 @@ This is the **single, canonical way** to write notes into the Obsidian vault (`~
     still goes through the `# AI Generated` append path. The vault's git history plus the morning
     briefing's daily commit audit are the safety net — keep edits small enough that a diff reads at
     a glance.
+  - **Creation exception (new reference notes, anywhere in the vault — user grant [[2026-07-31]]).**
+    Inline maintenance can only fix notes that already exist. When a session verifies a real thing
+    that has **no note at all**, you may create one **anywhere in the vault**, not just `ai_chats/`.
+    The narrowness lives in the evidence bar and the review loop, not in a folder whitelist:
+    - **Prove it is missing first.** Search note **names *and* `aliases:` across the whole vault**
+      before concluding nothing covers it — a basename search in one folder is not evidence (the
+      `[[Lenovo ThinkPad P15 Gen 2i]]` near-miss of 2026-07-31 is exactly why this clause exists).
+      If any note covers the thing, maintain it inline instead of creating a second one.
+    - **Only for something this session actually verified exists** — the same evidence bar as inline
+      maintenance. Never create a note for something inferred, planned, or merely believed.
+    - **Match the destination's conventions**: the template/schema of the folder you're writing into
+      and the vault's path→tags convention. Copy the shape of a sibling note in that folder.
+    - **Write only what you verified.** A short honest stub beats an invented encyclopedia entry;
+      mark anything unconfirmed `[VERIFY: …]`. Never invent dates, prices, specs, or history.
+    - **Mark it for review — mandatory.** Add **`ai_created: <yyyy-MM-dd>`** to the frontmatter. The
+      morning briefing lists every note carrying a fresh `ai_created:` date so the user can review or
+      delete it (see the `lorite-morning-briefing` skill). A created note **without** this field is
+      invisible to that review, so omitting it is a policy violation, not a formatting slip.
+    - **Log it** in the task note's journal and add it to `## Related notes`, like any other edit.
+    - **Do not create**, each for a concrete reason: `templates/` (Templater sources, not notes),
+      `diary/daily/` (owned by the daily-note pipeline), `tasks/` (created through `mtn` /
+      `lorite-task-manager` so ids and schema stay consistent), and **people notes** (the user
+      explicitly deferred bulk people stubs on 2026-07-29; that decision is still theirs to make).
+    When unsure whether a thing deserves its own note, **add the fact to an existing note instead**.
+    A wrongly created note is worse than a wrong correction: a strikethrough is self-evident and
+    reversible in place, while a bogus note is a new object someone has to find and delete.
 - **Never write secrets** into notes (e.g. nothing from `obsidian-web-clipper-settings.json`).
 
 ## Inputs (when called by another agent or the user)
