@@ -28,7 +28,7 @@ To add another workspace, drop in a new unit pointing the wrapper at that dir (i
 
 ## Dotfiles freshness (dotfiles-pull.timer, added 2026-07-30)
 
-The server's `~/git/dotfiles` does **not** stay current on its own, and its `~/.claude/CLAUDE.md` + skills are symlinks into that checkout, so phone sessions were loading stale rules (caught 2 days behind on 2026-07-30). A daily systemd user timer now fixes that: `dotfiles-pull.timer` runs `dotfiles-pull.sh` at **02:30** (before the 03:00 morning briefing; `Persistent=true`), doing a `git pull --ff-only`. Canonical copies in `tools/home-server/`, live at `~/.local/bin/dotfiles-pull.sh` + `~/.config/systemd/user/dotfiles-pull.{service,timer}`.
+The server's `~/git/dotfiles` does **not** stay current on its own, and its `~/.claude/CLAUDE.md` + skills are symlinks into that checkout, so phone sessions were loading stale rules (caught 2 days behind on 2026-07-30). A daily systemd user timer now fixes that: `dotfiles-pull.timer` runs `dotfiles-pull.sh` at **01:30** (before the 01:45 morning briefing; `Persistent=true`), doing a `git pull --ff-only`. Canonical copies in `tools/home-server/`, live at `~/.local/bin/dotfiles-pull.sh` + `~/.config/systemd/user/dotfiles-pull.{service,timer}`.
 
 It **deliberately never runs `install.sh`** (unattended-run bug history + this host's uutils traps): when a pull changes `.copilot/agents/`, it writes a flag to `~/.local/state/dotfiles-pull/install-sh-needed` and every later run repeats the reminder in its journal — run `install.sh` there manually, then delete the flag. A `--ff-only` failure (diverged checkout) shows as a failed `dotfiles-pull.service`.
 

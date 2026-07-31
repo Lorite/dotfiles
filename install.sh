@@ -721,7 +721,7 @@ if systemctl --user show-environment >/dev/null 2>&1; then
 	systemctl --user daemon-reload
 	if is_vault_processor; then
 		systemctl --user enable --now lorite-morning-briefing.timer
-		print_success "Enabled lorite-morning-briefing.timer (home server, ~03:00)"
+		print_success "Enabled lorite-morning-briefing.timer (home server, ~01:45)"
 	else
 		systemctl --user disable --now lorite-morning-briefing.timer 2>/dev/null || true
 		print_success "lorite-morning-briefing.timer left disabled here (runs on the home server)"

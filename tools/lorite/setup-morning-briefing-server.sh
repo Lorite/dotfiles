@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Canonical copy: ~/git/dotfiles/tools/lorite/setup-morning-briefing-server.sh
 # Idempotent bootstrap for running the lorite-morning-briefing on the HOME SERVER
-# (headless, Syncthing vault, no Obsidian GUI) at 03:00 daily. Safe to re-run.
+# (headless, Syncthing vault, no Obsidian GUI) at 01:45 daily. Safe to re-run.
 #
 # It sets up everything EXCEPT Claude Code auth (that needs you):
 #   1. pulls latest dotfiles and runs install.sh (installs opencode, lorite-llm, syncs agents)
 #   2. a read-only side clone of the vault (git audit source — Syncthing excludes .git/)
 #   3. the host env file pointing the briefing at that clone
-#   4. the systemd user service + timer, with a 03:00 drop-in override
+#   4. the systemd user service + timer, with a 01:45 drop-in override
 #   5. enables the timer ONLY when OpenCode or Claude Code is installed (OpenCode first,
 #      Claude fallback — the briefing uses tools/lorite/lorite-llm.sh)
 #
@@ -56,18 +56,19 @@ OBSIDIAN_GUI=0
 EOF
 say "wrote $ENV_DIR/morning-briefing.env (LORITE_VAULT_GIT=$CLONE, OBSIDIAN_GUI=0)"
 
-# 3. Install the service + timer + a 03:00 drop-in (overrides the laptop's 06:00)
+# 3. Install the service + timer + a 01:45 drop-in (overrides the laptop's 06:00)
 mkdir -p "$UNIT_DIR" "$UNIT_DIR/lorite-morning-briefing.timer.d"
 cp "$DOTFILES/tools/lorite/lorite-morning-briefing.service" \
    "$DOTFILES/tools/lorite/lorite-morning-briefing.timer" "$UNIT_DIR/"
 cat > "$UNIT_DIR/lorite-morning-briefing.timer.d/override.conf" <<'EOF'
-# Home server runs at 03:00 (empty OnCalendar= first clears the shipped 06:00).
+# Home server runs at 01:45, last slot of the staggered nightly batch (01:00 HA import,
+# 01:15 AW export, 01:30 dotfiles pull). Empty OnCalendar= first clears the shipped 06:00.
 [Timer]
 OnCalendar=
-OnCalendar=*-*-* 03:00:00
+OnCalendar=*-*-* 01:45:00
 EOF
 systemctl --user daemon-reload
-say "installed service + timer + 03:00 drop-in"
+say "installed service + timer + 01:45 drop-in"
 
 # 4. Enable only when OpenCode or Claude Code is available (the briefing uses lorite-llm.sh
 # which prefers opencode, falls back to claude). Check ~/.local/bin explicitly — a non-login

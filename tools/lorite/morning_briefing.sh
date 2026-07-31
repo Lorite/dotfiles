@@ -9,7 +9,7 @@
 #   * Home server (headless, Syncthing): no GUI. Content is read/written in the
 #                      Syncthing working copy ($VAULT); git history for the audit
 #                      comes from a SEPARATE read-only clone ($LORITE_VAULT_GIT),
-#                      because Syncthing excludes .git/ (.stignore). OnCalendar 03:00.
+#                      because Syncthing excludes .git/ (.stignore). OnCalendar 01:45.
 #
 # The skill reads these exported vars: VAULT (content root), VAULT_GIT (git-history
 # root), AUDIT_REF (ref to audit), OBSIDIAN_GUI (1 app-driven / 0 pure-file).
