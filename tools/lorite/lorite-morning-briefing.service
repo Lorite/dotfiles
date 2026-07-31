@@ -22,6 +22,11 @@ Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
 # no briefing at all. This is not a claim that OpenCode is unfit generally — it did the
 # briefing BACKFILL well on the same free model. Re-measure once OpenCode Go's paid
 # models (GLM-5.2 / Kimi K2.7 Code) are wired, and drop this line if they pass.
+# CONSEQUENCE of the 2026-07-31 fallback change: a pinned client now still falls back, so if
+# Claude fails (quota), this job retries on OpenCode — the very client measured above to return
+# a false "no issues found" on the security audit. That is the deliberate trade: a briefing from
+# the weaker client beats no briefing, and the swap is logged to the journal by lorite-llm.
+# If a false-negative audit is ever worse than a missing one, add Environment=LLM_FALLBACK=0.
 Environment=LLM_CLIENT=claude
 # Host-specific overrides (optional; '-' = ok if absent). The home server writes
 # LORITE_VAULT_GIT=%h/git/lorite-obsidian-notes-audit here (the side clone used for

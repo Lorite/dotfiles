@@ -18,7 +18,9 @@
 #   LLM_CLIENT=claude|opencode    force a client and skip auto-detection
 #   LLM_MODEL=<model>             model override (client-specific naming)
 #   LLM_EFFORT=<level>            Claude only: reasoning effort (low|medium|high|xhigh|max)
-#   LLM_FALLBACK=1|0              on primary-client failure, retry with the other (default 1)
+#   LLM_FALLBACK=1|0              on primary-client failure, retry with the other (default 1).
+#                                 Applies even when LLM_CLIENT is pinned; the retry drops
+#                                 LLM_MODEL, which is client-specific. Set 0 to fail instead.
 #
 # Exit status is the picked client's; 127 if no usable client exists.
 set -euo pipefail
@@ -47,7 +49,8 @@ CLAUDE_BIN="$(resolve_claude || true)"
 #
 # Callers with a job OpenCode has been MEASURED to do badly should pin LLM_CLIENT=claude
 # themselves rather than flipping this default — see lorite-morning-briefing.service,
-# which does exactly that and says why.
+# which does exactly that and says why. Pinning picks the PRIMARY client only: since
+# 2026-07-31 a pinned client still falls back to the other one when it fails.
 detect_client() {
     case "${LLM_CLIENT:-}" in
         claude)
@@ -128,16 +131,34 @@ run_client() {
     "${CMD[@]}"
 }
 
-# Primary attempt; on failure fall back to the other client when one is available.
-if run_client "$CLIENT"; then
+# Primary attempt.
+#
+# Status capture is deliberate: `if run_client ...; then exit 0; fi` followed by `STATUS=$?`
+# reads **0**, not the client's exit code — an `if` whose condition fails and which has no
+# `else` returns 0 itself. That bug (fixed 2026-07-31) made a failed run exit 0, so systemd
+# logged the nightly briefing as successful when the LLM had actually died. Use `|| STATUS=$?`.
+STATUS=0
+run_client "$CLIENT" || STATUS=$?
+if [[ $STATUS -eq 0 ]]; then
     exit 0
 fi
-STATUS=$?
 
 FALLBACK="$(other_client "$CLIENT")"
 FALLBACK_BIN_VAR="$([[ "$FALLBACK" == claude ]] && echo "$CLAUDE_BIN" || echo "$OPENCODE_BIN")"
 
-if [[ "${LLM_FALLBACK:-1}" == 1 && -z "${LLM_CLIENT:-}" && -n "$FALLBACK_BIN_VAR" ]]; then
+# Fall back EVEN WHEN LLM_CLIENT IS PINNED (changed 2026-07-31; it used to require LLM_CLIENT
+# to be unset). Pinning expresses which client should do the work, not an instruction to fail
+# the whole job when that client is unavailable — and a Claude quota limit is precisely when
+# the other client earns its keep, since that is what killed the 2026-07-20 briefing.
+# Opt out with LLM_FALLBACK=0.
+if [[ "${LLM_FALLBACK:-1}" == 1 && -n "$FALLBACK_BIN_VAR" ]]; then
+    # MODEL is client-specific by definition (claude-sonnet-5 vs openclaw), so carrying it into
+    # the retry would only fail it a second way. Drop it and let the fallback client use its own
+    # default. EFFORT needs no such handling: build_cmd only applies it on the Claude branch.
+    if [[ -n "$MODEL" ]]; then
+        echo "[lorite-llm] dropping --model '$MODEL' for the $FALLBACK retry (models are client-specific)" >&2
+        MODEL=""
+    fi
     echo "[lorite-llm] $CLIENT failed (exit $STATUS) — retrying with $FALLBACK" >&2
     run_client "$FALLBACK"
     exit $?
