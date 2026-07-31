@@ -39,6 +39,25 @@ This is the **single, canonical way** to write notes into the Obsidian vault (`~
     template's headings. Use a **direct file edit** for this positioned fill.
   - **Any other note**: append a top-level `# AI Generated` section containing exactly `## Prompt`
     and `## AI Generated Answer`.
+  - **Inline-maintenance exception (reference notes wikilinked from the driving task note — user
+    grant [[2026-07-31]]).** Append-only builds a split brain on reference notes: the hand-written
+    body keeps stating the outdated fact while the correction sits in an appended section below, and
+    readers trust the top. So in a note that is **wikilinked from the task note driving the current
+    session**, you may keep the body factually current:
+    - **Add** a short sentence or bullet where the new fact belongs (matching the note's own style).
+    - **Correct** an outdated statement by **strike-and-replace with a date**:
+      `~~old fact~~ new fact ([[<yyyy-MM-dd>]])`. **Strike, never delete or reword** — the
+      hand-written original must stay readable in place, not only in git.
+    - **Cross out** a statement that is simply no longer true the same way (strike + date), even
+      with no replacement.
+    Hard limits: only facts **verified by this session's tool output** (never "probably outdated");
+    short factual statements only — never restyle the user's prose, and for opinion-like or
+    meaning-changing edits **ask instead**; no frontmatter (beyond the task-status exception), no
+    `templates/`, no `diary/` notes, no `people/` notes; and **log every inline edit in the task
+    note's journal entry** (which note, what changed, the evidence). Anything bigger or uncertain
+    still goes through the `# AI Generated` append path. The vault's git history plus the morning
+    briefing's daily commit audit are the safety net — keep edits small enough that a diff reads at
+    a glance.
 - **Never write secrets** into notes (e.g. nothing from `obsidian-web-clipper-settings.json`).
 
 ## Inputs (when called by another agent or the user)
