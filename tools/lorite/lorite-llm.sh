@@ -11,11 +11,13 @@
 #   --allowed-tools <csv>     Claude only (OpenCode has no equivalent; ignored there)
 #   --max-turns <n>           Claude only (ignored on OpenCode)
 #   --model <m>               override the model for the picked client
+#   --effort <level>          Claude only: low|medium|high|xhigh|max (ignored on OpenCode)
 #   --dry-run                 print the resolved command instead of running it
 #
 # Env overrides (also settable in ~/.config/environment.d/lorite-llm.conf):
 #   LLM_CLIENT=claude|opencode    force a client and skip auto-detection
 #   LLM_MODEL=<model>             model override (client-specific naming)
+#   LLM_EFFORT=<level>            Claude only: reasoning effort (low|medium|high|xhigh|max)
 #   LLM_FALLBACK=1|0              on primary-client failure, retry with the other (default 1)
 #
 # Exit status is the picked client's; 127 if no usable client exists.
@@ -67,7 +69,7 @@ other_client() { [[ "$1" == claude ]] && echo opencode || echo claude; }
 
 # ── parse args ──────────────────────────────────────────────────────────────────
 WHICH=0; DRY_RUN=0
-SKILL=""; PROMPT=""; ALLOWED_TOOLS=""; MAX_TURNS=""; MODEL="${LLM_MODEL:-}"
+SKILL=""; PROMPT=""; ALLOWED_TOOLS=""; MAX_TURNS=""; MODEL="${LLM_MODEL:-}"; EFFORT="${LLM_EFFORT:-}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -78,7 +80,8 @@ while [[ $# -gt 0 ]]; do
         --allowed-tools) ALLOWED_TOOLS="$2"; shift 2 ;;
         --max-turns)     MAX_TURNS="$2"; shift 2 ;;
         --model)         MODEL="$2"; shift 2 ;;
-        -h|--help)       sed -n '2,20p' "$0"; exit 0 ;;
+        --effort)        EFFORT="$2"; shift 2 ;;
+        -h|--help)       sed -n '2,23p' "$0"; exit 0 ;;
         *)               echo "ERROR: unknown argument '$1' (see --help)" >&2; exit 2 ;;
     esac
 done
@@ -103,6 +106,8 @@ build_cmd() {
             CMD=("$CLAUDE_BIN" --model "${MODEL:-sonnet}" -p "$text")
             [[ -n "$ALLOWED_TOOLS" ]] && CMD+=(--allowedTools "$ALLOWED_TOOLS")
             [[ -n "$MAX_TURNS"     ]] && CMD+=(--max-turns "$MAX_TURNS")
+            # Unset => the client's own default (settings.json effortLevel), not a hardcoded one.
+            [[ -n "$EFFORT"        ]] && CMD+=(--effort "$EFFORT")
             ;;
         opencode)
             local text="${PROMPT:-Use the $SKILL skill now, and follow it to completion.}"

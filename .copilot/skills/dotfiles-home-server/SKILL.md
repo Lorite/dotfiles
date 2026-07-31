@@ -45,9 +45,10 @@ Headless jobs go through **`lorite-llm.sh`**, whose built-in default is **OpenCo
 ```
 LLM_CLIENT=claude
 LLM_MODEL=claude-sonnet-5
+LLM_EFFORT=xhigh
 ```
 
-So every headless job on this host runs **Claude Sonnet 5** — today that means the morning briefing plus the daily-note LLM summaries it performs (`obsidian_daily_note.py` deliberately does no LLM work itself). The **full model name is pinned rather than the `sonnet` alias**, so a future Sonnet release cannot silently change what runs overnight. Reload with `systemctl --user daemon-reload`, then confirm with `systemctl --user show-environment | grep -i llm`.
+So every headless job on this host runs **Claude Sonnet 5 at extra-high reasoning effort** — today that means the morning briefing plus the daily-note LLM summaries it performs (`obsidian_daily_note.py` deliberately does no LLM work itself). The **full model name is pinned rather than the `sonnet` alias**, so a future Sonnet release cannot silently change what runs overnight. `LLM_EFFORT` maps to Claude's `--effort` (`low|medium|high|xhigh|max`); unset means the client's own `settings.json` default, and OpenCode ignores it. Higher effort trades wall-clock for thoroughness, which suits jobs running at 01:00 with nobody waiting. Reload with `systemctl --user daemon-reload`, then confirm with `systemctl --user show-environment | grep -i llm`.
 
 **Consequence to remember:** `lorite-llm.sh` only falls back to the other client when `LLM_CLIENT` is **unset**, so pinning it **disables the OpenCode fallback** — a Claude quota limit now fails the job outright instead of retrying. That is precisely the failure that killed the 2026-07-20 briefing. Comment `LLM_CLIENT` out to restore OpenCode-first with fallback. (The briefing unit already pinned `LLM_CLIENT=claude` for itself, so for that job this only adds the model.)
 
