@@ -88,12 +88,38 @@ This is the **single, canonical way** to write notes into the Obsidian vault (`~
       invisible to that review, so omitting it is a policy violation, not a formatting slip.
     - **Log it** in the task note's journal and add it to `## Related notes`, like any other edit.
     - **Do not create**, each for a concrete reason: `templates/` (Templater sources, not notes),
-      `diary/daily/` (owned by the daily-note pipeline), `tasks/` (created through `mtn` /
-      `lorite-task-manager` so ids and schema stay consistent), and **people notes** (the user
-      explicitly deferred bulk people stubs on 2026-07-29; that decision is still theirs to make).
+      `diary/daily/` (owned by the daily-note pipeline), and `tasks/` (created through `mtn` /
+      `lorite-task-manager` so ids and schema stay consistent). **People notes ARE allowed** —
+      the user lifted that exclusion on [[2026-07-31]] now that the briefing review loop exists.
+      Same bar as everything else: only real people the session actually encountered in the vault,
+      a thin honest stub (never invented biography), matching `people/`'s template, and stamped
+      `ai_created:` so each one lands in the briefing for review.
     When unsure whether a thing deserves its own note, **add the fact to an existing note instead**.
     A wrongly created note is worse than a wrong correction: a strikethrough is self-evident and
     reversible in place, while a bogus note is a new object someone has to find and delete.
+  - **Archiving exception (retiring a note for something no longer used — user grant
+    [[2026-07-31]]).** The vault archives a note in exactly two steps, which the user's QuickAdd
+    "Archive Current Note" macro performs (`scripts/add-archived-tag.js` + `scripts/move-to-archived.js`)
+    and which you replicate directly when working outside the GUI:
+    1. add `archived` to the note's `tags:` frontmatter array (leave every other tag alone), and
+    2. move the file to a **sibling `archived/` folder** — `media/digital_tools/Karakeep.md` →
+       `media/digital_tools/archived/Karakeep.md`. Never invent a different archive location, and
+       skip the move if any path segment is already `archived`.
+    Use `git mv` so history follows the file. Wikilinks are **basename**-resolved, so a folder move
+    does not break `[[Name]]` links — but grep for path-style links (`[[media/digital_tools/Name]]`)
+    before moving and fix any you find.
+    - **Evidence bar: prove disuse, don't infer it.** A note may be archived only when this session
+      verified the thing is no longer in use — the service has no container/unit on the host, its
+      task note is `cancelled`, the account is closed, the tool was explicitly replaced. Two
+      independent signals is the standard (e.g. "no container at all" *and* a `status: cancelled`
+      task). **Absence of evidence is not evidence of disuse**: plenty of tools are used without
+      running on a server, so a missing container proves nothing about, say, a phone app.
+    - **Never archive** notes that are still linked as current by an active task, `tasks/` notes
+      (use `mtn archive`), daily notes, or anything the user touched recently — ask instead.
+    - **Stamp and log it**: add `ai_archived: <yyyy-MM-dd>` to the frontmatter so the morning
+      briefing surfaces it for review, and record the evidence in the task note's journal.
+    Archiving is reversible (the QuickAdd "Unarchive Current Note" macro undoes both steps), which
+    is exactly why it must stay cheap to audit — one line per archived note in the briefing.
 - **Never write secrets** into notes (e.g. nothing from `obsidian-web-clipper-settings.json`).
 
 ## Inputs (when called by another agent or the user)

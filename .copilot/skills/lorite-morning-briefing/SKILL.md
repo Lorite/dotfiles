@@ -50,10 +50,12 @@ find "$VAULT" -name "*.md" -newermt "$SINCE" -not -path "*/.obsidian/*"   # rece
 **(c) AI-created-note review** — always, against `$VAULT`. The write policy lets the AI **create** reference notes anywhere in the vault (see the `lorite-obsidian-note` skill's *Creation exception*), on the condition that each one carries an `ai_created:` frontmatter date **so that it surfaces here for the user to review or delete**. This review is the entire safeguard on that grant, so never skip it:
 
 ```bash
-grep -rl "^ai_created: \($(date '+%Y-%m-%d')\|$(date -d 'yesterday' '+%Y-%m-%d')\)" "$VAULT" --include="*.md" 2>/dev/null
+STAMPS="$(date '+%Y-%m-%d')\|$(date -d 'yesterday' '+%Y-%m-%d')"
+grep -rl "^ai_created: \($STAMPS\)"  "$VAULT" --include="*.md" 2>/dev/null   # notes the AI created
+grep -rl "^ai_archived: \($STAMPS\)" "$VAULT" --include="*.md" 2>/dev/null   # notes the AI archived
 ```
 
-These are **normal output, not anomalies** — list them in the briefing's *Notes the AI created* section (what each is, why it was created, which task drove it) rather than under the git check. Report them even when the rest of the audit is clean.
+These are **normal output, not anomalies** — list them in the briefing's *Notes the AI created or archived* section (what each is, why, which task drove it) rather than under the git check. Report them even when the rest of the audit is clean. Archived notes have moved into a sibling `archived/` folder and gained an `archived` tag; both steps are undone by the QuickAdd "Unarchive Current Note" macro.
 
 For each commit in the window (use `git -C "$VAULT_GIT" show <sha>` when the stat looks off), each recently-modified note, and any conflict file, check for:
 
@@ -99,8 +101,8 @@ Create `$VAULT/ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no O
 - Commits reviewed: <n> (<shas>), working-copy/unstaged files: <n>
 - ✅ No issues found — or one bullet per finding: **file** (sha) — what's wrong
 
-## 🆕 Notes the AI created (review or delete)
-- (one bullet per note carrying a fresh `ai_created:` date: [[Note]] — what it is, why it was created, which task drove it. Omit the whole section when there are none)
+## 🆕 Notes the AI created or archived (review)
+- (one bullet per note carrying a fresh `ai_created:` or `ai_archived:` date: [[Note]] — what it is, why it was created/archived, which task drove it. Say which of the two it was. Omit the whole section when there are none)
 
 ## 🧩 Concept notes (new [[links]] → notes)
 - _pass running…_  ← placeholder; step 5 replaces this line with the results
