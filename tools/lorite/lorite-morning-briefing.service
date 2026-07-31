@@ -2,6 +2,10 @@
 # Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
 [Unit]
 Description=Morning briefing: daily-note LLM summaries + vault git audit (headless Claude Code)
+# Ordering only, for the server's lorite-nightly.target batch: run last, after the
+# dotfiles pull, so the briefing loads fresh skills. Ignored on the laptop (the pull
+# unit is not queued there) and harmless for standalone runs.
+After=dotfiles-pull.service
 
 [Service]
 Type=oneshot

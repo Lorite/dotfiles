@@ -1,6 +1,8 @@
 # Canonical copy: ~/git/dotfiles/tools/lorite/lorite-morning-briefing.timer
-# Daily at 06:00; Persistent catches mornings the laptop slept through (fires on
-# next wake/login), and the service's per-day idempotency makes that harmless.
+# Laptop-only standalone fallback, disabled by default everywhere: since 2026-07-31 the
+# server runs the briefing as the last job of the lorite-nightly.target 01:00 batch
+# (tools/home-server/). Daily at 06:00; Persistent catches mornings the laptop slept
+# through (fires on next wake/login), per-day idempotency makes that harmless.
 [Unit]
 Description=Daily 06:00 morning briefing (daily-note summaries + vault git audit)
 

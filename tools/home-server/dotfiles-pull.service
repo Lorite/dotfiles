@@ -9,6 +9,9 @@
 Description=Daily fast-forward pull of ~/git/dotfiles (flags agent changes for manual install.sh)
 After=network-online.target
 Wants=network-online.target
+# Ordering only, for the lorite-nightly.target batch: run third, after the AW export
+# (a lorite-activitywatch unit). Ignored when that unit is absent or not queued.
+After=aw-daily-export.service
 
 [Service]
 Type=oneshot

@@ -709,22 +709,26 @@ else
 	print_warning "No systemd user session — skipped obsidian-daily-note.timer (headless server?)"
 fi
 
-# Morning briefing at 06:00: headless Claude Code run of the lorite-morning-briefing
-# skill (daily-note LLM summaries + vault git audit + ai_brain briefing note).
-# Canonical unit copies live in tools/lorite/; Persistent catches slept-through
-# mornings and the wrapper is idempotent per day.
+# Morning briefing: headless Claude Code run of the lorite-morning-briefing skill
+# (daily-note LLM summaries + vault git audit + ai_brain briefing note). On the home
+# server it runs as the LAST job of the lorite-nightly.target 01:00 batch (single
+# timer, strict After= ordering, tools/home-server/); the standalone 06:00 timer stays
+# a laptop-only fallback and is disabled everywhere by default.
 if systemctl --user show-environment >/dev/null 2>&1; then
 	mkdir -p "$HOME/.config/systemd/user"
 	cp "$DOTFILES_DIR/tools/lorite/lorite-morning-briefing.service" \
 		"$DOTFILES_DIR/tools/lorite/lorite-morning-briefing.timer" \
+		"$DOTFILES_DIR/tools/home-server/lorite-nightly.timer" \
+		"$DOTFILES_DIR/tools/home-server/lorite-nightly.target" \
 		"$HOME/.config/systemd/user/"
 	systemctl --user daemon-reload
 	if is_vault_processor; then
-		systemctl --user enable --now lorite-morning-briefing.timer
-		print_success "Enabled lorite-morning-briefing.timer (home server, ~01:45)"
-	else
 		systemctl --user disable --now lorite-morning-briefing.timer 2>/dev/null || true
-		print_success "lorite-morning-briefing.timer left disabled here (runs on the home server)"
+		systemctl --user enable --now lorite-nightly.timer
+		print_success "Enabled lorite-nightly.timer (home server batch at 01:00, briefing runs last)"
+	else
+		systemctl --user disable --now lorite-morning-briefing.timer lorite-nightly.timer 2>/dev/null || true
+		print_success "lorite-morning-briefing/lorite-nightly timers left disabled here (run on the home server)"
 	fi
 else
 	print_warning "No systemd user session — skipped lorite-morning-briefing.timer (headless server?)"

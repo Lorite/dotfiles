@@ -1,8 +1,9 @@
 # Canonical copy: ~/git/dotfiles/tools/home-server/dotfiles-pull.timer
-# Daily at 01:30, before the 01:45 morning briefing on this host, so briefing and early phone
-# sessions load the freshest CLAUDE.md and skills. Persistent catches nights the server was off.
+# Standalone fallback only, NOT enabled on the server: since 2026-07-31 the service is
+# pulled in by lorite-nightly.target (01:00 batch, third slot, After=aw-daily-export),
+# so this timer stays disabled there. Persistent catches nights the host was off.
 [Unit]
-Description=Daily 01:30 dotfiles fast-forward pull
+Description=Daily dotfiles fast-forward pull (standalone fallback)
 
 [Timer]
 OnCalendar=*-*-* 01:30:00

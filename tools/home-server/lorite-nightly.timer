@@ -1,0 +1,13 @@
+# Canonical copy: ~/git/dotfiles/tools/home-server/lorite-nightly.timer
+# Single trigger for the server's whole nightly batch (see lorite-nightly.target).
+# One knob to move the hour, and Persistent catches nights the server was off.
+[Unit]
+Description=Nightly 01:00 server batch (HA import, AW export, dotfiles pull, morning briefing)
+
+[Timer]
+OnCalendar=*-*-* 01:00:00
+Persistent=true
+Unit=lorite-nightly.target
+
+[Install]
+WantedBy=timers.target

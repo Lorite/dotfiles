@@ -1,0 +1,13 @@
+# Canonical copy: ~/git/dotfiles/tools/home-server/lorite-nightly.target
+# The server's nightly batch: one 01:00 activation (lorite-nightly.timer) pulls in all
+# four jobs, and After= lines inside the services run them in strict sequence with no
+# gaps and no overlap: ha-to-aw -> aw-daily-export -> dotfiles-pull -> morning briefing.
+# After= only orders (it does not propagate failure), so a failed job never blocks the
+# rest, and each keeps its own journalctl history. The first two services live in
+# ~/git/lorite-activitywatch/systemd/; Wants= tolerates their absence on other hosts.
+# StopWhenUnneeded lets the target deactivate once the jobs finish, so the next
+# night's timer activation re-runs the whole batch.
+[Unit]
+Description=Nightly server batch: HA import, AW export, dotfiles pull, morning briefing
+Wants=ha-to-aw.service aw-daily-export.service dotfiles-pull.service lorite-morning-briefing.service
+StopWhenUnneeded=true

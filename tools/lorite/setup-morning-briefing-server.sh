@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Canonical copy: ~/git/dotfiles/tools/lorite/setup-morning-briefing-server.sh
 # Idempotent bootstrap for running the lorite-morning-briefing on the HOME SERVER
-# (headless, Syncthing vault, no Obsidian GUI) at 01:45 daily. Safe to re-run.
+# (headless, Syncthing vault, no Obsidian GUI) as the last job of the 01:00
+# lorite-nightly.target batch. Safe to re-run.
 #
 # It sets up everything EXCEPT Claude Code auth (that needs you):
 #   1. pulls latest dotfiles and runs install.sh (installs opencode, lorite-llm, syncs agents)
 #   2. a read-only side clone of the vault (git audit source — Syncthing excludes .git/)
 #   3. the host env file pointing the briefing at that clone
-#   4. the systemd user service + timer, with a 01:45 drop-in override
+#   4. the systemd user service + the lorite-nightly batch timer/target
 #   5. enables the timer ONLY when OpenCode or Claude Code is installed (OpenCode first,
 #      Claude fallback — the briefing uses tools/lorite/lorite-llm.sh)
 #
@@ -56,19 +57,18 @@ OBSIDIAN_GUI=0
 EOF
 say "wrote $ENV_DIR/morning-briefing.env (LORITE_VAULT_GIT=$CLONE, OBSIDIAN_GUI=0)"
 
-# 3. Install the service + timer + a 01:45 drop-in (overrides the laptop's 06:00)
-mkdir -p "$UNIT_DIR" "$UNIT_DIR/lorite-morning-briefing.timer.d"
+# 3. Install the service + the nightly batch units. The briefing runs LAST in the
+# lorite-nightly.target 01:00 batch (After=dotfiles-pull inside the service), so the
+# standalone briefing timer and the old per-host time override are removed here.
+mkdir -p "$UNIT_DIR"
 cp "$DOTFILES/tools/lorite/lorite-morning-briefing.service" \
-   "$DOTFILES/tools/lorite/lorite-morning-briefing.timer" "$UNIT_DIR/"
-cat > "$UNIT_DIR/lorite-morning-briefing.timer.d/override.conf" <<'EOF'
-# Home server runs at 01:45, last slot of the staggered nightly batch (01:00 HA import,
-# 01:15 AW export, 01:30 dotfiles pull). Empty OnCalendar= first clears the shipped 06:00.
-[Timer]
-OnCalendar=
-OnCalendar=*-*-* 01:45:00
-EOF
+   "$DOTFILES/tools/home-server/lorite-nightly.timer" \
+   "$DOTFILES/tools/home-server/lorite-nightly.target" "$UNIT_DIR/"
+rm -rf "$UNIT_DIR/lorite-morning-briefing.timer.d"
+systemctl --user disable --now lorite-morning-briefing.timer 2>/dev/null || true
+rm -f "$UNIT_DIR/lorite-morning-briefing.timer"
 systemctl --user daemon-reload
-say "installed service + timer + 01:45 drop-in"
+say "installed service + lorite-nightly batch units (old standalone timer removed)"
 
 # 4. Enable only when OpenCode or Claude Code is available (the briefing uses lorite-llm.sh
 # which prefers opencode, falls back to claude). Check ~/.local/bin explicitly — a non-login
@@ -80,10 +80,11 @@ elif command -v claude >/dev/null 2>&1 || [ -x "$HOME/.local/bin/claude" ]; then
     has_llm=1
 fi
 if [[ $has_llm -eq 1 ]]; then
-    systemctl --user enable --now lorite-morning-briefing.timer
-    say "ENABLED lorite-morning-briefing.timer — next run:"
-    systemctl --user list-timers lorite-morning-briefing.timer --no-pager || true
-    say "test now:  systemctl --user start lorite-morning-briefing.service"
+    systemctl --user enable --now lorite-nightly.timer
+    say "ENABLED lorite-nightly.timer (batch runs the briefing last) — next run:"
+    systemctl --user list-timers lorite-nightly.timer --no-pager || true
+    say "test now:  systemctl --user start lorite-nightly.target   (whole batch)"
+    say "      or:  systemctl --user start lorite-morning-briefing.service   (briefing only)"
 else
     warn "No LLM client found (opencode preferred, claude fallback) — timer NOT enabled."
     warn "Install OpenCode (preferred):  curl -fsSL https://opencode.ai/install | bash"
