@@ -87,6 +87,7 @@ You (base session) can invoke any agent or skill — match the work to it and ha
 | Theorize research directions / write concept notes | `lorite-robotics-theorist` |
 | Modify robotics ROS 2 code (nodes/launch) | `lorite-ros2-operator` |
 | Design an experiment | `lorite-experiment-designer` |
+| Author or extend a campaign for an existing experiment | the `lorite-experiment-campaign` skill, inline in this session |
 | Write experiment run-code + run trials / record bags | `lorite-experiment-coder` |
 | Check data, compute metrics, make figures/tables | `lorite-data-analyst` |
 | Write the LaTeX paper | `lorite-paper-writer` *(planned)* |
