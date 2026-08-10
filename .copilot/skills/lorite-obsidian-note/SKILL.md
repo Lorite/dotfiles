@@ -120,7 +120,7 @@ This is the **single, canonical way** to write notes into the Obsidian vault (`~
       briefing surfaces it for review, and record the evidence in the task note's journal.
     Archiving is reversible (the QuickAdd "Unarchive Current Note" macro undoes both steps), which
     is exactly why it must stay cheap to audit — one line per archived note in the briefing.
-- **Never write secrets** into notes (e.g. nothing from `obsidian-web-clipper-settings.json`).
+  - **Tagging exception (untagged notes, anywhere in the vault — user grant [[2026-08-10]]).** A note with **no real tags** (no `tags:` key, or an empty one: `tags:`, `tags: []`, `tags: ""`) may be given tags: the folder-path tags per the vault's path→tags convention (`media/articles/` → `media, articles`; `temporary/` → `temporary`) plus 1 to 3 topical tags **reused from the existing vocabulary** (`obsidian tags counts`, or a frontmatter scan when headless), preferring tags already used at least twice. A new tag is allowed only when nothing existing fits (snake_case, reported for review). Strictly **add-only**: insert the `tags:` block (or replace an empty key), stamp **`ai_tagged: <yyyy-MM-dd>`** so the morning briefing lists it for review, and touch nothing else — never edit or remove existing tags, other frontmatter, or the body. Parse the **whole** frontmatter before deciding a note is untagged (Media DB notes hide `tags:` below long `plot:` fields). Excluded: `ai_chats/`, `templates/`, `attachments/`, `diary/`, `KOReader/`, dotfolders, `.trash/`. The morning briefing runs this daily over the last 24 h of new notes (its step 4c); bulk backfills happen only on explicit request.
 
 ## Inputs (when called by another agent or the user)
 - `title` — note title (required for a new note).

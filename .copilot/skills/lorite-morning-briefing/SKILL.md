@@ -1,6 +1,6 @@
 ---
 name: lorite-morning-briefing
-description: Write the daily 06:00 morning briefing — fill the LLM time-slot summaries of recent daily notes (yesterday first), audit the last 24 h of the Obsidian vault git repo (commits + unstaged changes) for problems, delegate to lorite-concept-note-writer to turn the day's new unresolved concept [[links]] into concept notes, and write a briefing note (ai_chats/briefings/daily/) that reports issues and ends with the reminder to manually review yesterday's daily note. Runs headless via lorite-morning-briefing.timer; also runnable on demand. Use when asked for the morning briefing or to check the vault's recent commits.
+description: Write the daily 06:00 morning briefing — fill the LLM time-slot summaries of recent daily notes (yesterday first), audit the last 24 h of the Obsidian vault git repo (commits + unstaged changes) for problems, delegate to lorite-concept-note-writer to turn the day's new unresolved concept [[links]] into concept notes, tag the day's new untagged notes reusing the vault's existing tag vocabulary, and write a briefing note (ai_chats/briefings/daily/) that reports issues and ends with the reminder to manually review yesterday's daily note. Runs headless via lorite-morning-briefing.timer; also runnable on demand. Use when asked for the morning briefing or to check the vault's recent commits.
 argument-hint: "(no args) · force (rewrite today's briefing)"
 ---
 
@@ -53,9 +53,10 @@ find "$VAULT" -name "*.md" -newermt "$SINCE" -not -path "*/.obsidian/*"   # rece
 STAMPS="$(date '+%Y-%m-%d')\|$(date -d 'yesterday' '+%Y-%m-%d')"
 grep -rl "^ai_created: \($STAMPS\)"  "$VAULT" --include="*.md" 2>/dev/null   # notes the AI created
 grep -rl "^ai_archived: \($STAMPS\)" "$VAULT" --include="*.md" 2>/dev/null   # notes the AI archived
+grep -rl "^ai_tagged: \($STAMPS\)"   "$VAULT" --include="*.md" 2>/dev/null   # notes the AI tagged (step 4c or any other session)
 ```
 
-These are **normal output, not anomalies** — list them in the briefing's *Notes the AI created or archived* section (what each is, why, which task drove it) rather than under the git check. Report them even when the rest of the audit is clean. Archived notes have moved into a sibling `archived/` folder and gained an `archived` tag; both steps are undone by the QuickAdd "Unarchive Current Note" macro.
+These are **normal output, not anomalies** — list them in the briefing's *Notes the AI created or archived* section (what each is, why, which task drove it) rather than under the git check. Freshly `ai_tagged:` notes go in the *New-note tags* section instead (note + the tags it got). Report them even when the rest of the audit is clean. Archived notes have moved into a sibling `archived/` folder and gained an `archived` tag; both steps are undone by the QuickAdd "Unarchive Current Note" macro.
 
 For each commit in the window (use `git -C "$VAULT_GIT" show <sha>` when the stat looks off), each recently-modified note, and any conflict file, check for:
 
@@ -110,6 +111,9 @@ Create `$VAULT/ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no O
 ## 📚 KOReader highlights
 - _import running…_  ← placeholder; step 5 replaces this with the import summary (omit the section if there was no export folder / nothing new)
 
+## 🏷️ New-note tags
+- _tagging pass running…_  ← placeholder; step 5 replaces this with one bullet per note tagged: [[Note]] — `tag1, tag2, …` (omit the section when nothing needed tagging)
+
 ## ⏳ Older pending
 - (older summary-todo dates, and anything else left for a human)
 
@@ -133,6 +137,21 @@ Pass the concrete `$VAULT`, `$VAULT_GIT`, `$AUDIT_REF` values in the prompt (the
 
 Invoke the **`lorite-koreader-highlights`** skill to ingest any new KOReader highlight exports (classify by colour, format, append to the matching book / Zotero literature note / inbox, and route vocabulary to the SR decks). Same **best-effort, non-blocking** contract as step 4 — the briefing already stands. On a host where the export folder (`<vault>/Book Exports/koreader/`) isn't synced, its parser reports the dir missing and this is a no-op; note that and move on. Keep the per-book/per-category counts for the step-5 fill.
 
+### 4c. Tag the day's new untagged notes (best-effort, user grant [[2026-08-10]])
+
+New clippings and quick captures land in the vault without tags. Tag them so search and Bases keep working, following the vault's convention: tags mirror the folder path (a note in `media/articles/` carries `media, articles`, in `temporary/` it carries `temporary`) plus 1 to 3 topical tags. Same **best-effort, non-blocking** contract as steps 4 and 4b.
+
+1. **Load the existing tag vocabulary first, so tags get reused, not reinvented.** When `$OBSIDIAN_GUI=1`: `obsidian tags counts` (authoritative, includes counts). Headless fallback (approximate, frontmatter list items only):
+
+   ```bash
+   find "$VAULT" -name "*.md" -not -path "*/.obsidian/*" -not -path "*/.trash/*" \
+     -exec awk '/^tags:$/{f=1;next} f&&/^  - /{print $2;next} {f=0}' {} + | sort | uniq -c | sort -rn
+   ```
+
+2. **Candidates:** notes in `$VAULT` modified in the last 24 h (reuse the `find -newermt` list from step 1b) that have **no real tags**. Parse the whole frontmatter, not a prefix: Media DB notes hide `tags:` below long `plot:` fields, and an empty key (`tags:`, `tags: []`, `tags: ""`) counts as untagged. **Exclude** `ai_chats/`, `templates/`, `attachments/`, `diary/`, `KOReader/`, `.obsidian/`, `.trash/`, and dotfolders — those are intentionally untagged or machine-owned.
+3. **Assign:** the folder-path tags plus 1 to 3 topical tags from the vocabulary, preferring tags already used at least twice (the hierarchical `engineering/…` tags are the interesting ones for technical content). A **new** tag is allowed only when nothing existing fits: snake_case, and name it explicitly in the briefing. Notes that are pure junk captures (bare URLs, gibberish titles with no classifiable content) get the folder tag plus `random`.
+4. **Write:** only **add** to frontmatter — insert the `tags:` block (or replace an empty `tags:` key) and stamp **`ai_tagged: <yyyy-MM-dd>`** so the note surfaces in this briefing's review greps. Never touch existing tags, other frontmatter, or the body. **Cap at ~20 notes per run**; list any beyond the cap as pending.
+
 1. Replace the `_pass running…_` placeholder in the briefing's `## 🧩 Concept notes` section (best-effort Edit) with the results:
    ```markdown
    - Created: <n> — [[Note A]] · [[Note B]] … (or "none new")
@@ -140,7 +159,8 @@ Invoke the **`lorite-koreader-highlights`** skill to ingest any new KOReader hig
    ```
    If the concept pass was skipped/killed, set it to `- (concept-note pass skipped this run)` — don't leave the placeholder.
 2. Replace the `_import running…_` placeholder in the `## 📚 KOReader highlights` section with the import summary (`- Imported: <n> highlights across <m> books → [[Note]] · … · <k> vocab cards; <j> to the inbox`), or delete the whole section if there was no export folder / nothing new. If the import was skipped/killed, set it to `- (KOReader import skipped this run)`.
-3. Append a one-line entry to the AI-chat diary per the `lorite-ai-chat-diary` skill (`ai_chats/diary/daily/AI Chat - <today>.md`), wikilinking the briefing note (and any concept notes created). Skip the per-task-note detail log for routine runs; log detail only when the audit found real issues.
+3. Replace the `_tagging pass running…_` placeholder in the `## 🏷️ New-note tags` section with one bullet per tagged note (`[[Note]] — tag1, tag2, …`), flagging any newly created tag, plus a `- Pending: <n> over the cap` line when capped. Delete the section when nothing needed tagging; if the pass was skipped/killed, set it to `- (tagging pass skipped this run)`.
+4. Append a one-line entry to the AI-chat diary per the `lorite-ai-chat-diary` skill (`ai_chats/diary/daily/AI Chat - <today>.md`), wikilinking the briefing note (and any concept notes created). Skip the per-task-note detail log for routine runs; log detail only when the audit found real issues.
 
 ## Troubleshooting
 
