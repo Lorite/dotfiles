@@ -1,0 +1,18 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/lorite-weekly-note.service
+# Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
+[Unit]
+Description=Weekly note: create + fill diary/weekly for the last completed week (headless LLM)
+# Ordering only: when the Monday 03:00 firing overlaps a still-running nightly batch,
+# wait for the briefing so Sunday's daily summary exists first. Harmless elsewhere.
+After=lorite-morning-briefing.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/git/dotfiles/tools/lorite/weekly_note.sh
+Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
+# Same client pinning rationale as the morning briefing: the roll-up distills a week
+# of notes and the drafted reflections go in front of the user every Monday, so pin
+# Claude and accept the lorite-llm fallback to OpenCode on failure.
+Environment=LLM_CLIENT=claude
+EnvironmentFile=-%h/.config/lorite/morning-briefing.env
+TimeoutStartSec=30min

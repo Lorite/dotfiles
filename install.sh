@@ -734,6 +734,26 @@ else
 	print_warning "No systemd user session — skipped lorite-morning-briefing.timer (headless server?)"
 fi
 
+# Weekly note: headless LLM run of the lorite-weekly-note skill (create + fill
+# diary/weekly for the last completed week, Monday 03:00). Home-server only, like
+# the nightly batch; idempotent per week.
+if systemctl --user show-environment >/dev/null 2>&1; then
+	mkdir -p "$HOME/.config/systemd/user"
+	cp "$DOTFILES_DIR/tools/lorite/lorite-weekly-note.service" \
+		"$DOTFILES_DIR/tools/lorite/lorite-weekly-note.timer" \
+		"$HOME/.config/systemd/user/"
+	systemctl --user daemon-reload
+	if is_vault_processor; then
+		systemctl --user enable --now lorite-weekly-note.timer
+		print_success "Enabled lorite-weekly-note.timer (Mon 03:00, home server)"
+	else
+		systemctl --user disable --now lorite-weekly-note.timer 2>/dev/null || true
+		print_success "lorite-weekly-note.timer left disabled here (runs on the home server)"
+	fi
+else
+	print_warning "No systemd user session — skipped lorite-weekly-note.timer (headless server?)"
+fi
+
 # Bridge Nextcloud reference folders into the Obsidian vault: per-machine symlinks
 # (vault/nextcloud/papers -> ~/nextcloud/zotero, …) + Syncthing/git ignore entries,
 # so notes embed files with stable vault-relative links while the bytes live in Nextcloud.

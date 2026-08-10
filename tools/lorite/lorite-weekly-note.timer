@@ -1,0 +1,14 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/lorite-weekly-note.timer
+# Monday 03:00: the completed week's daily notes are all processed and the 01:00
+# nightly batch has written Sunday's summary. Persistent catches Mondays the host
+# was off; per-week idempotency in weekly_note.sh makes late firings harmless.
+[Unit]
+Description=Weekly Monday 03:00 weekly-note generation (diary/weekly)
+
+[Timer]
+OnCalendar=Mon *-*-* 03:00:00
+Persistent=true
+Unit=lorite-weekly-note.service
+
+[Install]
+WantedBy=timers.target
