@@ -12,4 +12,6 @@ gcalcli>=4.3
 
 # paper-reader: extract_pdf_annotations.py + sync_zotero_obsidian_notes.py read embedded
 # PDF annotations (BOOX highlights) from the Zotero linked files in ~/nextcloud/zotero.
-pypdf>=4.0
+# PyMuPDF does the quad->text recovery; the old pypdf path lost ~40% of highlights to
+# empty text and reversed multi-line ones. PyMuPDF is AGPL-3.0, fine for local tooling.
+pymupdf>=1.24

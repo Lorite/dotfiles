@@ -14,64 +14,108 @@ Output (markdown, default):
     - 📝 standalone note text *(p. 5)*
 
 Run with the shared agents venv: ~/.local/share/dotfiles-agents/venv/bin/python
-(pypdf is installed there).
+(pymupdf is installed there).
+
+Text recovery uses PyMuPDF's clip-based extraction rather than reconstructing words
+from QuadPoints by hand. The old pypdf implementation matched a word only when its
+text-matrix origin fell inside the quad, so any run starting just outside the
+highlight was dropped and the whole quad often came back empty (9 of 23 highlights
+on a Papers-annotated report). It also emitted quads in file order, which reversed
+multi-line highlights.
 """
 import argparse
 import json
 import sys
 
-from pypdf import PdfReader
+import pymupdf
 
-TEXT_MARKUP = {"/Highlight", "/Underline", "/Squiggly"}
-NOTE_TYPES = {"/Text", "/FreeText"}
+TEXT_MARKUP = {"Highlight", "Underline", "Squiggly"}
+NOTE_TYPES = {"Text", "FreeText"}
+
+# Quads whose tops fall within this many points are treated as the same visual line.
+LINE_TOLERANCE = 5
+
+# A word counts as highlighted once this fraction of its box falls inside a quad.
+# Low enough to keep words the user only partly dragged over, high enough to reject
+# the neighbours that a quad grazes at either end.
+MIN_WORD_OVERLAP = 0.3
+
+# Expand ligatures, so a highlight over "scientific" does not come back as "scientiﬁc".
+WORD_FLAGS = pymupdf.TEXTFLAGS_WORDS & ~pymupdf.TEXT_PRESERVE_LIGATURES
 
 
-def rect_text(page, quads):
-    """Recover the highlighted text from QuadPoints via word positions."""
-    words = []
+def quad_rects(annot):
+    """Quad rectangles of a text-markup annotation, ordered top-to-bottom, left-to-right."""
+    verts = annot.vertices or []
+    rects = []
+    # Vertices arrive as groups of 4 corner points, one group per highlighted line.
+    for i in range(0, len(verts) - 3, 4):
+        # Pad vertically: glyph boxes routinely overshoot the quad by a fraction of a point.
+        r = pymupdf.Quad(*verts[i:i + 4]).rect
+        rects.append(pymupdf.Rect(r.x0, r.y0 - 1, r.x1, r.y1 + 1))
+    # PyMuPDF page space puts y0 at the top, so ascending y0 is reading order. Quads
+    # are not guaranteed to arrive in that order, hence the explicit sort.
+    rects.sort(key=lambda r: (round(r.y0 / LINE_TOLERANCE), r.x0))
+    return rects
 
-    def visitor(text, cm, tm, font_dict, font_size):
-        if text.strip():
-            words.append((tm[4], tm[5], text))
 
-    try:
-        page.extract_text(visitor_text=visitor)
-    except Exception:
-        return ""
-    out = []
-    # QuadPoints come as groups of 8 floats (x1 y1 ... x4 y4), one group per line.
-    for i in range(0, len(quads), 8):
-        q = quads[i:i + 8]
-        x_min, x_max = min(q[0::2]), max(q[0::2])
-        y_min, y_max = min(q[1::2]), max(q[1::2])
-        line = [t for (x, y, t) in words
-                if y_min - 2 <= y <= y_max + 2 and x_min - 2 <= x <= x_max + 2]
-        out.append("".join(line))
-    return " ".join(" ".join(out).split())
+def rect_text(words, rects):
+    """Recover the highlighted text covered by a set of quad rectangles.
+
+    Matched against a page's word boxes rather than clipped out of the page per quad:
+    `Page.get_textbox` costs ~75 ms per call regardless of any textpage cache, which
+    adds up to ten seconds on a heavily highlighted paper. Word boxes also keep the
+    trailing punctuation that clipping tends to shave off.
+    """
+    picked = {}
+    for r in rects:
+        hit = False
+        best = None
+        for w in words:
+            box = pymupdf.Rect(w[:4])
+            area = box.get_area()
+            if area <= 0:
+                continue
+            overlap = (box & r).get_area()
+            if overlap <= 0:
+                continue
+            if overlap / area >= MIN_WORD_OVERLAP:
+                # Key by (block, line, word) so overlapping quads cannot double-count
+                # and sorting restores reading order across the whole annotation.
+                picked[(w[5], w[6], w[7])] = w[4]
+                hit = True
+            elif best is None or overlap > best[0]:
+                best = (overlap, (w[5], w[6], w[7]), w[4])
+        # A quad narrower than the word beneath it (a stray tap highlighting a single
+        # character) clears no ratio, so fall back to the word it overlaps most.
+        if not hit and best is not None:
+            picked[best[1]] = best[2]
+    return " ".join(picked[k] for k in sorted(picked))
 
 
 def extract(pdf_path):
-    reader = PdfReader(pdf_path)
     results = []
-    for pnum, page in enumerate(reader.pages, start=1):
-        for ref in page.get("/Annots") or []:
-            a = ref.get_object()
-            sub = a.get("/Subtype")
-            if sub not in TEXT_MARKUP | NOTE_TYPES:
-                continue
-            comment = (a.get("/Contents") or "").strip()
-            entry = {"page": pnum, "type": sub[1:], "comment": comment}
-            if sub in TEXT_MARKUP:
-                quads = [float(v) for v in (a.get("/QuadPoints") or [])]
-                entry["text"] = rect_text(page, quads) if quads else ""
-            results.append(entry)
+    with pymupdf.open(pdf_path) as doc:
+        for page in doc:
+            words = None
+            for annot in page.annots() or []:
+                kind = annot.type[1]
+                if kind not in TEXT_MARKUP | NOTE_TYPES:
+                    continue
+                comment = (annot.info.get("content") or "").strip()
+                entry = {"page": page.number + 1, "type": kind, "comment": comment}
+                if kind in TEXT_MARKUP:
+                    if words is None:  # parsed once per page, only if it has highlights
+                        words = page.get_text("words", flags=WORD_FLAGS)
+                    entry["text"] = rect_text(words, quad_rects(annot))
+                results.append(entry)
     return results
 
 
 def to_markdown(annots):
     lines = []
     for a in annots:
-        if a["type"] in ("Highlight", "Underline", "Squiggly"):
+        if a["type"] in TEXT_MARKUP:
             if a.get("text"):
                 lines.append(f"> {a['text']} *(p. {a['page']})*")
             if a["comment"]:
