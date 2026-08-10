@@ -61,7 +61,7 @@ Align the brief with the presentation style used in the user's `slides.md`:
 ## Suggested Extraction Commands
 Use these in order when a local PDF is available:
 - `pdftotext -layout "<pdf_path>" -`
-- `python - <<'PY'` with `pypdf` if available
+- `python - <<'PY'` with `pymupdf` if available
 
 If both fail, request from user:
 - paper abstract

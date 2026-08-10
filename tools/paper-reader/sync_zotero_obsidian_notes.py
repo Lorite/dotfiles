@@ -12,7 +12,7 @@ which embeds child notes as `annote` fields and bloats entries by orders of magn
 Embedded PDF highlights (BOOX-annotated linked files) are extracted into the new
 note's annotations block unless --no-highlights.
 
-Usage (run with the shared agents venv — pypdf lives there):
+Usage (run with the shared agents venv — pymupdf lives there):
     ~/.local/share/dotfiles-agents/venv/bin/python sync_zotero_obsidian_notes.py --dry-run
     ... --limit 5            # create at most 5 notes (testing)
     ... --key ABCD1234       # only this item
@@ -220,7 +220,7 @@ def main():
         try:
             import extract_pdf_annotations as epa
         except ImportError:
-            print("warn: pypdf/extract_pdf_annotations unavailable — skipping highlights", file=sys.stderr)
+            print("warn: pymupdf/extract_pdf_annotations unavailable — skipping highlights", file=sys.stderr)
 
     existing = {f[:-3].rsplit(" - ", 1)[-1]
                 for f in os.listdir(NOTES_DIR) if f.endswith(".md")}
