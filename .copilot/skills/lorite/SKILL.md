@@ -8,7 +8,7 @@ argument-hint: "optional task hint, e.g. 'work on the CLAWAR pose-source experim
 
 The thing you talk to in a chat is the **base session**, not a pipeline agent — so the read-first / log-often Obsidian rule baked into `lorite-experiment-coder`, `lorite-paper-reader`, etc. doesn't apply to it automatically. This skill is how the base session adopts that rule for **any tracked work** — PhD research, a side-project or coding task, personal life & admin, a meeting, some writing — since it all lives in the one vault and is tracked in the one SimpleTimeTracker. Run `/lorite` at the **start of a chat** and it (1) pins the session to a specific **task note**, (2) times the work — a **live timer** when work starts now, or a **back-filled block** when it's already done — (3) commits to **logging as we go**, and (4) **routes** the work to a specialized agent when one fits (otherwise you work inline). Re-run it to **switch task** or to **stop** the timer.
 
-Vault: `~/git/lorite-obsidian-notes`. Timer script: `~/git/dotfiles/tools/lorite/simple_time_tracker.py`. Dates `yyyy-MM-dd`, times `HH:mm` (current local time from the `time` tool or `date "+%H:%M"`).
+Vault: `~/git/lorite-obsidian-notes`. Timer scripts: **`~/git/dotfiles/tools/lorite/lorite_intent.py`** (ActivityWatch, primary) and `~/git/dotfiles/tools/lorite/simple_time_tracker.py` (SimpleTimeTracker, run in parallel during the transition). Dates `yyyy-MM-dd`, times `HH:mm` (current local time from the `time` tool or `date "+%H:%M"`).
 
 ## Session contract (Opus 4.8 calibration)
 For the whole anchored session, the user steers and the AI works:
@@ -42,6 +42,8 @@ Pick the mode from when the work happens:
 **Default (work starts now)** — start a running SimpleTimeTracker activity tied to the task note name:
 
 ```bash
+LORITE_INTENT_SOURCE=claude python3 ~/git/dotfiles/tools/lorite/lorite_intent.py start \
+  --activity Task --task "<task-note name>"
 python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py start \
   --activity Task --comment "<task-note name>"
 ```
@@ -49,6 +51,9 @@ python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py start \
 **Retrospective (the work is already done)** — when the user asks you to *log/record* a piece of work that's already finished, or you reach wrap-up and realize no live timer was ever running, do **not** start a live timer. Back-fill a **finished block** with `add_record` instead:
 
 ```bash
+LORITE_INTENT_SOURCE=claude python3 ~/git/dotfiles/tools/lorite/lorite_intent.py add \
+  --activity Task --task "<task-note name>" \
+  --start "YYYY-MM-DD HH:MM" --end "YYYY-MM-DD HH:MM"
 python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py add_record \
   --activity Task --comment "<task-note name>" \
   --start "YYYY-MM-DD HH:MM:SS" --end "YYYY-MM-DD HH:MM:SS"
@@ -58,7 +63,10 @@ You usually don't know exactly when the user started — **propose your best est
 
 - `--comment` is the task-note **basename** (no `.md`, no `[[ ]]`) — the vault renders it as a `[[wikilink]]`, matching `daily_time_tracker.py`.
 - For non-task work use a different `--activity` with a free-text `--comment`. Pick an activity that already exists in your SimpleTimeTracker (e.g. `Code`, `Read`, `Write`, `Meeting`, or whatever life/admin activities you track) rather than inventing a new one.
-- `--dry-run` is a **global** flag: place it **before** the subcommand (`simple_time_tracker.py --dry-run add_record …`), not after — it prints the envelope (secret redacted) without sending.
+- **Two trackers, on purpose (transition).** `lorite_intent.py` writes to **ActivityWatch** — the destination — and `simple_time_tracker.py` keeps feeding SimpleTimeTracker so no history is lost while the AW path is still young. Run both on every start/stop/add. Drop the STT line once a couple of weeks of AW declarations look right; that is the user's call, not an automatic cutover.
+- **`lorite_intent.py` corrections.** Unlike STT it is editable, so a wrong entry is fixable rather than permanent: `list [--date]` shows event ids, `edit <id> [--task|--activity|--comment|--start|--end]`, `rm <id>`. Use these instead of asking the user to fix it in an app.
+- **`lorite_intent.py` talks to the LOCAL aw-server** (`AW_SERVER`, default `http://localhost:5600`) and the declaration rides aw-sync to the home server. If ActivityWatch is not running it exits non-zero with a clear message — say so and carry on, exactly as with a missing STT config.
+- `--dry-run` is a **global** flag for both scripts: place it **before** the subcommand (`simple_time_tracker.py --dry-run add_record …`), not after — it prints the envelope (secret redacted) without sending.
 - Transport = **LlamaLab Automate Cloud Messaging** (`POST https://llamalab.com/automate/cloud/message`), not a per-flow webhook. Config comes from env (or `<vault>/.secrets/automate.env`): `AUTOMATE_ANDROID_APP_SECRET` (**secret — never print**), `AUTOMATE_ANDROID_APP_TO`, `AUTOMATE_ANDROID_APP_DEVICE`. The Automate flow branches on `payload.action` (`start`/`stop`).
 - If config is missing or the endpoint is unreachable the script exits non-zero with a clear message — **don't block the work**, tell the user the timer didn't start and continue.
 
@@ -99,6 +107,7 @@ You (base session) can invoke any agent or skill — match the work to it and ha
 - **Stop / wrap up** — **run this yourself as soon as the work ends; don't wait to be asked** (see the session contract). Concretely, stop when any of these is true: the task's deliverable is finished, the user says the equivalent of "that's it"/"thanks", the user pivots to an unrelated task (stop, then re-anchor), or the session is otherwise ending:
 
   ```bash
+  python3 ~/git/dotfiles/tools/lorite/lorite_intent.py stop
   python3 ~/git/dotfiles/tools/lorite/simple_time_tracker.py stop
   ```
 
