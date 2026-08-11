@@ -50,6 +50,14 @@ else
     say "vault git history present in $VAULT — fetching"
     git -C "$VAULT" config core.filemode false   # Syncthing sets its own permission bits
     git -C "$VAULT" fetch --quiet origin || warn "fetch failed"
+    # Credential redaction filters are PER-CLONE and not versioned, so a fresh clone
+    # commits live plugin credentials with no warning. This bit us on 2026-08-12.
+    if [ -x "$VAULT/scripts/install-git-filters.sh" ]; then
+        say "installing the redact-plugin-secrets git filter"
+        bash "$VAULT/scripts/install-git-filters.sh" 2>&1 | sed 's/^/  /' || warn "filter install failed — vault-git-backup will refuse to commit until it works"
+    else
+        warn "no $VAULT/scripts/install-git-filters.sh — vault-git-backup will refuse to commit"
+    fi
 fi
 if [ -d "$CLONE/.git" ]; then
     warn "legacy side clone still present at $CLONE — it is no longer used; remove it to reclaim disk."
