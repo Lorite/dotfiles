@@ -56,6 +56,23 @@ STT_CSV = VAULT / ".android-simpletimetracking/stt_records_automatic.csv"
 STT_HEADING = "# 📑 [[Android SimpleTimeTracker App]] Logs"
 STT_LINE_RE = re.compile(r"^- (\d\d:\d\d)–(\d\d:\d\d) — ")
 
+# ActivityWatch CSVs the note's AW sections render from, written by the 01:00
+# lorite-nightly batch (aw_daily_export.py + aw_extra_export.py, both on the server).
+# One representative file per exporter is enough to tell whether it has run for a date.
+AW_EXPORT_FILES = (
+    VAULT / "_android-appusage/LaptopITU/daily/{date}/LORI_Activity_{date}.csv",
+    VAULT / "_activitywatch/daily/{date}/AW_Categories_{date}.csv",
+)
+# How long to keep waiting for those CSVs before building the note without them.
+# Processing STRIPS the %% run %% blocks, so a note is rendered exactly once and its
+# AW sections are frozen from then on (only SimpleTimeTracker has a top-up path,
+# refresh-stt). Building early therefore freezes an empty table permanently — which is
+# precisely what happened while obsidian-daily-note.timer's OnUnitActiveSec=1h drift put
+# it in the 00:30-00:58 window, minutes AHEAD of the 01:00 export, every night.
+# The grace period is bounded so a day whose export never arrives (server off, exporter
+# broken) still gets a note eventually: a note with an empty table beats no note at all.
+AW_EXPORT_GRACE_DAYS = 3
+
 # SimpleTimeTracker "activity name" -> Media DB media type, for the entries whose
 # comment names a catalogable work. Only these activities are looked up / created;
 # everything else (Social Media, YouTube, Read, …) is left to Virtual Linker to
@@ -495,6 +512,33 @@ def cmd_refresh_stt(lookback: int) -> None:
                     print(f"refresh-stt: [{date}] relink failed: {e}")
 
 
+def aw_exports_missing(date: str) -> list[str]:
+    """Names of the ActivityWatch export CSVs still absent for `date` (empty when ready)."""
+    return [Path(str(t).format(date=date)).name
+            for t in AW_EXPORT_FILES
+            if not Path(str(t).format(date=date)).is_file()]
+
+
+def aw_exports_ready(date: str) -> bool:
+    """Whether `date`'s note may be built yet.
+
+    True once every AW export CSV exists, or once the date is older than
+    AW_EXPORT_GRACE_DAYS — past that the data is not coming and an AW-less note is
+    better than no note. See AW_EXPORT_FILES for why building early is unrecoverable.
+    """
+    missing = aw_exports_missing(date)
+    if not missing:
+        return True
+    age = (dt.date.today() - dt.date.fromisoformat(date)).days
+    if age > AW_EXPORT_GRACE_DAYS:
+        print(f"[{date}] AW exports still missing after {age}d "
+              f"({', '.join(missing)}); building without them")
+        return True
+    print(f"[{date}] waiting for AW exports ({', '.join(missing)}); "
+          f"will retry (grace {AW_EXPORT_GRACE_DAYS}d, age {age}d)")
+    return False
+
+
 def cmd_auto(lookback: int) -> None:
     cmd_refresh_stt(10)  # file-only: runs even when Obsidian is closed
     res = subprocess.run(["obsidian", "vault"], capture_output=True, text=True)
@@ -510,6 +554,8 @@ def cmd_auto(lookback: int) -> None:
             if content.strip() and "%% run start" not in content:
                 continue  # already processed (a TODO summary is the LLM step, not ours)
             # empty stub or leftover %% run %% blocks → (re)process below
+        if not aw_exports_ready(date):
+            continue  # build it on a later run, once the 01:00 export has landed
         try:
             cmd_process(date)
         except Exception as e:  # keep going: one bad day must not block the rest
