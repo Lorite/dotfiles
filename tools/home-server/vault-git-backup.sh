@@ -28,6 +28,19 @@ git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo: $VAULT" >&2; 
 # change (5492 phantom "modified" files when this was first set up).
 git config core.filemode false
 
+# HARD GATE: the vault's .gitattributes routes .obsidian/plugins/**/data*.json through
+# a `redact-plugin-secrets` clean filter, and git filters are PER-CLONE, not versioned.
+# A clone without it commits live credentials and git says nothing. That is exactly what
+# happened on the first run of this script (2026-08-12): the server had no filter, and
+# the commit carried a Google Calendar client secret, an IGDB client secret and a Toggl
+# API token in the clear. Never commit from here unless the filter is configured.
+if ! git config --get filter.redact-plugin-secrets.clean >/dev/null; then
+    echo "REFUSING TO COMMIT: filter.redact-plugin-secrets is not configured in this clone." >&2
+    echo "Plugin settings files would be committed with live credentials." >&2
+    echo "Fix: bash $VAULT/scripts/install-git-filters.sh" >&2
+    exit 1
+fi
+
 if [ -z "$(git status --porcelain)" ]; then
     echo "no changes to commit"
 else
