@@ -58,7 +58,8 @@ Target: the `# ⁉️ Daily Questions` → `### 📌 Summary` section — replac
 - Before night, …
 ```
 
-- Source the phrases **mainly from** `# ✏️ Tasks`, `# 📅 [[Google Calendar]] Events`, and `# 📑 [[Android SimpleTimeTracker App]] Logs` (App-Usage time logs help for evenings).
+- Source the phrases **mainly from** `# ✏️ Tasks`, `# 📅 [[Google Calendar]] Events`, `# 🎯 [[ActivityWatch]] Declared Tasks`, and `# 📑 [[Android SimpleTimeTracker App]] Logs` (App-Usage time logs help for evenings).
+- **Declared Tasks is the strongest signal of *what* was worked on**, since it is stated rather than inferred, and its rows already carry the `[[task note]]` to link. Its blocks may overlap (several declarations can run at once), so read a slot as "these tasks were live", not as a partition of the hour. Absent for days before 2026-08-12, and empty on days where nothing was declared: fall back to the sections above rather than treating that as "nothing happened".
 - Only state what the data shows — never invent. If a slot has no data, say so plainly (e.g. "nothing was logged.").
 - Use `[[wikilinks]]` to the tasks / meeting notes / places involved (copy link targets from the sections above; Virtual Linker has already converted the body, so match its style).
 - The note must contain no `%% run start` text before summarizing (`process` guarantees this).

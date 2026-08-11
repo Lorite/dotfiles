@@ -22,12 +22,15 @@ Vault: `~/git/lorite-obsidian-notes` (use `$VAULT` when set). Dates `yyyy-MM-dd`
 
 ### 1. Reconstruct "today" (what was actually worked on)
 
-`simple_time_tracker.py` is write-only and the human daily note (`diary/daily/<today>.md`) is built retroactively, so it usually **doesn't exist yet** at wrap-up — reconstruct today's work from what's live:
+`simple_time_tracker.py` is write-only and the human daily note (`diary/daily/<today>.md`) is built retroactively, so it usually **doesn't exist yet** at wrap-up. `lorite_intent.py` is the readable half (it queries the local aw-server), so today's declarations are available even when nothing else is — reconstruct today's work from what's live:
 
 ```bash
 D=$(date +%Y-%m-%d)
 # today's AI-chat diary = the richest "what we did" signal
 cat "$VAULT/ai_chats/diary/daily/AI Chat - $D.md" 2>/dev/null
+# what was DECLARED today: the measured half, straight from ActivityWatch
+python3 ~/git/dotfiles/tools/lorite/lorite_intent.py list --date "$D"
+python3 ~/git/dotfiles/tools/lorite/lorite_intent.py status
 # task notes touched today (the work surface)
 find "$VAULT/tasks" -name '*.md' -newermt "$D 00:00" -not -path '*/archived/*'
 # vault commits today (may be sparse — vault auto-backs-up periodically)
@@ -35,7 +38,11 @@ git -C "$VAULT" log --since="$D 00:00" --stat
 git -C "$VAULT" status --porcelain
 ```
 
-Extract: which task notes advanced, key decisions/outcomes logged today, and the active themes (their `projects`/tags). If SimpleTimeTracker's `.android-simpletimetracking/` export or an already-built daily note is present, fold in the time-per-activity; otherwise infer effort from the diary. This is the **recency signal** for both task and media suggestions.
+Extract: which task notes advanced, key decisions/outcomes logged today, and the active themes (their `projects`/tags). This is the **recency signal** for both task and media suggestions.
+
+**`lorite_intent.py list` is the time signal now** — it reads the `aw-intent` bucket directly, so it works at wrap-up (unlike the daily note, which is built retroactively) and it names the task note per block. Read it as: which tasks got real time today, and how much. Two caveats. Blocks may **overlap**, because several declarations can run at once, so the column sums to more than the day on purpose. And **`status` matters at wrap-up**: anything still running is a timer nobody stopped, so close it (`stop --task "<name>"`) before writing the wrap-up rather than leaving it to accrue overnight — but never `--force` another source's block, that is someone else's session still working.
+
+SimpleTimeTracker's `.android-simpletimetracking/` export and an already-built daily note are still worth folding in when present, and are the only source for time declared **before** 2026-08-12. If neither exists and nothing was declared, infer effort from the diary.
 
 ### 2. Tomorrow's calendar (fixed commitments + free-slot shape)
 
@@ -115,7 +122,7 @@ Include only sections with content. Keep it scannable — this is a *decision-re
 ### 6. Light upkeep + log (no heavy scans)
 
 - **Queue upkeep (light only):** if the user mentions having consumed something today, tick/remove it from the Consumption Queue; if a strong new candidate surfaced today, add it. Do **not** do the full re-curation — that's `lorite-consumption-queue`'s job.
-- **Timer / diary:** if this wrap-up is the end of a live `/lorite` session, stop the SimpleTimeTracker timer (see [[lorite]] step 6). Log the wrap-up via **[[lorite-ai-chat-diary]]** — a dated diary entry linking `[[Wrap-up - <today>]]` and the tasks referenced.
+- **Timer / diary:** if this wrap-up is the end of a live `/lorite` session, stop the timers (see [[lorite]] step 6) — every declaration you started, by name, plus the one SimpleTimeTracker activity. Log the wrap-up via **[[lorite-ai-chat-diary]]** — a dated diary entry linking `[[Wrap-up - <today>]]` and the tasks referenced.
 - Report the plan back to the user in a few lines (top task picks + top media picks), and note if the queue needs a weekly refresh.
 
 ## Boundaries (why this stays separate from the briefing)
