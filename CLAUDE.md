@@ -71,7 +71,8 @@ Index only — configuration, modes, gotchas, and env keys for each of these are
 - **SimpleTimeTracker late-entry enrichment (`refresh-stt`)**: hourly top-up of back-filled STT entries; creates Media DB notes for catalogable media and queues the rest to `ai_chats/notes/STT media to triage.md` (never guesses).
 - **Nextcloud → Obsidian file bridge** (`tools/nextcloud-bridge/setup-bridge.sh`): symlinks curated Nextcloud folders into `vault/nextcloud/` for stable cross-machine wikilinks. Bridge **only curated subfolders, never the whole tree**, and point it at the **desktop sync client, not a WebDAV/rclone mount**.
 - **Slidev**: `slidev-theme-lorite-phd` theme for presentations.
-- **SimpleTimeTracker** (Android, via LlamaLab Automate): live work-session timing, `tools/lorite/simple_time_tracker.py start|stop|add_record`. Never echo the secret.
+- **Declared intent → ActivityWatch**: `tools/lorite/lorite_intent.py start|stop|status|add|list|edit|rm`, the destination for live work-session timing (local aw-server, editable afterwards). Several declarations may run at once and are closed by name (`stop --task "<name>"` / `--all`).
+- **SimpleTimeTracker** (Android, via LlamaLab Automate): the same timing on the old single-track path, run in parallel during the transition. `tools/lorite/simple_time_tracker.py start|stop|add_record`. Never echo the secret.
 - **Dev-container execution model**: the robotics and CLAWAR paper repos run in Docker Dev Containers, but **run Claude/the editor on the host** — source is bind-mounted, only the toolchain needs the container. Shell in with `tools/lorite/in-ros2.sh <cmd>` (ROS 2) and `tools/lorite/in-tex.sh <cmd>` (texlive).
 
 ## The PhD research pipeline

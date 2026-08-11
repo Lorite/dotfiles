@@ -64,9 +64,15 @@ Config (per-machine, optional): `~/.config/dotfiles/paths.env` — `NEXTCLOUD_BA
 
 `slidev-theme-lorite-phd` theme for presentations.
 
+## Declared intent → ActivityWatch (`lorite_intent.py`, the destination)
+
+Live work-session timing, straight into the local aw-server (`AW_SERVER`, default `http://localhost:5600`, bucket `aw-intent_<host>`) and onward to the home server over aw-sync. `tools/lorite/lorite_intent.py start|stop|status|add|list|edit|rm`, with `--source` (env `LORITE_INTENT_SOURCE`) recording who declared it. Unlike the SimpleTimeTracker hop below it is **editable after the fact** (`list` for ids, then `edit`/`rm`), which is what lets an agent correct its own mistake instead of asking the user to.
+
+**Several declarations can run at once**, because work does: `start` may be issued again without stopping the first, and each stream is closed by name (`stop --task "<name>"`, or `stop --all`). A bare `stop` is refused while more than one is running, a repeat `start` for the same task is refused (that is a forgotten stop), and `stop` refuses to close a declaration a *different* `--source` started unless `--force`. Overlap does not inflate the day: `intent_resolve.py` (in `~/git/lorite-activitywatch`) splits each observed minute evenly across the declarations covering it. The phone board keeps its own single running block in localStorage, independent of the CLI state file (`$XDG_STATE_HOME/lorite/intent.json`).
+
 ## SimpleTimeTracker (Android, via LlamaLab Automate Cloud Messaging)
 
-Live work-session timing. `tools/lorite/simple_time_tracker.py start|stop|add_record` POSTs to `https://llamalab.com/automate/cloud/message` an envelope `{secret,to,device,priority,payload}` where `payload.action` ∈ `start`/`stop`/`add_record` (`start`/`stop` = live timer, the prospective complement to the vault's retrospective `daily_time_tracker.py` blocks). Config from env `AUTOMATE_ANDROID_APP_{SECRET,TO,DEVICE}` (or `<vault>/.secrets/automate.env`) — never echo the secret.
+Live work-session timing, run in parallel with the above during the transition and **single-track**: one live activity, no overlap, no API of its own. `tools/lorite/simple_time_tracker.py start|stop|add_record` POSTs to `https://llamalab.com/automate/cloud/message` an envelope `{secret,to,device,priority,payload}` where `payload.action` ∈ `start`/`stop`/`add_record` (`start`/`stop` = live timer, the prospective complement to the vault's retrospective `daily_time_tracker.py` blocks). Config from env `AUTOMATE_ANDROID_APP_{SECRET,TO,DEVICE}` (or `<vault>/.secrets/automate.env`) — never echo the secret.
 
 ## Dev-container execution model
 
