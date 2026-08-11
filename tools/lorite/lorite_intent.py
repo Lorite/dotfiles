@@ -26,8 +26,19 @@ CATEGORISATION COMES FREE
     matches rules against those fields. Declared intent is therefore classified by the very
     same rules as observed activity, with no separate matcher to drift.
 
+SEVERAL DECLARATIONS CAN RUN AT ONCE
+    Work overlaps for real - a long build or an agent grinding on one task while another is
+    being written up - so `start` may be issued again without stopping the first, and each
+    stream is closed by name (`stop --task ...`, or `stop --all` at the end of the day).
+    Overlapping events are stored as they are, because the declaration is a true statement
+    about that time; what must not double-count is *observed* time, and intent_resolve.py
+    handles that by splitting each observed minute across the declarations covering it.
+
     lorite_intent.py start --task "Write the second PhD Conference Paper"
-    lorite_intent.py stop
+    lorite_intent.py start --task "Fix the Crazyflie pose bridge"   # both now running
+    lorite_intent.py status
+    lorite_intent.py stop --task "Fix the Crazyflie pose bridge"
+    lorite_intent.py stop --all
     lorite_intent.py list --date 2026-08-11
     lorite_intent.py edit 42 --task "Something else"
     lorite_intent.py rm 42
@@ -144,17 +155,25 @@ def insert_event(bid, start, duration, data, dry):
     # `edit` knows what it wrote and an LLM can address the entry afterwards. Look it up by
     # the timestamp we just asked for rather than assuming the newest event is ours - it is
     # not, when the block being recorded is in the past.
-    return find_event(bid, start)
+    return find_event(bid, start, data)
 
 
-def find_event(bid, start):
-    """The event in `bid` starting at `start`, or None."""
+def find_event(bid, start, data=None):
+    """The event in `bid` starting at `start` (and carrying `data`, when given), or None.
+
+    The second-wide timestamp window alone stopped being enough once several declarations
+    could be stopped in one command: two blocks written milliseconds apart both fall inside
+    it, and the first one found was reported as the id of both. Matching the payload too
+    tells them apart.
+    """
     target = start.astimezone(dt.timezone.utc)
+    near = []
     for e in day_events(bid, start.astimezone().date().isoformat()):
         ts = dt.datetime.fromisoformat(e["timestamp"].replace("Z", "+00:00"))
-        if abs((ts - target).total_seconds()) < 1:
-            return e
-    return None
+        delta = abs((ts - target).total_seconds())
+        if delta < 1 and (data is None or e.get("data") == data):
+            near.append((delta, e))
+    return min(near, key=lambda pair: pair[0])[1] if near else None
 
 
 def read_state():
@@ -397,10 +416,13 @@ def main():
 
     p = sub.add_parser("start", help="begin a declaration (written on stop)")
     add_fields(p)
-    sp = sub.add_parser("stop", help="end the running declaration and write it")
+    sp = sub.add_parser("stop", help="end a running declaration and write it")
+    sp.add_argument("--task", default=None, help="which running declaration to stop")
+    sp.add_argument("--activity", default=None, help="stop the ones with this activity")
+    sp.add_argument("--all", action="store_true", help="stop every running declaration")
     sp.add_argument("--force", action="store_true",
                     help="stop even if another source started it")
-    sub.add_parser("status", help="show the running declaration, if any")
+    sub.add_parser("status", help="show the running declarations, if any")
 
     p = sub.add_parser("add", help="record a block that already finished")
     add_fields(p)
