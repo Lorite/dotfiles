@@ -38,24 +38,33 @@ git -C "$DOTFILES" pull --ff-only --quiet || warn "dotfiles pull failed (using c
 say "running install.sh (OpenCode + lorite-llm + agent sync)..."
 bash "$DOTFILES/install.sh" 2>&1 | sed 's/^/  /' || warn "install.sh reported issues (non-fatal, continuing)"
 
-# 1. Read-only side clone for the commit audit (Syncthing does NOT sync .git/)
-if [ ! -d "$CLONE/.git" ]; then
-    say "cloning vault history → $CLONE"
-    git clone --quiet "$REMOTE" "$CLONE"
+# 1. Vault git history. Since 2026-08-12 the vault directory itself is a real clone of
+# $REMOTE on this host (Syncthing excludes .git/, so the repo is local to the server),
+# and vault-git-backup.service commits and pushes it nightly. The old read-only side
+# clone at $CLONE is therefore redundant and is retired here: one copy of the history
+# instead of two (it was 2.4 GB of duplicate objects).
+if [ ! -d "$VAULT/.git" ]; then
+    warn "$VAULT is not a git repo — the commit audit will be skipped."
+    warn "Fix: clone $REMOTE elsewhere and move its .git into $VAULT, then 'git reset --mixed HEAD'."
 else
-    say "side clone exists — fetching"
-    git -C "$CLONE" fetch --quiet origin || warn "fetch failed"
+    say "vault git history present in $VAULT — fetching"
+    git -C "$VAULT" config core.filemode false   # Syncthing sets its own permission bits
+    git -C "$VAULT" fetch --quiet origin || warn "fetch failed"
+fi
+if [ -d "$CLONE/.git" ]; then
+    warn "legacy side clone still present at $CLONE — it is no longer used; remove it to reclaim disk."
 fi
 
-# 2. Host env file: point the briefing's git audit at the side clone
+# 2. Host env file: point the briefing's git audit at the vault's own repo
 mkdir -p "$ENV_DIR"
 cat > "$ENV_DIR/morning-briefing.env" <<EOF
 # Home-server overrides for lorite-morning-briefing (read by the systemd service).
-# The vault content root ($VAULT) is the Syncthing copy; its git history is here:
-LORITE_VAULT_GIT=$CLONE
+# The vault content root ($VAULT) is the Syncthing copy, and since 2026-08-12 it is
+# also a real clone of the GitHub remote, so content and history are the same path:
+LORITE_VAULT_GIT=$VAULT
 OBSIDIAN_GUI=0
 EOF
-say "wrote $ENV_DIR/morning-briefing.env (LORITE_VAULT_GIT=$CLONE, OBSIDIAN_GUI=0)"
+say "wrote $ENV_DIR/morning-briefing.env (LORITE_VAULT_GIT=$VAULT, OBSIDIAN_GUI=0)"
 
 # 3. Install the service + the nightly batch units. The briefing runs LAST in the
 # lorite-nightly.target 01:00 batch (After=dotfiles-pull inside the service), so the

@@ -3,9 +3,10 @@
 [Unit]
 Description=Morning briefing: daily-note LLM summaries + vault git audit (headless Claude Code)
 # Ordering only, for the server's lorite-nightly.target batch: run last, after the
-# dotfiles pull, so the briefing loads fresh skills. Ignored on the laptop (the pull
-# unit is not queued there) and harmless for standalone runs.
-After=dotfiles-pull.service
+# dotfiles pull, so the briefing loads fresh skills, and after the vault git backup, so
+# the commit audit reads tonight's commit instead of missing it by minutes. Ignored on
+# the laptop (neither unit is queued there) and harmless for standalone runs.
+After=dotfiles-pull.service vault-git-backup.service
 
 [Service]
 Type=oneshot
@@ -29,8 +30,11 @@ Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
 # If a false-negative audit is ever worse than a missing one, add Environment=LLM_FALLBACK=0.
 Environment=LLM_CLIENT=claude
 # Host-specific overrides (optional; '-' = ok if absent). The home server writes
-# LORITE_VAULT_GIT=%h/git/lorite-obsidian-notes-audit here (the side clone used for
-# the commit audit, since Syncthing excludes .git/). Laptop has no file → defaults.
+# LORITE_VAULT_GIT=%h/git/lorite-obsidian-notes here: since 2026-08-12 the vault
+# directory on that host is itself a clone of the GitHub remote (Syncthing excludes
+# .git/, so the repo is server-local) and vault-git-backup.service commits and pushes
+# it nightly. That replaced the separate ...-audit side clone, which held a second
+# 2.4 GB copy of the same history. Laptop has no file → defaults.
 EnvironmentFile=-%h/.config/lorite/morning-briefing.env
 TimeoutStartSec=30min
 # Already-written today → quick exit 0; failures show in `journalctl --user -u lorite-morning-briefing`

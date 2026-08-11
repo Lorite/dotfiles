@@ -689,6 +689,15 @@ if cp "$DOTFILES_DIR/tools/home-server/with-headless-obsidian.sh" "$HOME/.local/
 	print_success "Installed with-headless-obsidian.sh -> ~/.local/bin"
 fi
 
+# Vault git backup: commits + pushes the Obsidian vault from the home server. Replaces
+# the obsidian-git plugin (removed from the vault 2026-08-12), which used to commit as
+# a side effect of the hourly headless-Obsidian run, into a local-only repo with no
+# remote. Pulled in by lorite-nightly.target, ordered before the morning briefing.
+if cp "$DOTFILES_DIR/tools/home-server/vault-git-backup.sh" "$HOME/.local/bin/vault-git-backup.sh"; then
+	chmod +x "$HOME/.local/bin/vault-git-backup.sh"
+	print_success "Installed vault-git-backup.sh -> ~/.local/bin"
+fi
+
 # Obsidian daily-note pipeline for the previous day (create + run + strip + link
 # + lint; no LLM summary). Canonical unit copies live in tools/lorite/; the timer
 # runs hourly and no-ops when Obsidian is closed or yesterday is already done.
@@ -720,6 +729,7 @@ if systemctl --user show-environment >/dev/null 2>&1; then
 		"$DOTFILES_DIR/tools/lorite/lorite-morning-briefing.timer" \
 		"$DOTFILES_DIR/tools/home-server/lorite-nightly.timer" \
 		"$DOTFILES_DIR/tools/home-server/lorite-nightly.target" \
+		"$DOTFILES_DIR/tools/home-server/vault-git-backup.service" \
 		"$HOME/.config/systemd/user/"
 	systemctl --user daemon-reload
 	if is_vault_processor; then

@@ -1,0 +1,17 @@
+# Canonical copy: ~/git/dotfiles/tools/home-server/vault-git-backup.service
+# Installed to ~/.config/systemd/user/ by install.sh. No paired .timer on purpose:
+# it is pulled in by lorite-nightly.target, the server's single 01:00 batch.
+[Unit]
+Description=Commit and push the Obsidian vault from the home server
+# Ordering only, inside lorite-nightly.target: after the dotfiles pull (so this script
+# is the freshest copy), and before the morning briefing, whose git audit should see
+# tonight's commit. Ignored on hosts where those units are not queued.
+After=dotfiles-pull.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/vault-git-backup.sh
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Pushes over SSH with the passphrase-less ~/.ssh/id_ed25519, so no agent is needed.
+TimeoutStartSec=20min
+# Failures (e.g. a rebase conflict) show in `journalctl --user -u vault-git-backup`
