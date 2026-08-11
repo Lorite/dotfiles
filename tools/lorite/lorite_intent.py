@@ -47,8 +47,8 @@ BUCKET_CLIENT = "aw-intent"
 BUCKET_TYPE = "intent.declared"
 DEFAULT_ACTIVITY = "Task"
 
-# Where a running declaration is remembered between `start` and `stop`. Local-only state:
-# the event itself is not written until `stop`, so an abandoned start costs nothing.
+# Where the running declarations are remembered between `start` and `stop`. Local-only
+# state: the event itself is not written until `stop`, so an abandoned start costs nothing.
 STATE_PATH = Path(
     os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")
 ) / "lorite" / "intent.json"
@@ -158,22 +158,49 @@ def find_event(bid, start):
 
 
 def read_state():
+    """The running declarations, oldest first. A list, possibly empty.
+
+    Several may run at once because work genuinely overlaps: a build compiling under one
+    task while another is being written up is two true declarations, not one. aw-server
+    stores overlapping events happily, and intent_resolve.py splits any observed minute
+    across the declarations covering it, so concurrency never inflates the day.
+    """
     if not STATE_PATH.is_file():
-        return None
+        return []
     try:
-        return json.loads(STATE_PATH.read_text())
+        state = json.loads(STATE_PATH.read_text())
     except (ValueError, OSError):
-        return None
+        return []
+    # The single-declaration format (a bare object with "start") predates concurrency; read
+    # it so a start from the old version can still be stopped by this one.
+    if isinstance(state, dict):
+        return [state] if state.get("start") else state.get("running", [])
+    return state if isinstance(state, list) else []
 
 
-def write_state(state):
+def write_state(running):
+    if not running:
+        clear_state()
+        return
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False))
+    STATE_PATH.write_text(json.dumps({"running": running}, indent=2, ensure_ascii=False))
 
 
 def clear_state():
     if STATE_PATH.is_file():
         STATE_PATH.unlink()
+
+
+def decl_key(decl):
+    """What `stop --task`/`--activity` matches on: the task if there is one, else the label."""
+    return decl.get("task") or decl.get("comment") or decl.get("activity") or DEFAULT_ACTIVITY
+
+
+def fmt_decl(decl, now=None):
+    start = dt.datetime.fromisoformat(decl["start"])
+    mins = round(((now or dt.datetime.now().astimezone()) - start).total_seconds() / 60)
+    return "%s (%d min): %s - %s" % (start.strftime("%H:%M"), mins, decl.get("activity"),
+                                     decl.get("task") or decl.get("comment") or "")
 
 
 def fmt_event(e):
@@ -199,43 +226,90 @@ def day_events(bid, date):
 # --- commands ---------------------------------------------------------------------
 
 def cmd_start(args):
-    if read_state():
-        _err("A declaration is already running. `stop` it first, or `status` to see it.")
-    now = dt.datetime.now().astimezone()
-    write_state({"start": _iso(now), "activity": args.activity, "task": args.task,
-                 "comment": args.comment, "source": args.source})
-    print("start: %s — %s" % (args.activity, args.task or args.comment or ""))
+    running = read_state()
+    new = {"start": _iso(dt.datetime.now().astimezone()), "activity": args.activity,
+           "task": args.task, "comment": args.comment, "source": args.source}
+    # A second live declaration for the *same* thing is always a mistake (a forgotten stop,
+    # a command run twice), never a second stream of work: refuse rather than double-count.
+    clash = next((d for d in running if decl_key(d) == decl_key(new)), None)
+    if clash:
+        _err("%r is already running (%s). `stop --task %s` first, or `status` to see all."
+             % (decl_key(new), fmt_decl(clash), decl_key(new)))
+    write_state(running + [new])
+    print("start: %s - %s%s" % (args.activity, args.task or args.comment or "",
+                                "" if not running else
+                                " (%d declarations now running)" % (len(running) + 1)))
+
+
+def select_running(running, args):
+    """The declarations `stop` should close, given its selectors. Errors out if unclear."""
+    listing = "\n".join("  " + fmt_decl(d) for d in running)
+    if args.all:
+        picked = running
+    elif args.task:
+        picked = [d for d in running if d.get("task") == args.task]
+        if not picked:
+            _err("No running declaration for task %r. Running now:\n%s" % (args.task, listing))
+    elif args.activity:
+        picked = [d for d in running if d.get("activity") == args.activity]
+        if not picked:
+            _err("No running declaration for activity %r. Running now:\n%s"
+                 % (args.activity, listing))
+    elif len(running) > 1:
+        # Several streams can be live at once, so a bare `stop` is ambiguous the moment it
+        # would close more than one. Make the caller say which rather than guess.
+        _err("%d declarations are running; say which to stop (--task/--activity) or --all:\n%s"
+             % (len(running), listing))
+    else:
+        picked = running
+    # The state file is shared by everything on this machine, so a `stop` can close a
+    # declaration somebody else started - which happened: an assistant's stop ended a
+    # human's running task and recorded it 5 minutes short. Refuse unless the source
+    # matches, or --force is given deliberately.
+    alien = [d for d in picked if d.get("source", "cli") != args.source]
+    if alien and not args.force:
+        _err("Started by another source, not %r:\n%s\n"
+             "Refusing to stop someone else's block. Use --force to override, or select "
+             "your own with --task." % (args.source,
+                                        "\n".join("  [%s] %s" % (d.get("source", "cli"),
+                                                                 fmt_decl(d)) for d in alien)))
+    return picked
 
 
 def cmd_stop(args):
-    state = read_state()
-    if not state:
+    running = read_state()
+    if not running:
         _err("Nothing running. Use `add` to record a block that already finished.")
-    start = dt.datetime.fromisoformat(state["start"])
-    duration = (dt.datetime.now().astimezone() - start).total_seconds()
-    if duration < 0:
-        _err("Recorded start is in the future (%s); refusing to write a negative duration."
-             % state["start"])
-    data = event_data(state["activity"], state.get("task"), state.get("comment"),
-                      state.get("source", "cli"))
-    created = insert_event(bucket_id(), start, duration, data, args.dry_run)
-    if not args.dry_run:
-        clear_state()
-    print("stop: %s — %s (%d min)%s"
-          % (state["activity"], state.get("task") or "", round(duration / 60),
-             "" if not created else " [id %s]" % created.get("id")))
+    now = dt.datetime.now().astimezone()
+    for decl in select_running(running, args):
+        start = dt.datetime.fromisoformat(decl["start"])
+        duration = (now - start).total_seconds()
+        if duration < 0:
+            _err("Recorded start is in the future (%s); refusing to write a negative "
+                 "duration." % decl["start"])
+        data = event_data(decl["activity"], decl.get("task"), decl.get("comment"),
+                          decl.get("source", "cli"))
+        created = insert_event(bucket_id(), start, duration, data, args.dry_run)
+        if not args.dry_run:
+            # Drop each one as it lands rather than rewriting the file once at the end: if a
+            # later insert fails, the blocks already written stay written and are not
+            # stopped a second time (and so not duplicated) on the next run.
+            running = [d for d in running if decl_key(d) != decl_key(decl)]
+            write_state(running)
+        print("stop: %s - %s (%d min)%s"
+              % (decl["activity"], decl.get("task") or "", round(duration / 60),
+                 "" if not created else " [id %s]" % created.get("id")))
 
 
 def cmd_status(args):
-    state = read_state()
-    if not state:
+    running = read_state()
+    if not running:
         print("nothing running")
         return
-    start = dt.datetime.fromisoformat(state["start"])
-    mins = round((dt.datetime.now().astimezone() - start).total_seconds() / 60)
-    print("running since %s (%d min): %s — %s"
-          % (start.strftime("%H:%M"), mins, state["activity"],
-             state.get("task") or state.get("comment") or ""))
+    now = dt.datetime.now().astimezone()
+    for decl in running:
+        print("running since %s [started by %s]"
+              % (fmt_decl(decl, now), decl.get("source", "cli")))
 
 
 def cmd_add(args):
@@ -323,7 +397,9 @@ def main():
 
     p = sub.add_parser("start", help="begin a declaration (written on stop)")
     add_fields(p)
-    sub.add_parser("stop", help="end the running declaration and write it")
+    sp = sub.add_parser("stop", help="end the running declaration and write it")
+    sp.add_argument("--force", action="store_true",
+                    help="stop even if another source started it")
     sub.add_parser("status", help="show the running declaration, if any")
 
     p = sub.add_parser("add", help="record a block that already finished")
