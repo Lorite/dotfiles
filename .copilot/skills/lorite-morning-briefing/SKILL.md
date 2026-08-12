@@ -70,6 +70,14 @@ For each commit in the window (use `git -C "$VAULT_GIT" show <sha>` when the sta
 
 Plain untracked/modified/recently-edited notes are the user's normal in-progress work — **not** an issue by themselves; flag only the anomalies above. Verdict is either "no issues found" or a concrete per-finding list (file, commit sha if committed, what's wrong).
 
+**(d) Declarations left running** — always, on whichever machine the briefing runs (the state file is per machine, so this catches that machine's forgotten timers):
+
+```bash
+python3 ~/git/dotfiles/tools/lorite/lorite_intent.py status
+```
+
+A declaration is **written nowhere until it is stopped**, so one left running overnight is missing from that day's CSVs, daily note and category rollup entirely — the day just looks emptier than it was. `status` marks anything over 4 h `<-- STALE` and prints a greppable `STALE:` summary line. List each stale one in the briefing's *Declarations left running* section with its task, age and source. **Do not stop or edit them here**: the briefing runs unattended and cannot know whether the work is still going. Reporting is the job. Omit the section when there are none, and note it if the script cannot reach aw-server rather than reporting a clean result.
+
 ### 2. Daily-note LLM summaries (yesterday first, 3-day catch-up)
 
 ```bash
@@ -101,6 +109,9 @@ Create `$VAULT/ai_chats/briefings/daily/AI Briefing - <today>.md` directly (no O
 ## 🩺 Vault git check (last 24 h)
 - Commits reviewed: <n> (<shas>), working-copy/unstaged files: <n>
 - ✅ No issues found — or one bullet per finding: **file** (sha) — what's wrong
+
+## ⏱️ Declarations left running
+- (one bullet per stale declaration: **<task>** — running <n> h since <HH:mm>, started by <source>. Omit the whole section when `status` reports none)
 
 ## 🆕 Notes the AI created or archived (review)
 - (one bullet per note carrying a fresh `ai_created:` or `ai_archived:` date: [[Note]] — what it is, why it was created/archived, which task drove it. Say which of the two it was. Omit the whole section when there are none)

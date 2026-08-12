@@ -48,6 +48,8 @@ import argparse
 import datetime as dt
 import json
 import os
+import shlex
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -58,11 +60,22 @@ BUCKET_CLIENT = "aw-intent"
 BUCKET_TYPE = "intent.declared"
 DEFAULT_ACTIVITY = "Task"
 
+# A declaration running longer than this is almost certainly a forgotten stop rather than a
+# real sitting. Concurrency made this easy to do and nothing used to say so: on 2026-08-12 a
+# block ran 5.5 h unnoticed, and because a running declaration is not written until `stop`,
+# it was invisible in every CSV and daily note for the whole time.
+STALE_HOURS = float(os.environ.get("LORITE_INTENT_STALE_HOURS", "4"))
+
 # Where the running declarations are remembered between `start` and `stop`. Local-only
 # state: the event itself is not written until `stop`, so an abandoned start costs nothing.
 STATE_PATH = Path(
     os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")
 ) / "lorite" / "intent.json"
+
+# Optional second destination for every event written here. See remote_conf().
+REMOTE_CONF_PATH = Path(
+    os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")
+) / "lorite" / "aw-remote.env"
 
 
 def _err(msg):
@@ -85,6 +98,132 @@ def _req(method, path, payload=None):
         _err("aw-server %s %s -> HTTP %s: %s" % (method, path, exc.code, exc.read()[:200]))
     except urllib.error.URLError as exc:
         _err("Cannot reach aw-server at %s (%s). Is ActivityWatch running?" % (AW_SERVER, exc))
+
+
+def remote_conf():
+    """Where to mirror every event, or None when no second destination is configured.
+
+    WHY MIRROR AT ALL. Declarations are the one kind of event written OUT OF ORDER: the block
+    is stamped with its start but only written at `stop`. aw-sync resumes a bucket from where
+    the destination's newest event ends and asks for events starting after that, so a long
+    block that finishes after a shorter one has already synced falls behind the watermark and
+    never arrives. That is not a theory: on 2026-08-12 the home server was missing a whole
+    24-minute block, and the daily note built from it under-reported the day by 25 minutes.
+    Writing straight to the home server as well removes the sync path from the equation. The
+    phone board already works this way, which is why it has never lost a block.
+
+    Config from the environment or `~/.config/lorite/aw-remote.env`:
+        AW_REMOTE=ssh://lorite@100.72.103.27   (over Tailscale, needs no new secret)
+        AW_REMOTE=https://aw.lorite.eu         (needs AW_REMOTE_USER + AW_REMOTE_PASSWORD)
+        AW_REMOTE_PORT=5600                    (ssh form only: the port on the far side)
+    """
+    conf = {}
+    if REMOTE_CONF_PATH.is_file():
+        for line in REMOTE_CONF_PATH.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            conf[k.strip()] = v.strip().strip('"').strip("'")
+    for k in ("AW_REMOTE", "AW_REMOTE_PORT", "AW_REMOTE_USER", "AW_REMOTE_PASSWORD"):
+        if os.environ.get(k):
+            conf[k] = os.environ[k]
+    return conf if conf.get("AW_REMOTE") else None
+
+
+def remote_req(method, path, payload=None, conf=None):
+    """One request against the mirror. Returns parsed JSON, or None when it could not run.
+
+    Never raises and never blocks the local write: a declaration that reached the local
+    aw-server is already safe, and the mirror is an optimisation on top of it.
+    """
+    conf = conf or remote_conf()
+    if not conf:
+        return None
+    target = conf["AW_REMOTE"]
+    data = json.dumps(payload).encode() if payload is not None else None
+    if target.startswith("ssh://"):
+        # The home server publishes aw-server on 127.0.0.1 only, deliberately (it has no auth
+        # of its own). Reaching it over the SSH session that already exists keeps it that way
+        # and adds no password anywhere on this laptop.
+        host = target[len("ssh://"):]
+        url = "http://127.0.0.1:%s%s" % (conf.get("AW_REMOTE_PORT", "5600"), path)
+        cmd = ["curl", "-sS", "-X", method, "-H", "Content-Type: application/json", url]
+        if data is not None:
+            cmd += ["--data-binary", "@-"]
+        try:
+            out = subprocess.run(
+                ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", host,
+                 " ".join(shlex.quote(c) for c in cmd)],
+                input=data, capture_output=True, timeout=45)
+        except (OSError, subprocess.SubprocessError) as exc:
+            return {"_error": str(exc)}
+        if out.returncode != 0:
+            return {"_error": (out.stderr or b"").decode()[:200] or "ssh exit %d" % out.returncode}
+        body = out.stdout.strip()
+        try:
+            return json.loads(body) if body else {}
+        except ValueError:
+            return {}
+    req = urllib.request.Request(target.rstrip("/") + path, data=data, method=method,
+                                 headers={"Content-Type": "application/json"})
+    user, password = conf.get("AW_REMOTE_USER"), conf.get("AW_REMOTE_PASSWORD")
+    if user and password:
+        import base64
+        token = base64.b64encode(("%s:%s" % (user, password)).encode()).decode()
+        req.add_header("Authorization", "Basic " + token)   # never printed anywhere
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = resp.read()
+            return json.loads(body) if body else {}
+    except Exception as exc:                      # noqa: BLE001 - the mirror never blocks
+        return {"_error": type(exc).__name__}
+
+
+def mirror_event(bid, start, duration, data):
+    """Write the same event to the mirror, best effort. Prints one line either way."""
+    conf = remote_conf()
+    if not conf:
+        return
+    remote_req("POST", "/api/0/buckets/%s" % bid,
+               {"client": BUCKET_CLIENT, "type": BUCKET_TYPE, "hostname": "!local"}, conf)
+    res = remote_req("POST", "/api/0/buckets/%s/events" % bid,
+                     [{"timestamp": _iso(start), "duration": round(duration, 3), "data": data}],
+                     conf)
+    if isinstance(res, dict) and res.get("_error"):
+        # Not fatal: the block is already in the local bucket and aw-sync may still carry it.
+        print("  mirror to %s failed (%s). The local block is written."
+              % (conf["AW_REMOTE"], res["_error"]), file=sys.stderr)
+    else:
+        print("  mirrored to %s" % conf["AW_REMOTE"])
+
+
+def mirror_delete(start, data):
+    """Delete the mirror's copy of an event, matched by content rather than by id.
+
+    Ids are per-server, so the mirror's copy of a block carries a different one. Without this
+    an `edit` or `rm` here would leave the old version behind on the home server, which is
+    exactly the stale-copy problem the mirror exists to end.
+    """
+    conf = remote_conf()
+    if not conf:
+        return
+    bid = bucket_id()
+    day = start.astimezone().date().isoformat()
+    lo = dt.datetime.combine(dt.date.fromisoformat(day), dt.time.min).astimezone()
+    path = ("/api/0/buckets/%s/events?limit=-1&start=%s&end=%s"
+            % (bid, urllib.request.quote(_iso(lo)),
+               urllib.request.quote(_iso(lo + dt.timedelta(days=1)))))
+    events = remote_req("GET", path, conf=conf)
+    if not isinstance(events, list):
+        return
+    target = start.astimezone(dt.timezone.utc)
+    for e in events:
+        ts = dt.datetime.fromisoformat(e["timestamp"].replace("Z", "+00:00"))
+        if abs((ts - target).total_seconds()) < 1 and e.get("data") == data:
+            remote_req("DELETE", "/api/0/buckets/%s/events/%s" % (bid, e["id"]), conf=conf)
+            print("  mirror: deleted the matching event %s" % e["id"])
+            return
 
 
 def server_info():
@@ -148,6 +287,9 @@ def insert_event(bid, start, duration, data, dry):
         return None
     ensure_bucket(bid)
     created = _req("POST", "/api/0/buckets/%s/events" % bid, payload)
+    # The mirror is written from the same payload, so the two sides hold byte-identical
+    # blocks and the exporters' dedupe collapses them to one.
+    mirror_event(bid, start, duration, data)
     if isinstance(created, list) and created:
         return created[0]
     # aw-server only started returning the created events (Json<Vec<Event>>) after the
@@ -320,15 +462,31 @@ def cmd_stop(args):
                  "" if not created else " [id %s]" % created.get("id")))
 
 
+def stale_declarations(running, now=None):
+    """The running declarations older than STALE_HOURS, oldest first."""
+    now = now or dt.datetime.now().astimezone()
+    return [d for d in running
+            if (now - dt.datetime.fromisoformat(d["start"])).total_seconds()
+            > STALE_HOURS * 3600]
+
+
 def cmd_status(args):
     running = read_state()
     if not running:
         print("nothing running")
         return
     now = dt.datetime.now().astimezone()
+    stale = stale_declarations(running, now)
     for decl in running:
-        print("running since %s [started by %s]"
-              % (fmt_decl(decl, now), decl.get("source", "cli")))
+        print("running since %s [started by %s]%s"
+              % (fmt_decl(decl, now), decl.get("source", "cli"),
+                 "  <-- STALE" if decl in stale else ""))
+    if stale:
+        # One line, greppable: the morning briefing reads this rather than reimplementing the
+        # threshold. A running declaration writes nothing until `stop`, so a forgotten one is
+        # missing from every CSV and daily note in the meantime.
+        print("STALE: %d declaration(s) running longer than %g h. They are written nowhere "
+              "until stopped." % (len(stale), STALE_HOURS))
 
 
 def cmd_add(args):
@@ -344,17 +502,58 @@ def cmd_add(args):
              "" if not created else " [id %s]" % created.get("id")))
 
 
+def clipped_span(e, date):
+    """An event's start and end, clipped to `date`.
+
+    aw-server already clips a block that runs through midnight to the queried range - the
+    same block comes back as 23:59-00:00 on one day and 00:00-00:10 on the next - so this is
+    a safeguard rather than a correction, and it keeps the total honest if that ever changes.
+    """
+    lo = dt.datetime.combine(dt.date.fromisoformat(date), dt.time.min).astimezone()
+    hi = lo + dt.timedelta(days=1)
+    t0 = dt.datetime.fromisoformat(e["timestamp"].replace("Z", "+00:00")).astimezone()
+    t1 = t0 + dt.timedelta(seconds=e.get("duration", 0))
+    return max(t0, lo), min(t1, hi)
+
+
+def union_seconds(spans):
+    """Wall-clock time covered by `spans`, counting an overlapping moment once."""
+    total, cur_lo, cur_hi = 0, None, None
+    for lo, hi in sorted(spans):
+        if cur_hi is None or lo > cur_hi:
+            total += (cur_hi - cur_lo).total_seconds() if cur_hi else 0
+            cur_lo, cur_hi = lo, hi
+        elif hi > cur_hi:
+            cur_hi = hi
+    if cur_hi:
+        total += (cur_hi - cur_lo).total_seconds()
+    return total
+
+
 def cmd_list(args):
     events = day_events(bucket_id(), args.date)
     if not events:
         print("no declarations on %s" % args.date)
         return
     print("    id  time         activity task")
-    total = 0
+    spans, total = [], 0
     for e in events:
+        lo, hi = clipped_span(e, args.date)
+        secs = (hi - lo).total_seconds()
+        if secs <= 0:
+            continue
         print(fmt_event(e))
-        total += e.get("duration", 0)
-    print("%s total declared: %d h %02d m" % (" " * 6, total // 3600, total % 3600 // 60))
+        spans.append((lo, hi))
+        total += secs
+    real = union_seconds(spans)
+    # The plain sum is per task and can exceed the day, because declarations overlap on
+    # purpose. The union is the day's real declared time - the same distinction the CSV's
+    # Split column and the records page make, which the CLI used to leave to the reader.
+    line = "total declared: %d h %02d m" % (total // 3600, total % 3600 // 60)
+    if real < total - 1:
+        line += " over %d block(s), %d h %02d m of real time (overlaps counted once)" % (
+            len(spans), real // 3600, real % 3600 // 60)
+    print("%s%s" % (" " * 6, line))
 
 
 def cmd_edit(args):
@@ -383,6 +582,8 @@ def cmd_edit(args):
         print("(dry-run) would delete event %d after inserting the replacement" % args.id)
         return
     _req("DELETE", "/api/0/buckets/%s/events/%d" % (bid, args.id))
+    old_start = dt.datetime.fromisoformat(old["timestamp"].replace("Z", "+00:00"))
+    mirror_delete(old_start, old.get("data") or {})
     print("edited %d -> %s" % (args.id, created.get("id") if created else "?"))
 
 
@@ -395,6 +596,8 @@ def cmd_rm(args):
         print("(dry-run) would delete:\n%s" % fmt_event(old))
         return
     _req("DELETE", "/api/0/buckets/%s/events/%d" % (bid, args.id))
+    mirror_delete(dt.datetime.fromisoformat(old["timestamp"].replace("Z", "+00:00")),
+                  old.get("data") or {})
     print("deleted %d" % args.id)
 
 
