@@ -42,6 +42,7 @@ SEVERAL DECLARATIONS CAN RUN AT ONCE
     lorite_intent.py list --date 2026-08-11
     lorite_intent.py edit 42 --task "Something else"
     lorite_intent.py rm 42
+    lorite_intent.py reconcile --date 2026-08-11 --prune   # make the home server match
     lorite_intent.py add --task "Reading" --start "2026-08-11 09:00" --end "2026-08-11 09:45"
 """
 import argparse
@@ -556,6 +557,89 @@ def cmd_list(args):
     print("%s%s" % (" " * 6, line))
 
 
+def content_key(e):
+    """What identifies a block across servers. Ids cannot: they are assigned per server."""
+    d = e.get("data") or {}
+    return (e["timestamp"][:19], round(e.get("duration", 0)), d.get("app"),
+            d.get("task"), d.get("comment"))
+
+
+def our_remote_buckets(conf):
+    """The remote intent buckets holding THIS machine's declarations.
+
+    Both the one the mirror writes and the one aw-sync pushes, since a block from before the
+    mirror existed only lives in the latter. Deliberately excludes other devices' buckets:
+    the phone declares straight to the server and its blocks are none of this machine's
+    business to reconcile.
+    """
+    base = bucket_id()
+    remote = remote_req("GET", "/api/0/buckets/", conf=conf)
+    if not isinstance(remote, dict):
+        return []
+    return sorted(b for b in remote if b == base or b.startswith(base + "-synced-from-"))
+
+
+def cmd_reconcile(args):
+    """Make the home server's copy of a day match this machine's, block for block.
+
+    aw-sync drops declarations that are written late (see remote_conf), and an `edit` here
+    leaves the pre-edit copy behind there, so the two sides drift and the daily note is built
+    from the drifted one. The mirror stops new drift; this repairs what already happened.
+    """
+    conf = remote_conf()
+    if not conf:
+        _err("No mirror configured (%s). Nothing to reconcile against." % REMOTE_CONF_PATH)
+    base = bucket_id()
+    buckets = our_remote_buckets(conf)
+    if not buckets:
+        _err("The mirror has no bucket for %s yet." % base)
+    day = args.date
+    # WHOLE events on both sides, never the day-clipped view. aw-server clips an event to the
+    # queried range, so a block running through midnight comes back as two shorter ones - and
+    # comparing those would "repair" a good block into two fragments, which is precisely what
+    # the first run of this did. Query a day either side and keep what STARTS on the day.
+    lo = dt.datetime.combine(dt.date.fromisoformat(day), dt.time.min).astimezone()
+    wide_lo, wide_hi = lo - dt.timedelta(days=1), lo + dt.timedelta(days=2)
+
+    def starts_on_day(e):
+        t0 = dt.datetime.fromisoformat(e["timestamp"].replace("Z", "+00:00")).astimezone()
+        return t0.date().isoformat() == day and e.get("duration")
+
+    def window(bucket):
+        return ("/api/0/buckets/%s/events?limit=-1&start=%s&end=%s"
+                % (bucket, urllib.request.quote(_iso(wide_lo)),
+                   urllib.request.quote(_iso(wide_hi))))
+
+    local = {content_key(e): e for e in (_req("GET", window(base)) or []) if starts_on_day(e)}
+    remote = {}
+    for b in buckets:
+        for e in remote_req("GET", window(b), conf=conf) or []:
+            if starts_on_day(e):
+                remote.setdefault(content_key(e), (b, e))
+    missing = [e for k, e in local.items() if k not in remote]
+    extra = [(b, e) for k, (b, e) in remote.items() if k not in local]
+    print("%s: local=%d remote=%d -> %d missing there, %d it has that this machine does not"
+          % (day, len(local), len(remote), len(missing), len(extra)))
+    for e in missing:
+        print("    + %s" % fmt_event(e))
+    for b, e in extra:
+        print("    - %s   [%s]" % (fmt_event(e), "mirror" if b == base else "aw-sync copy"))
+    if args.dry_run:
+        return
+    for e in missing:
+        start = dt.datetime.fromisoformat(e["timestamp"].replace("Z", "+00:00"))
+        mirror_event(base, start, e.get("duration", 0), e.get("data") or {})
+    if args.prune:
+        # Only ever deletes from the buckets that mirror THIS machine, and only blocks this
+        # machine does not have - which is exactly the pre-edit leftovers. aw-sync will not
+        # re-push them: its resume point is long past.
+        for b, e in extra:
+            remote_req("DELETE", "/api/0/buckets/%s/events/%s" % (b, e["id"]), conf=conf)
+        print("    pruned %d event(s) from the mirror" % len(extra))
+    elif extra:
+        print("    left in place. Re-run with --prune to delete them.")
+
+
 def cmd_edit(args):
     bid = bucket_id()
     old = _req("GET", "/api/0/buckets/%s/events/%d" % (bid, args.id))
@@ -646,9 +730,15 @@ def main():
     p = sub.add_parser("rm", help="delete a declaration")
     p.add_argument("id", type=int)
 
+    p = sub.add_parser("reconcile", help="make the mirror's copy of a day match this machine")
+    p.add_argument("--date", default=dt.date.today().isoformat(), help="YYYY-MM-DD")
+    p.add_argument("--prune", action="store_true",
+                   help="also delete blocks the mirror has that this machine does not")
+
     args = ap.parse_args()
     {"start": cmd_start, "stop": cmd_stop, "status": cmd_status, "add": cmd_add,
-     "list": cmd_list, "edit": cmd_edit, "rm": cmd_rm}[args.cmd](args)
+     "list": cmd_list, "edit": cmd_edit, "rm": cmd_rm,
+     "reconcile": cmd_reconcile}[args.cmd](args)
 
 
 if __name__ == "__main__":
