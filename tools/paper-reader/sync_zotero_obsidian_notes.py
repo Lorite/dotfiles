@@ -205,6 +205,8 @@ def html_note_to_md(body, demote=1):
             level = min(6, int(m.group(1)[1]) + demote)
             txt = _strip_tags(m.group(2))
             if txt:
+                if out and not out[-1].endswith("\n"):
+                    out.append("")          # blank line between a list and the next heading
                 out.append(f"{'#' * level} {txt}\n")
         elif m.group(3) is not None:
             txt = _strip_tags(m.group(3))
