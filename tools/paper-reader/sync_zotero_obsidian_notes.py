@@ -10,13 +10,18 @@ Reads via the Zotero LOCAL API (Zotero desktop must be running); the bibliograph
 the CSL-rendered bibtex entry (`include=bib&style=bibtex`) — NOT `format=bibtex`,
 which embeds child notes as `annote` fields and bloats entries by orders of magnitude.
 Embedded PDF highlights (BOOX-annotated linked files) are extracted into the new
-note's annotations block unless --no-highlights.
+note's annotations block unless --no-highlights. Zotero CHILD NOTES are imported too:
+the "AI Generated Summary (<model>)" note becomes the note's Notes section, the machine
+"Citations" note becomes the `citations` / `citations_counted_date` frontmatter lists
+(appended, so the count keeps a dated history), and an arXiv "Comment:" note becomes
+`arxiv_comment`. Use --refresh-notes to backfill notes that already exist.
 
 Usage (run with the shared agents venv — pymupdf lives there):
     ~/.local/share/dotfiles-agents/venv/bin/python sync_zotero_obsidian_notes.py --dry-run
     ... --limit 5            # create at most 5 notes (testing)
     ... --key ABCD1234       # only this item
     ... --no-highlights      # skip PDF annotation extraction
+    ... --refresh-notes      # backfill Zotero child notes into EXISTING notes too
 """
 import argparse
 import html
@@ -101,7 +106,7 @@ def pub_date(data):
     return f"{m.group(1)}-{m.group(2) or '01'}-{m.group(3) or '01'} 12:00"
 
 
-def build_note(item, coll_paths, today, highlights_md=None):
+def build_note(item, coll_paths, today, highlights_md=None, parsed=None):
     d = item["data"]
     citekey = d["citationKey"]
     title = escape_title(d.get("title") or d.get("nameOfAct") or citekey)
@@ -130,6 +135,11 @@ def build_note(item, coll_paths, today, highlights_md=None):
         f"date_read: {fmt_date(d.get('dateModified',''))}",
         f"url: {d.get('url','')}",
         f"zotero: zotero://select/library/items/{d['key']}",
+        *( [f"citations: [{parsed['citations']}]",
+             f"citations_counted_date: [{parsed['citations_date']}]"]
+           if parsed and parsed.get("citations") is not None and parsed.get("citations_date") else [] ),
+        *( [f"arxiv_comment: {json.dumps(parsed['arxiv_comment'])}"]
+           if parsed and parsed.get("arxiv_comment") else [] ),
         "type: research",
         "status: new",
         "publish: true",
@@ -141,15 +151,179 @@ def build_note(item, coll_paths, today, highlights_md=None):
     if d.get("abstractNote"):
         body += ["# Abstract", "", d["abstractNote"], ""]
     body += ["# Extra", "", d.get("extra", ""), ""]
-    body += ["# Notes", "", "%% begin notes %%", "",
-             f"## Created by sync_zotero_obsidian_notes on [[{today}]]", "",
-             "*(No deep read yet — run `lorite-paper-reader` to fill this section.)*", "",
-             "%% end notes %%", ""]
+    body += ["# Notes", "", "%% begin notes %%", ""]
+    if parsed and parsed.get("summary_md"):
+        body += [notes_section(today, parsed.get("summary_model") or "unknown", parsed["summary_md"])]
+    else:
+        body += [f"## Created by sync_zotero_obsidian_notes on [[{today}]]", "",
+                 "*(No deep read yet — run `lorite-paper-reader` to fill this section.)*", ""]
+    body += ["%% end notes %%", ""]
     body += ["# Highlights", "", "%% begin annotations %%", ""]
     if highlights_md:
         body += [hl_section(today, highlights_md)]
     body += ["%% end annotations %%", "", "# Links", "", "%% begin links %%", "%% end links %%", ""]
     return title, "\n".join(fm + body)
+
+
+
+# ---------------------------------------------------------------------------
+# Zotero child notes -> vault
+#
+# Zotero items carry child notes that the headless sync ignored until 2026-08-19:
+# an "AI Generated Summary (<model>)" note, a machine-written "Citations" note whose
+# <pre> block is a JSON array of citing/cited records, and short arXiv "Comment:" notes.
+# The summary is rendered into the notes block (same shape the Zotero Integration
+# plugin produced, so old and new notes read alike); the other two become frontmatter.
+# ---------------------------------------------------------------------------
+
+NOTES_BEGIN = "<!-- zotero-notes:begin -->"
+NOTES_END = "<!-- zotero-notes:end -->"
+
+
+def child_notes(key):
+    out = []
+    for ch in api(f"/items/{key}/children"):
+        d = ch["data"]
+        if d.get("itemType") == "note":
+            out.append(d.get("note", ""))
+    return out
+
+
+def _strip_tags(t):
+    return html.unescape(re.sub(r"<[^>]+>", "", t)).strip()
+
+
+def html_note_to_md(body, demote=1):
+    """Minimal Zotero-note HTML -> Markdown. Headings are demoted by `demote` levels so
+    the note's own <h2> sits under the '### AI Generated Summary' heading we add."""
+    t = body
+    t = re.sub(r"<br\s*/?>", "\n", t, flags=re.I)
+    out, pos = [], 0
+    token = re.compile(r"<(h[1-6])>(.*?)</\1>|<li>(.*?)</li>|<p>(.*?)</p>", re.I | re.DOTALL)
+    for m in token.finditer(t):
+        if m.group(1):
+            level = min(6, int(m.group(1)[1]) + demote)
+            txt = _strip_tags(m.group(2))
+            if txt:
+                out.append(f"{'#' * level} {txt}\n")
+        elif m.group(3) is not None:
+            txt = _strip_tags(m.group(3))
+            if txt:
+                out.append(f"- {txt}")
+        else:
+            txt = _strip_tags(m.group(4))
+            if txt:
+                out.append(f"{txt}\n")
+    md = "\n".join(out)
+    md = re.sub(r"\n{3,}", "\n\n", md)
+    return md.strip()
+
+
+def parse_child_notes(notes):
+    """-> dict(summary_md, summary_model, citations, citations_date, arxiv_comment)."""
+    res = {"summary_md": None, "summary_model": None,
+           "citations": None, "citations_date": None, "arxiv_comment": None}
+    for n in notes:
+        head = _strip_tags(n[:400])
+        m = re.search(r"AI Generated Summary\s*\(([^)]+)\)", n)
+        if m and res["summary_md"] is None:
+            res["summary_model"] = m.group(1).strip()
+            # drop the title heading itself; it becomes our '### AI Generated Summary (model)'
+            body = re.sub(r"<h[1-6]>\s*AI Generated Summary[^<]*</h[1-6]>", "", n, count=1, flags=re.I)
+            res["summary_md"] = html_note_to_md(body, demote=1)
+            continue
+        if head.startswith("Citations") and "<pre>" in n:
+            try:
+                raw = html.unescape(re.search(r"<pre>(.*?)</pre>", n, re.DOTALL).group(1))
+                data = json.loads(raw)
+                res["citations"] = len(data)
+                dates = [e.get("creationDate", "")[:10] for e in data if e.get("creationDate")]
+                res["citations_date"] = max(dates) if dates else None
+            except Exception:
+                pass
+            continue
+        m = re.match(r"Comment:\s*(.+)", head)
+        if m and res["arxiv_comment"] is None:
+            res["arxiv_comment"] = m.group(1).strip().rstrip(".")
+    return res
+
+
+def notes_section(today, model, summary_md):
+    return (f"{NOTES_BEGIN}\n## Imported on [[{today}]]\n\n\n"
+            f"### AI Generated Summary ({model})\n\n{summary_md}\n{NOTES_END}\n")
+
+
+def refresh_note_children(note_path, today, parsed):
+    """Update an EXISTING note in place from its Zotero child notes.
+
+    Touches only machine-managed surface: the marked notes block and the three
+    frontmatter keys. A note that already carries a plugin-imported summary
+    ('### AI Generated Summary' outside our markers) keeps it and is not duplicated.
+    Returns a list of what changed.
+    """
+    s = open(note_path).read()
+    orig = s
+    changed = []
+
+    # --- body: the AI summary ---
+    if parsed["summary_md"]:
+        has_ours = NOTES_BEGIN in s
+        has_theirs = "AI Generated Summary" in s.split("%% end notes %%")[0] and not has_ours
+        if not has_theirs:
+            sec = notes_section(today, parsed["summary_model"] or "unknown", parsed["summary_md"])
+            if has_ours:
+                s = re.sub(re.escape(NOTES_BEGIN) + r".*?" + re.escape(NOTES_END) + r"\n?",
+                           sec, s, flags=re.DOTALL)
+            else:
+                placeholder = ("*(No deep read yet — run `lorite-paper-reader` to fill this section.)*\n\n")
+                stale = re.search(r"## Created by sync_zotero_obsidian_notes on \[\[[0-9-]+\]\]\n\n"
+                                  + re.escape(placeholder), s)
+                if stale:
+                    s = s.replace(stale.group(0), sec, 1)
+                elif placeholder in s:
+                    s = s.replace(placeholder, sec, 1)
+                elif "%% end notes %%" in s:
+                    s = s.replace("%% end notes %%", sec + "%% end notes %%", 1)
+                else:
+                    return changed
+            # also retire the stale creation heading if it now sits right above our block
+            s = re.sub(r"## Created by sync_zotero_obsidian_notes on \[\[[0-9-]+\]\]\n\n(?=" +
+                       re.escape(NOTES_BEGIN) + r")", "", s)
+            if s != orig:
+                changed.append("summary")
+
+    # --- frontmatter ---
+    def fm_block(key):
+        """Whole frontmatter entry for `key`, inline or block list. -> (text, values)."""
+        m = re.search(rf"^{key}:[ \t]*(.*)(?:\n(?:[ \t]*-[ \t]*.*\n?)*)?", s, re.M)
+        if not m:
+            return None, []
+        return m.group(0).rstrip("\n"), re.findall(r"[\w.:-]+", m.group(0).split(":", 1)[1])
+
+    if parsed["citations"] is not None and parsed["citations_date"]:
+        cur_c, counts = fm_block("citations")
+        cur_d, dates = fm_block("citations_counted_date")
+        if parsed["citations_date"] not in dates:
+            counts = [c for c in counts if c.isdigit()] + [str(parsed["citations"])]
+            dates = [d for d in dates if re.fullmatch(r"\d{4}-\d\d-\d\d", d)] + [parsed["citations_date"]]
+            new_c = f"citations: [{', '.join(counts)}]"
+            new_d = "citations_counted_date: [" + ", ".join(dates) + "]"
+            if cur_c and cur_d:
+                s = s.replace(cur_c, new_c, 1).replace(cur_d, new_d, 1)
+            elif cur_c:
+                s = s.replace(cur_c, new_c + "\n" + new_d, 1)
+            else:
+                s = s.replace("\ntype: research", f"\n{new_c}\n{new_d}\ntype: research", 1)
+            changed.append("citations")
+
+    if parsed["arxiv_comment"] and not fm_block("arxiv_comment")[0]:
+        line = f"arxiv_comment: {json.dumps(parsed['arxiv_comment'])}"
+        s = s.replace("\ntype: research", f"\n{line}\ntype: research", 1)
+        changed.append("arxiv_comment")
+
+    if s != orig:
+        open(note_path, "w").write(s)
+    return changed
 
 
 HL_BEGIN = "<!-- boox-highlights:begin -->"
@@ -198,6 +372,9 @@ def main():
     ap.add_argument("--refresh-highlights", action="store_true",
                     help="re-extract highlights into EXISTING notes for PDFs whose mtime "
                          "changed since the last run (BOOX reading sessions synced back)")
+    ap.add_argument("--refresh-notes", action="store_true",
+                    help="import Zotero child notes (AI summary, citation count, arXiv "
+                         "comment) into EXISTING notes as well as new ones")
     ap.add_argument("--quiet", action="store_true",
                     help="timer mode: no output unless something was created or failed")
     args = ap.parse_args()
@@ -261,14 +438,42 @@ def main():
                             hl = epa.to_markdown(annots)
                 except Exception as e:  # corrupt PDF etc. — note still gets created
                     print(f"warn: highlight extraction failed for {citekey}: {e}", file=sys.stderr)
-            _, content = build_note(it, coll_paths, today, hl)
+            try:
+                parsed = parse_child_notes(child_notes(d["key"]))
+            except Exception as e:
+                print(f"warn: child-note parse failed for {citekey}: {e}", file=sys.stderr)
+                parsed = None
+            _, content = build_note(it, coll_paths, today, hl, parsed)
             with open(path, "w") as f:
                 f.write(content)
             created += 1
-            print(f"created: {os.path.basename(path)}" + (" [+highlights]" if hl else ""))
+            extras = ("" if not hl else " [+highlights]") + ("" if not (parsed and parsed.get("summary_md")) else " [+summary]")
+            print(f"created: {os.path.basename(path)}{extras}")
         except Exception as e:
             failed += 1
             print(f"FAILED {citekey}: {e}", file=sys.stderr)
+
+    notes_updated = 0
+    if args.refresh_notes and not args.dry_run:
+        note_by_citekey = {f[:-3].rsplit(" - ", 1)[-1]: os.path.join(NOTES_DIR, f)
+                           for f in os.listdir(NOTES_DIR) if f.endswith(".md")}
+        for it in items:
+            d = it["data"]
+            if d["itemType"] in ("attachment", "note", "annotation") or "parentItem" in d:
+                continue
+            note = note_by_citekey.get(d.get("citationKey", ""))
+            if not note:
+                continue
+            try:
+                parsed = parse_child_notes(child_notes(d["key"]))
+                if not any(parsed.values()):
+                    continue
+                ch = refresh_note_children(note, today, parsed)
+                if ch:
+                    notes_updated += 1
+                    print(f"notes updated ({', '.join(ch)}): {os.path.basename(note)}")
+            except Exception as e:
+                print(f"warn: child-note refresh failed for {d.get('citationKey')}: {e}", file=sys.stderr)
 
     refreshed = 0
     if args.refresh_highlights and epa and not args.dry_run:
@@ -304,9 +509,10 @@ def main():
                 print(f"warn: highlight refresh failed for {d.get('citationKey')}: {e}", file=sys.stderr)
         json.dump(state, open(state_path, "w"))
 
-    if not args.quiet or created or refreshed or failed:
+    if not args.quiet or created or refreshed or notes_updated or failed:
         print(f"\n{'would create' if args.dry_run else 'created'}: {created}, "
-              f"existing skipped: {skipped}, highlights refreshed: {refreshed}, failed: {failed}")
+              f"existing skipped: {skipped}, highlights refreshed: {refreshed}, "
+              f"notes updated: {notes_updated}, failed: {failed}")
     return 0 if failed == 0 else 1
 
 
