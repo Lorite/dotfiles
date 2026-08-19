@@ -75,6 +75,11 @@ AW_EXPORT_FILES = (
 # would stall those notes for the whole grace period and then build them empty anyway.
 AW_EXPORT_FILES_NONEMPTY = (
     VAULT / "_activitywatch/daily/{date}/AW_Places_{date}.csv",
+    # The Day Log section renders from this one. It must be listed here for the same reason
+    # Places is: a note built before it lands freezes the section empty forever, which is
+    # the exact failure this guard exists to prevent — and the new section would have
+    # inherited it silently.
+    VAULT / "_activitywatch/daily/{date}/AW_Timeline_{date}.csv",
 )
 # How long to keep waiting for those CSVs before building the note without them.
 # Processing STRIPS the %% run %% blocks, so a note is rendered exactly once and its
