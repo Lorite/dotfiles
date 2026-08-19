@@ -42,6 +42,7 @@ Usage:
 import argparse
 import csv
 import datetime as dt
+import itertools
 import json
 import re
 import subprocess
@@ -62,6 +63,18 @@ STT_LINE_RE = re.compile(r"^- (\d\d:\d\d)–(\d\d:\d\d) — ")
 AW_EXPORT_FILES = (
     VAULT / "_android-appusage/LaptopITU/daily/{date}/LORI_Activity_{date}.csv",
     VAULT / "_activitywatch/daily/{date}/AW_Categories_{date}.csv",
+)
+# Existence is NOT enough for the HA-derived half. write_csv() emits the header row
+# unconditionally, so an export that ran before ha_to_aw.py imported the day leaves a
+# header-only file that passes an is_file() check and renders as an empty section — the
+# 2026-08-13 -> 08-18 failure. These files must therefore carry at least one DATA row.
+#
+# Places is the canary rather than Sleep: location is a state series and any normal day
+# produces at least one named-zone event, whereas Sleep is legitimately 0 rows on days the
+# phone recorded nothing (2026-08-13 and 08-17 are both genuinely empty). Requiring Sleep
+# would stall those notes for the whole grace period and then build them empty anyway.
+AW_EXPORT_FILES_NONEMPTY = (
+    VAULT / "_activitywatch/daily/{date}/AW_Places_{date}.csv",
 )
 # How long to keep waiting for those CSVs before building the note without them.
 # Processing STRIPS the %% run %% blocks, so a note is rendered exactly once and its
@@ -512,11 +525,32 @@ def cmd_refresh_stt(lookback: int) -> None:
                     print(f"refresh-stt: [{date}] relink failed: {e}")
 
 
+def _has_data_row(path: Path) -> bool:
+    """Whether a CSV holds at least one row beyond its header."""
+    try:
+        with path.open(encoding="utf-8") as f:
+            return sum(1 for _ in itertools.islice(f, 2)) > 1
+    except OSError:
+        return False
+
+
 def aw_exports_missing(date: str) -> list[str]:
-    """Names of the ActivityWatch export CSVs still absent for `date` (empty when ready)."""
-    return [Path(str(t).format(date=date)).name
-            for t in AW_EXPORT_FILES
-            if not Path(str(t).format(date=date)).is_file()]
+    """Names of the ActivityWatch export CSVs not yet usable for `date` (empty when ready).
+
+    A file counts as missing when it is absent, or — for AW_EXPORT_FILES_NONEMPTY — when it
+    exists but holds only its header, which is what an export that ran ahead of the HA
+    import produces.
+    """
+    missing = [Path(str(t).format(date=date)).name
+               for t in AW_EXPORT_FILES
+               if not Path(str(t).format(date=date)).is_file()]
+    for t in AW_EXPORT_FILES_NONEMPTY:
+        p = Path(str(t).format(date=date))
+        if not p.is_file():
+            missing.append(p.name)
+        elif not _has_data_row(p):
+            missing.append(p.name + " (header only)")
+    return missing
 
 
 def aw_exports_ready(date: str) -> bool:

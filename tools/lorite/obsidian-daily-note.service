@@ -2,10 +2,23 @@
 # Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
 [Unit]
 Description=Create + process yesterday's Obsidian daily note (Templater, Run, strip, Virtual Linker, lint)
-# Ensure the ActivityWatch laptop-usage CSVs exist before the note is processed
-# (soft dep: if aw-export fails the note still runs). See aw-daily-export.service.
-Wants=aw-daily-export.service
-After=aw-daily-export.service
+# Ensure the ActivityWatch CSVs exist AND are complete before the note is processed
+# (soft dep: if either job fails the note still runs).
+#
+# Both jobs are needed, in this order. ha-to-aw imports the day's Home Assistant history
+# (location, physical activity, sleep, phone apps) INTO ActivityWatch; aw-daily-export then
+# reads ActivityWatch and writes the vault CSVs. Queueing only the second one produces
+# CSVs that exist but are missing every HA-derived signal — and because processing strips
+# the %% run %% blocks, the note freezes that way permanently.
+#
+# That is exactly what happened 2026-08-13 -> 08-18: aw-daily-export.service carries
+# `After=ha-to-aw.service`, but After= only ORDERS jobs that are already queued, and this
+# unit never queued ha-to-aw. The hourly timer then caught the 00:00-01:00 window (the note
+# becomes eligible at midnight, the nightly batch imports HA at 01:00) and six notes were
+# built with empty `Where I Was` / `Sleep` sections and a Category Summary silently missing
+# its `Rest > Sleep` row. See aw-daily-export.service and lorite-nightly.target.
+Wants=ha-to-aw.service aw-daily-export.service
+After=ha-to-aw.service aw-daily-export.service
 
 [Service]
 Type=oneshot
