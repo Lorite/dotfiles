@@ -238,9 +238,17 @@ def step_process(date: str) -> int:
     def done() -> bool:
         return SENTINEL.exists() and SENTINEL.read_text().split("\t")[0] == vault_rel(date)
 
-    # Budget: run-block stabilization (<= 2 min) + ~1.2 s per 25-line link chunk.
-    n_lines = read(date).count("\n") + 1
-    wait_for(done, timeout=150 + n_lines / 25 * 2, interval=2,
+    # Budget = run blocks + link conversion. The block term used to be a flat 150 s on the
+    # assumption that stabilization takes "<= 2 min", with only the LINE count varying --
+    # which scales the wrong quantity: the blocks are the work (each queries tasks,
+    # calendar, weather, AW, STT), while lines mostly mean rendered output that is already
+    # there. 2026-08-19 (903 lines, 40 blocks) got 222 s and passed; 2026-08-20 (539 lines,
+    # SAME 40 blocks) got 193 s and timed out twice. Same work, less budget, purely because
+    # the note was shorter. So scale by the blocks and keep the line term for the link pass.
+    body = read(date)
+    n_lines = body.count("\n") + 1
+    n_blocks = body.count("%% run start")
+    wait_for(done, timeout=150 + n_blocks * 3 + n_lines / 25 * 2, interval=2,
              what=f"process_daily_note macro on {vault_rel(date)}")
     _, status, debug = SENTINEL.read_text().split("\t", 2)
     SENTINEL.unlink(missing_ok=True)
