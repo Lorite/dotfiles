@@ -271,11 +271,40 @@ def wait_for_predicate_quiet(predicate, timeout: float, interval: float = 2.0) -
     return False
 
 
+def active_note_path() -> str:
+    """Vault-relative path of the active markdown editor, or "" if there is none."""
+    code = ("JSON.stringify((app.workspace.getActiveViewOfType("
+            "require('obsidian').MarkdownView)||{}).file?.path||'')")
+    try:
+        return obs("eval", f"code={code}", check=False).strip().strip('"').replace("=> ", "")
+    except Exception:
+        return ""
+
+
+def ensure_active_note(date: str, attempts: int = 5) -> None:
+    """Make the note the active markdown editor, retrying the open if something stole it."""
+    want = vault_rel(date)
+    for _ in range(attempts):
+        if active_note_path().endswith(want):
+            return
+        obs("open", f"path={want}", check=False)
+        time.sleep(2)
+    print(f"[warn] {want} is not the active editor — dispatching anyway", file=sys.stderr)
+
+
 def step_process(date: str) -> int:
     obs("open", f"path={vault_rel(date)}")
     time.sleep(1.5)
     SENTINEL.unlink(missing_ok=True)
     wait_for_command(QUICKADD_PROCESS_CMD)
+    # Re-open AFTER the lazy plugins have settled, and confirm the note is really the
+    # active editor before dispatching. The first open above happens seconds into startup;
+    # by the time QuickAdd finishes loading, a plugin that opens its own view has had time
+    # to steal the active leaf (this vault enables `homepage`, which does exactly that).
+    # The macro's first act is getActiveViewOfType(MarkdownView), so losing the leaf makes
+    # it write `(none)  error: no active markdown editor` — a sentinel whose path never
+    # matches, so done() stays false and the caller times out on a macro that DID run.
+    ensure_active_note(date)
     obs("command", f"id={QUICKADD_PROCESS_CMD}")
 
     def done() -> bool:
