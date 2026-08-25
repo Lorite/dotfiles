@@ -1,0 +1,10 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/vault-git-track.service
+# Installed to ~/.config/systemd/user/ by install.sh. Paired with the .timer.
+# Follower hosts only - the home server OWNS committing (vault-git-backup.service) and
+# must never reset itself to its own remote.
+[Unit]
+Description=Realign this host's vault checkout with what the home server committed
+
+[Service]
+Type=oneshot
+ExecStart=%h/git/dotfiles/tools/lorite/vault_git_track.sh

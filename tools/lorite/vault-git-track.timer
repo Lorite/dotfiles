@@ -1,0 +1,11 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/vault-git-track.timer
+[Unit]
+Description=Hourly: follow the home server's vault commits
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -718,6 +718,29 @@ else
 	print_warning "No systemd user session — skipped obsidian-daily-note.timer (headless server?)"
 fi
 
+# Vault git follower. Only the home server COMMITS the vault (vault-git-backup.service);
+# .git/ is excluded from Syncthing, so every other host keeps its own clone that nothing
+# ever pulled — the laptop's HEAD sat 14 commits back and reported ~953 changes that were
+# really the server's own committed work. This timer realigns HEAD + index hourly and
+# never touches the working tree. Inverse of is_vault_processor: followers only, because
+# the server must not reset itself to its own remote.
+if systemctl --user show-environment >/dev/null 2>&1; then
+	mkdir -p "$HOME/.config/systemd/user"
+	cp "$DOTFILES_DIR/tools/lorite/vault-git-track.service" \
+		"$DOTFILES_DIR/tools/lorite/vault-git-track.timer" \
+		"$HOME/.config/systemd/user/"
+	systemctl --user daemon-reload
+	if is_vault_processor; then
+		systemctl --user disable --now vault-git-track.timer 2>/dev/null || true
+		print_success "vault-git-track.timer left disabled here (this host owns the commits)"
+	else
+		systemctl --user enable --now vault-git-track.timer
+		print_success "Enabled vault-git-track.timer (hourly, follows the server's commits)"
+	fi
+else
+	print_warning "No systemd user session — skipped vault-git-track.timer"
+fi
+
 # Morning briefing: headless Claude Code run of the lorite-morning-briefing skill
 # (daily-note LLM summaries + vault git audit + ai_brain briefing note). On the home
 # server it runs as the LAST job of the lorite-nightly.target 01:00 batch (single
