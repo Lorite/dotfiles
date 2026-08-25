@@ -69,16 +69,23 @@ AW_EXPORT_FILES = (
 # header-only file that passes an is_file() check and renders as an empty section — the
 # 2026-08-13 -> 08-18 failure. These files must therefore carry at least one DATA row.
 #
-# Places is the canary rather than Sleep: location is a state series and any normal day
-# produces at least one named-zone event, whereas Sleep is legitimately 0 rows on days the
-# phone recorded nothing (2026-08-13 and 08-17 are both genuinely empty). Requiring Sleep
-# would stall those notes for the whole grace period and then build them empty anyway.
+# Places was the canary here until 2026-08-25, on the reasoning that "location is a state
+# series and any normal day produces at least one named-zone event". That is false while
+# travelling, and it cost three days of notes. person.alejandro went `not_home` at
+# 2026-08-20T02:59:59Z (working from Spain, outside every named HA zone) and stayed there;
+# ha_to_aw.normalise() drops `not_home` deliberately — "the absence of information, not a
+# place. Named zones only." So Places was correctly empty, the gate read correctly-empty as
+# not-yet-arrived, and 2026-08-22 -> 08-24 never got a note at all.
+#
+# AW_Timeline replaces it and is a strictly better canary for the same question ("has the
+# HA import landed for this day?"): it carries the HA-derived `activity` stream alongside
+# the local app stream, so it is non-empty on travel days AND still proves ha_to_aw ran.
+# Do NOT re-add a location-derived file here — location is legitimately absent whenever the
+# user is somewhere they have not named, which is exactly when they are most likely to be
+# working oddly and to want the note.
 AW_EXPORT_FILES_NONEMPTY = (
-    VAULT / "_activitywatch/daily/{date}/AW_Places_{date}.csv",
-    # The Day Log section renders from this one. It must be listed here for the same reason
-    # Places is: a note built before it lands freezes the section empty forever, which is
-    # the exact failure this guard exists to prevent — and the new section would have
-    # inherited it silently.
+    # The Day Log section renders from this one. A note built before it lands freezes the
+    # section empty forever, which is the exact failure this guard exists to prevent.
     VAULT / "_activitywatch/daily/{date}/AW_Timeline_{date}.csv",
 )
 # How long to keep waiting for those CSVs before building the note without them.
