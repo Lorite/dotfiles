@@ -271,14 +271,26 @@ def wait_for_predicate_quiet(predicate, timeout: float, interval: float = 2.0) -
     return False
 
 
+# NOT getActiveViewOfType(require("obsidian").MarkdownView): `require` is not available in
+# the CLI's eval context (it fails with "Require stack: electron/js2c/renderer_init"), so
+# that form throws every time and the check silently degrades to "never matches".
+_ACTIVE_NOTE_JS = (
+    '(() => { const t = app.workspace.activeLeaf?.view?.getViewType?.() || "";'
+    ' const f = app.workspace.getActiveFile();'
+    ' return JSON.stringify(t === "markdown" && f ? f.path : ""); })()'
+)
+
+
 def active_note_path() -> str:
     """Vault-relative path of the active markdown editor, or "" if there is none."""
-    code = ("JSON.stringify((app.workspace.getActiveViewOfType("
-            "require('obsidian').MarkdownView)||{}).file?.path||'')")
     try:
-        return obs("eval", f"code={code}", check=False).strip().strip('"').replace("=> ", "")
+        out = obs("eval", f"code={_ACTIVE_NOTE_JS}", check=False).strip()
     except Exception:
         return ""
+    # The CLI prints `=> "<json>"`; strip the arrow BEFORE the quotes, not after.
+    if out.startswith("=>"):
+        out = out[2:].strip()
+    return out.strip('"')
 
 
 def ensure_active_note(date: str, attempts: int = 5) -> None:
