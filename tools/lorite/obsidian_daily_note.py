@@ -47,6 +47,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -230,10 +231,51 @@ def step_create(date: str) -> None:
     print(f"[{date}] created from template")
 
 
+def command_registered(cmd_id: str) -> bool:
+    """Is `cmd_id` in Obsidian's command registry yet?"""
+    code = f'JSON.stringify(!!app.commands.commands[{cmd_id!r}])'
+    try:
+        return "true" in obs("eval", f"code={code}", check=False).lower()
+    except Exception:
+        return False
+
+
+def wait_for_command(cmd_id: str, timeout: float = 90) -> None:
+    """Block until Obsidian has REGISTERED the command, before dispatching it.
+
+    The vault runs Lazy Plugins, which keeps deferred plugins OUT of
+    .obsidian/community-plugins.json and loads them itself on a timer. QuickAdd is set to
+    startupType "long" (desktop longDelaySeconds = 15), while `run`, `dataview`,
+    `templater-obsidian` and `virtual-linker` are "instant". The CLI socket answers well
+    before that 15 s, so a headless run would fire quickadd:choice:... at a command that
+    does not exist yet -- and executeCommandById() returns false SILENTLY. No macro runs,
+    no sentinel is written, and step_process then waits out its entire budget for a result
+    that was never coming. That is a startup RACE, not slowness: it presents as a plain
+    timeout with no error, it is intermittent (a warm profile wins the race, a cold one
+    loses), and no budget increase can fix it -- 900 s failed exactly like 193 s did.
+    """
+    if wait_for_predicate_quiet(lambda: command_registered(cmd_id), timeout):
+        return
+    # Dispatch anyway rather than failing outright: if the id is simply stale the command
+    # will no-op as before, and the sentinel timeout still reports it.
+    print(f"[warn] {cmd_id} not registered after {timeout:.0f}s — dispatching anyway",
+          file=sys.stderr)
+
+
+def wait_for_predicate_quiet(predicate, timeout: float, interval: float = 2.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(interval)
+    return False
+
+
 def step_process(date: str) -> int:
     obs("open", f"path={vault_rel(date)}")
     time.sleep(1.5)
     SENTINEL.unlink(missing_ok=True)
+    wait_for_command(QUICKADD_PROCESS_CMD)
     obs("command", f"id={QUICKADD_PROCESS_CMD}")
 
     def done() -> bool:
