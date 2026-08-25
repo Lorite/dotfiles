@@ -274,8 +274,11 @@ def refresh_note_children(note_path, today, parsed):
         if not has_theirs:
             sec = notes_section(today, parsed["summary_model"] or "unknown", parsed["summary_md"])
             if has_ours:
+                # sec is arbitrary AI-summary text (may contain LaTeX like \sum, \sigma) —
+                # pass it via a replacement function so re.sub never parses it for
+                # backreference escapes (\1, \g<...>), which a literal replacement string does.
                 s = re.sub(re.escape(NOTES_BEGIN) + r".*?" + re.escape(NOTES_END) + r"\n?",
-                           sec, s, flags=re.DOTALL)
+                           lambda _m: sec, s, flags=re.DOTALL)
             else:
                 placeholder = ("*(No deep read yet — run `lorite-paper-reader` to fill this section.)*\n\n")
                 stale = re.search(r"## Created by sync_zotero_obsidian_notes on \[\[[0-9-]+\]\]\n\n"
