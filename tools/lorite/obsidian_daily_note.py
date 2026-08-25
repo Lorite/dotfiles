@@ -44,6 +44,7 @@ import csv
 import datetime as dt
 import itertools
 import json
+import os
 import re
 import subprocess
 import time
@@ -248,7 +249,14 @@ def step_process(date: str) -> int:
     body = read(date)
     n_lines = body.count("\n") + 1
     n_blocks = body.count("%% run start")
-    wait_for(done, timeout=150 + n_blocks * 3 + n_lines / 25 * 2, interval=2,
+    budget = 150 + n_blocks * 3 + n_lines / 25 * 2
+    # Escape hatch for diagnosing a note that will not finish: set a floor in seconds and
+    # watch whether it EVER completes. A note that finishes at 400 s is slow (raise the
+    # constants); one that never finishes has a genuinely stuck block, and no budget helps.
+    override = os.environ.get("LORITE_MACRO_TIMEOUT")
+    if override:
+        budget = max(budget, float(override))
+    wait_for(done, timeout=budget, interval=2,
              what=f"process_daily_note macro on {vault_rel(date)}")
     _, status, debug = SENTINEL.read_text().split("\t", 2)
     SENTINEL.unlink(missing_ok=True)
