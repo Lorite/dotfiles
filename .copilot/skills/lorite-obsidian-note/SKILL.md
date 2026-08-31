@@ -215,6 +215,11 @@ When the work produced a visual — an architecture/flow diagram, a data plot, a
 
 ## Conventions
 - Use wikilinks `[[Note]]` for everything linkable; link liberally. Use callouts/properties per the `lorite-obsidian-markdown` skill. Put sources under `## Sources` (CLI/Bases/Web).
+- **Short/acronym aliases must be whole-word-guarded.** The daily-note Virtual Linker auto-links note names and `aliases` at word boundaries (start *and* end of words), so a bare short acronym alias matches even inside unrelated words (a `GA` alias links inside `garden`, `VO` inside `volume`). Whenever you write an `aliases:` entry that is a short acronym or initialism (roughly 4 characters or fewer, or all-caps like `VO`, `QS`, `BT`, `CAD`), add that same entry to a `linker-match-whole-word:` frontmatter list so it only matches as an exact whole word. Full-word synonyms (`Computer-Aided Design`) are fine as plain aliases. See the `lorite-obsidian-markdown` skill for the exact key.
+    ```yaml
+    aliases: [Visual Odometry, VO]
+    linker-match-whole-word: [VO]
+    ```
 - **YAML-safe frontmatter — quote first, don't rely on rewording.** Any free-text field (`description`, `short_description`, `title`, `summary`, `aliases` items, …) breaks the note's *entire* property block if its value contains a **colon-then-space (`: `)** or **begins with** `"` `'` `[` `{` `-` `>` `|` `@` `` ` `` `#`. **Default: single-quote-wrap every free-text value you write and double each internal `'`** (`Tracy's` → `'…Tracy''s…'`). Do that mechanically rather than eyeballing whether a given sentence "needs" it — prose fields of 3+ sentences hit this constantly, and the whole note's properties disappear from Obsidian when they do. Rewording (em dash ` — ` in place of a colon) is a nicety on top, never the safeguard.
   - **Verify after writing** — don't assume; the note renders fine as text while its properties are dead:
     ```bash

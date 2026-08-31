@@ -101,6 +101,8 @@ maturity_level: 1
 > python3 -c "import sys,yaml;t=open(sys.argv[1]).read();yaml.safe_load(t[4:t.find(chr(10)+'---',3)]);print('OK',sys.argv[1])" "<note path>"
 > ```
 
+**Aliases and the Virtual Linker.** The template ships `aliases: []`. Keep any spelled-out synonyms as plain aliases, but if you add an alias that is a short acronym or initialism (e.g. the `(VO)` / `(CAD)` acronym from the concept's name), you MUST also list that acronym under a `linker-match-whole-word:` frontmatter key, or the daily-note Virtual Linker auto-links the bare acronym inside unrelated words (`VO` in `volume`). See the `lorite-obsidian-markdown` skill.
+
 Body — `# Obsidian Notes` present and **empty** (user space); everything you write under `# AI Generated`, in this order:
 
 ```markdown

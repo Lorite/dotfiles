@@ -504,6 +504,20 @@ due: 2024-02-01T14:30:00
 - `aliases` - Alternative names for the note
 - `cssclasses` - CSS classes applied to the note
 
+### Short aliases and the Virtual Linker
+
+The vault's Virtual Linker plugin auto-links note names and `aliases` at word boundaries (it matches at the **start and end** of words, not only whole words), so a bare short acronym alias like `VO`, `QS`, or `GA` wrongly auto-links inside unrelated words (`GA` inside `garden`, `VO` inside `volume`) in daily notes. Whenever an `aliases:` entry is a short acronym or initialism (roughly 4 characters or fewer, or all-caps), also list that same entry under a `linker-match-whole-word:` frontmatter key. It is a list of the aliases to restrict to exact whole-word matches only. Full-word synonyms (`Computer-Aided Design`) do not need it.
+
+```yaml
+aliases:
+  - Visual Odometry
+  - VO
+linker-match-whole-word:
+  - VO
+```
+
+Other per-note Virtual Linker keys: `linker-match-case`, `linker-ignore-case`, `linker-exclude` (never link this note), `linker-include`.
+
 ## Tags
 
 ```markdown
