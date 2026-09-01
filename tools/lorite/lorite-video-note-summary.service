@@ -14,11 +14,16 @@ Before=vault-git-backup.service
 Type=oneshot
 ExecStart=%h/git/dotfiles/tools/lorite/video_note_summary.sh
 Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
-# Not pinned to a client. Unlike the morning briefing (whose git audit is a security
-# review, where a false "no issues" is worse than nothing), this job summarizes a
-# transcript that is right there in the note, so a weaker client degrades the prose
-# rather than hiding a problem. lorite-llm's OpenCode-first default keeps it off the
-# Claude quota, and the usual fallback still applies.
+# Deliberately does NOT pin a client, unlike lorite-morning-briefing.service. That job's
+# git audit is a security review where a false "no issues" is worse than no briefing, so
+# it pins Claude; this one summarizes a transcript already present in the note, so a
+# weaker client degrades prose rather than hiding a problem.
+#
+# In practice on the home server that choice is moot: ~/.config/environment.d/lorite-llm.conf
+# sets LLM_CLIENT=claude / LLM_MODEL=claude-sonnet-5 / LLM_EFFORT=xhigh for every headless
+# job on the host, and systemd user units inherit it. Leaving the pin out here means this
+# job follows that host default instead of overriding it, and runs OpenCode-first on any
+# host that has not set one.
 #
 # Cap per run. Raising it makes one night longer, not more thorough: the pending list is
 # ordered oldest-first and any backlog simply drains over successive nights.
