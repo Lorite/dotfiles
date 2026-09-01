@@ -130,17 +130,33 @@ for each, so the same `inbox-watcher.py` path enriches them with no action from 
 ./aw-youtube-capture.py --min-minutes 10   # only longer watches
 ```
 
-Run by `aw-youtube-capture.timer` every 6 hours. The default look-back is 2 days and every
-candidate is deduped against the notes in `media/videos` (by video id in the `url:`
-frontmatter) and the stubs in `ai_chats/inbox/`, including `processed/` and `failed/`, so
-the cadence only controls latency and a failed clip is never retried in a loop.
+Runs nightly on the home server as part of `lorite-nightly.target`, which is the only
+machine that sees the phone's buckets as well as the laptop's. It has no timer of its own:
+the default look-back is 2 days and every candidate is deduped against the notes in
+`media/videos` (by video id in the `url:` frontmatter) and the stubs in `ai_chats/inbox/`,
+including `processed/` and `failed/`, so cadence only controls latency and a failed clip is
+never retried in a loop.
+
+Enrichment still happens on the laptop: the server has no `obsidian-clipper-cli` or
+`yt-dlp` templates, so the stub travels by Syncthing and the laptop's already-running
+`obsidian-inbox-watcher.timer` turns it into a note.
 
 **Why ActivityWatch and not the YouTube API.** There is no API option: YouTube deprecated
 the watch-history playlist in 2016 and exposes no OAuth scope for history at all. Google
 Takeout can export history, but only as periodic manual exports and **without watch
-duration** — which is the one signal that matters here. Dwell is what separates a talk
-worth a note from a music video left playing, and ActivityWatch records it per tab. Dwell
-is intersected with the afk watcher, so a tab left open overnight does not qualify.
+duration**, which is the one signal that matters here.
+
+**Three buckets, because no single one is enough.** `currently-playing` (laptop) and
+`media.playback` (phone) know real playback time but carry no URL; `web.tab.current` is the
+only source of URLs but measures tab focus, so a video playing while you work elsewhere is
+invisible to it. Playback comes from the media buckets, the URL from the web buckets matched
+by title, and for phone viewing (which has no URL anywhere) a guarded `yt-dlp` search that
+requires the channel to match and every word of the observed title to appear in the real one.
+Measured: one talk was 15.1 min of tab dwell and 31.3 min of actual playback.
+
+Tab dwell is afk-filtered so an idle open tab does not qualify. Playback deliberately is
+**not**: watching involves no keyboard input, and afk-filtering cut one talk from 37.6 to
+23.8 minutes.
 
 Takeout is still worth one thing: a one-off backfill of history from before the watchers
 existed, and of phone/TV viewing the desktop browser never saw.
