@@ -54,6 +54,7 @@ The section count and titles come from the note, **not** from this skill.
 
 ## 4. Visual-first rules
 - ~1 slide per 2 min; **no text-only stretch > 2 slides**; the note holds the detail.
+- **Speaker notes are the words to say**, not reminders of what to cover, with **one `[click]` beat per slide click** (`[click]` is Slidev's marker and syncs the note pane to the animation). Never narrate the bullets. Full rules in the deck repo's `CLAUDE.md` (Speaker notes).
 - Big numbers as **stat callouts** (`<div class="px-4 py-2 bg-blue-50 border-l-4 border-blue-700">` with a `text-3xl font-bold` number) instead of prose.
 - `<MediaFigure src="…" caption="…" img-class="w-full h-auto object-contain shadow" />` for images.
   - OneDrive media via the symlinks: `./assets/pictures/…`, **URL-encode spaces (`%20`) and commas

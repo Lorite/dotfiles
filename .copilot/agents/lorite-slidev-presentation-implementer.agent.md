@@ -83,9 +83,40 @@ Always ensure `slides.md` uses:
 - Prefer one full-width visual per major section; avoid text-only stretches longer than 2 slides.
 - Use mermaid for system diagrams or timelines if no source image exists. For **gantt timelines**, follow the **`lorite-mermaid-gantt`** skill (canonical `init` block + tag→colour convention).
 
+## Speaker Notes
+Notes are the **words to say**, not instructions about what to say. Never write "say something like X", "do not spend more than a minute here", or "ground this in Y" — at the lectern the sentences have to already exist.
+
+Each note is a spoken script, then short labelled blocks:
+
+```markdown
+<!--
+[click] What to say while the first reveal is on screen.
+
+[click] What to say for the next reveal.
+
+**Cues.** Time check, delivery beats, what to compress if behind.
+
+**If asked.** Detail that belongs in Q&A rather than in the script.
+-->
+```
+
+- **One `[click]` beat per slide click.** `[click]` is Slidev's own note marker and syncs the highlighted note paragraph to the animation. `[clicks]` is not recognized and leaks in as literal text.
+- **Never narrate the bullets.** The audience reads them faster than you can say them. Each beat says what its bullet does not.
+- **If a beat per click makes the script too long, the slide is over-clicked.** Group its `<v-clicks>` into one `<v-click>` rather than padding the script. More than ~4 reveals on a slide is rarely narratable.
+- **Trimmed content moves into `**If asked.**`, never deleted** — the slide still shows it, so an answer still has to exist.
+- Cover note also carries **`**Pace.**`** (word count, assumed words-per-minute, what to cut first). Closing note carries **`**Questions.**`** (expected question, answer, which backup slide to jump to). Backup-slide notes are spoken answers too.
+
+**Budget the talk by word count and measure it, never estimate.** ~140 words per minute; script ~1 min under the slot so pauses fit. Narration spoken over a video costs no extra time. Measure with the command in the deck repo's `CLAUDE.md` (Speaker notes), which strips the labelled blocks and the `[click]` markers.
+
+**Verify beats match clicks against Slidev, not a regex.** In `/presenter/`, per slide compare `$slidev.nav.clicksTotal` with the count of `.slidev-note-click-mark` inside `.slidev-note`. They must be equal on every slide.
+
+**Edit deck markup by matching its text, never by line number** — a line-numbered edit silently collapses the wrong block.
+
 ## Implementation Contract
 When done, report:
 - slide count
 - list of placeholder visuals added
 - any unresolved assumptions copied from brief
+- the measured spoken word count and the runtime it implies at 140 wpm
+- confirmation that every slide's `[click]` beat count equals its click count, checked against `$slidev.nav.clicksTotal`
 - confirmation that all 14 required sections exist in order — verified by actually re-reading the generated `slides.md` (or via the slidev tools), not asserted from memory of what you wrote
