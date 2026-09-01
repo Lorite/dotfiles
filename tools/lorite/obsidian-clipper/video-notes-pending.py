@@ -28,6 +28,10 @@ VIDEO_DIR = os.path.join(VAULT, "media", "videos")
 # a line are the multi-line separators, so they count too.
 CARD_RE = re.compile(r"(::|==.+==|^\?\??$)", re.M)
 
+# A section holding fewer real words than this is treated as blank. Filled sections run to
+# hundreds of words, so the gap is wide and the exact value is not delicate.
+MIN_SECTION_WORDS = 15
+
 
 def section(note, heading):
     """Text between `heading` and the next heading of the same or higher level, or a rule."""
@@ -56,9 +60,16 @@ def inspect(path):
     summary = section(note, "# AI Summary")
     cards = section(note, "## Flashcards")
     missing = []
-    # The template's own output structure starts with "## Summary", so its absence is the
-    # reliable signal, not emptiness: a filled section always has it.
-    if summary is not None and not re.search(r"^## Summary[ \t]*$", summary, re.M):
+    # Pending means EMPTY, not "structured differently".
+    #
+    # This originally tested for the template's "## Summary" subheading, on the premise
+    # that a filled section always has it. Wrong: notes predating the current template
+    # carry real summaries (518 and 638 words in the two that tripped it) pasted in from
+    # elsewhere, with no such subheading. The headless run refused to overwrite them,
+    # correctly, since rewriting published prose to satisfy a formatting technicality is
+    # exactly what the vault's never-rewrite policy forbids. Word count is the honest
+    # signal: an unfilled section is literally blank.
+    if summary is not None and len(summary.split()) < MIN_SECTION_WORDS:
         missing.append("summary")
     if cards is not None and not CARD_RE.search(cards):
         missing.append("flashcards")

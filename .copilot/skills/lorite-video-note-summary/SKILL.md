@@ -26,6 +26,8 @@ That script is the **single definition of pending** and is shared with the night
 
 A note whose `## Flashcards` heading does not exist at all is not pending for flashcards. Older notes predate that template revision, and adding the section would be inventing structure the user never asked for.
 
+**Never overwrite a section that already has content, even non-conforming content.** Some notes predate the current template and carry a real summary in a different shape (no `## Summary` subheading, sometimes credited to another model, often with `publish: true`). Those are finished, not pending. The detector now measures emptiness by word count for exactly this reason, but if you ever reach a note with existing prose in either section, stop and report it rather than rewriting: reshaping published text to match a template is precisely what the vault's never-rewrite-existing-content policy forbids. This is not hypothetical, it happened on the first headless run (2026-09-02) and the run was right to refuse.
+
 **Cap the run.** Default to **5 notes** unless told otherwise (`--limit`). These are long transcripts and a runaway nightly job that rewrites forty notes is worse than one that takes five nights.
 
 ### 2. Read the template's prompts, do not reinvent them
