@@ -28,7 +28,28 @@ CLIPPER = os.path.expanduser("~/.local/bin/obsidian-clipper-cli")
 TEMPLATES = os.path.expanduser("~/.config/obsidian-clipper-cli/templates")
 PROPERTY_TYPES = os.path.expanduser("~/.config/obsidian-clipper-cli/property-types.json")
 # Frontmatter keys the CLI cannot fill from YouTube's JSON-LD, mapped to yt-dlp fields.
-GAP_FIELDS = {"url": "webpage_url", "channel": "channel", "duration": "duration_string"}
+#
+# title/thumbnailUrl/published were originally left out because YouTube's JSON-LD carried
+# name/thumbnailUrl/uploadDate. It no longer does for a plain fetch, so as of 2026-09-02
+# they render empty too, which produced notes filed as "VIDEO <channel> - capture" with an
+# "<channel> — Untitled" alias. yt-dlp has all three, so take them from there as well.
+GAP_FIELDS = {
+    "url": "webpage_url",
+    "channel": "channel",
+    "duration": "duration_string",
+    "title": "title",
+    "thumbnailUrl": "thumbnail",
+    "published": "_published",  # derived below: yt-dlp gives YYYYMMDD, the vault wants ISO
+}
+
+
+def derive(meta):
+    """Add the computed fields GAP_FIELDS refers to, leaving yt-dlp's own keys untouched."""
+    meta = dict(meta)
+    raw = str(meta.get("upload_date") or "")
+    if len(raw) == 8 and raw.isdigit():
+        meta["_published"] = "%s-%s-%s" % (raw[:4], raw[4:6], raw[6:])
+    return meta
 
 
 def run(cmd, **kw):
@@ -105,6 +126,7 @@ def clip(url):
 
 def fill_frontmatter(note, meta):
     """Fill only frontmatter keys that rendered empty. Never overwrite a real value."""
+    meta = derive(meta)
     if not note.startswith("---\n"):
         return note, []
     end = note.find("\n---\n", 4)
@@ -125,12 +147,22 @@ def fill_frontmatter(note, meta):
         # The alias is built as "{{author}} — {{name}}", and author is empty for the same
         # reason `channel` is, so every note would start its alias with a dangling "— ".
         # Repair it with the channel we just resolved.
-        dangling = re.match(r'^(\s*-\s*)"—\s*(.*)"\s*$', line)
-        if dangling and channel:
-            out.append('%s"%s — %s"' % (dangling.group(1), channel, dangling.group(2)))
-            if "aliases" not in filled:
-                filled.append("aliases")
-            continue
+        # The alias is built as "{{author}} — {{name}}" and BOTH halves can be missing for
+        # the same reason the frontmatter gaps exist: author renders empty (leaving a
+        # dangling "— ") and name renders as the CLI's own "Untitled" placeholder, or
+        # empty. Repair whichever halves are absent, in one pass, so a note is never
+        # aliased " — Title" or "Channel — Untitled".
+        alias = re.match(r'^(\s*-\s*)"?(.*?)\s*—\s*(.*?)"?\s*$', line)
+        if alias:
+            left = alias.group(2) or channel or ""
+            right = alias.group(3)
+            if right in ("", "Untitled"):
+                right = meta.get("title") or right
+            if (left, right) != (alias.group(2), alias.group(3)) and left and right:
+                out.append('%s"%s — %s"' % (alias.group(1), left, right))
+                if "aliases" not in filled:
+                    filled.append("aliases")
+                continue
         out.append(line)
     return "---\n" + "\n".join(out) + body, filled
 

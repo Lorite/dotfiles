@@ -118,6 +118,33 @@ template's `path` says (`media/videos`, `media/wikis`, …) with a vault-convent
 filename, and moves the stub to `processed/`. Failures go to `failed/` with a `.reason`
 file; existing notes are never overwritten (a ` (2)` suffix is added).
 
+## Automatic capture from what you actually watched
+
+The phone share above is a *manual* trigger. `aw-youtube-capture.py` adds the automatic
+one: it asks ActivityWatch which YouTube videos were genuinely watched and drops a stub
+for each, so the same `inbox-watcher.py` path enriches them with no action from you.
+
+```bash
+./aw-youtube-capture.py --dry-run          # show what would be captured
+./aw-youtube-capture.py --days 7           # look back a week
+./aw-youtube-capture.py --min-minutes 10   # only longer watches
+```
+
+Run by `aw-youtube-capture.timer` every 6 hours. The default look-back is 2 days and every
+candidate is deduped against the notes in `media/videos` (by video id in the `url:`
+frontmatter) and the stubs in `ai_chats/inbox/`, including `processed/` and `failed/`, so
+the cadence only controls latency and a failed clip is never retried in a loop.
+
+**Why ActivityWatch and not the YouTube API.** There is no API option: YouTube deprecated
+the watch-history playlist in 2016 and exposes no OAuth scope for history at all. Google
+Takeout can export history, but only as periodic manual exports and **without watch
+duration** — which is the one signal that matters here. Dwell is what separates a talk
+worth a note from a music video left playing, and ActivityWatch records it per tab. Dwell
+is intersected with the afk watcher, so a tab left open overnight does not qualify.
+
+Takeout is still worth one thing: a one-off backfill of history from before the watchers
+existed, and of phone/TV viewing the desktop browser never saw.
+
 **Phone side (build once per device, in Automate):**
 1. **Content shared** block (makes the flow a share target; set MIME to `text/*`):
    https://llamalab.com/automate/doc/block/content_shared.html

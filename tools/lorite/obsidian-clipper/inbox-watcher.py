@@ -78,7 +78,9 @@ def note_filename(fields, template_dir):
     """
     title = fields.get("title") or fields.get("name") or "capture"
     if template_dir == "media/videos":
-        parts = [fields.get("published", ""), "VIDEO", fields.get("channel", ""), "-", title]
+        # The em dash matches the template's real noteNameFormat and the 76 notes already
+        # in media/videos ("2012-06-27 VIDEO Bob Sinclar — Bob Sinclar - World Hold On").
+        parts = [fields.get("published", ""), "VIDEO", fields.get("channel", ""), "\u2014", title]
         return safe_name(" ".join(p for p in parts if p))
     author = fields.get("author", "")
     author = re.sub(r"[\[\]\"']", "", author).strip()
