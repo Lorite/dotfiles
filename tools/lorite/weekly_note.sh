@@ -40,7 +40,10 @@ echo "weekly-note: target $WEEK, OBSIDIAN_GUI=$OBSIDIAN_GUI, VAULT=$VAULT"
 LLM="$HOME/git/dotfiles/tools/lorite/lorite-llm.sh"
 echo "weekly-note: detected client $("$LLM" --which 2>/dev/null || echo unknown)"
 
+# The target week goes through --skill-args, never as a bare positional: lorite-llm.sh
+# parses flags only and exits 2 on anything else. Passing "$WEEK" positionally is what
+# silently killed every scheduled run from 2026-08-17 to 08-31 (found 2026-09-01).
 exec "$LLM" --skill lorite-weekly-note \
+     --skill-args "$WEEK" \
      --allowed-tools Bash,Read,Write,Edit,Glob,Grep,TodoWrite,Skill \
-     --max-turns 100 \
-     "$WEEK"
+     --max-turns 100

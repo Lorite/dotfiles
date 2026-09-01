@@ -7,6 +7,8 @@
 #
 #   --which                   print which client would be used, then exit
 #   --skill <name>            run a skill / slash command (e.g. lorite-morning-briefing)
+#   --skill-args "<text>"     arguments for --skill, translated per client (Claude appends
+#                             them to the slash command, OpenCode folds them into the prompt)
 #   --prompt "<text>"         run a free-text prompt
 #   --allowed-tools <csv>     Claude only (OpenCode has no equivalent; ignored there)
 #   --max-turns <n>           Claude only (ignored on OpenCode)
@@ -73,24 +75,31 @@ other_client() { [[ "$1" == claude ]] && echo opencode || echo claude; }
 # ── parse args ──────────────────────────────────────────────────────────────────
 WHICH=0; DRY_RUN=0
 SKILL=""; PROMPT=""; ALLOWED_TOOLS=""; MAX_TURNS=""; MODEL="${LLM_MODEL:-}"; EFFORT="${LLM_EFFORT:-}"
+SKILL_ARGS=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --which)         WHICH=1; shift ;;
         --dry-run)       DRY_RUN=1; shift ;;
         --skill)         SKILL="$2"; shift 2 ;;
+        --skill-args)    SKILL_ARGS="$2"; shift 2 ;;
         --prompt)        PROMPT="$2"; shift 2 ;;
         --allowed-tools) ALLOWED_TOOLS="$2"; shift 2 ;;
         --max-turns)     MAX_TURNS="$2"; shift 2 ;;
         --model)         MODEL="$2"; shift 2 ;;
         --effort)        EFFORT="$2"; shift 2 ;;
-        -h|--help)       sed -n '2,23p' "$0"; exit 0 ;;
+        -h|--help)       sed -n '2,25p' "$0"; exit 0 ;;
         *)               echo "ERROR: unknown argument '$1' (see --help)" >&2; exit 2 ;;
     esac
 done
 
 CLIENT="$(detect_client)" || exit $?
 [[ $WHICH -eq 1 ]] && { echo "$CLIENT"; exit 0; }
+
+if [[ -n "$SKILL_ARGS" && -z "$SKILL" ]]; then
+    echo "ERROR: --skill-args needs --skill (it is the skill's argument line)" >&2
+    exit 2
+fi
 
 if [[ -z "$SKILL" && -z "$PROMPT" ]]; then
     echo "ERROR: nothing to run — pass --skill <name> or --prompt \"<text>\"" >&2
@@ -105,7 +114,12 @@ build_cmd() {
     local client="$1"; CMD=()
     case "$client" in
         claude)
-            local text="${PROMPT:-/$SKILL}"
+            # Claude runs a skill as a slash command, which takes its arguments inline.
+            local text="$PROMPT"
+            if [[ -z "$text" ]]; then
+                text="/$SKILL"
+                if [[ -n "$SKILL_ARGS" ]]; then text="$text $SKILL_ARGS"; fi
+            fi
             CMD=("$CLAUDE_BIN" --model "${MODEL:-sonnet}" -p "$text")
             [[ -n "$ALLOWED_TOOLS" ]] && CMD+=(--allowedTools "$ALLOWED_TOOLS")
             [[ -n "$MAX_TURNS"     ]] && CMD+=(--max-turns "$MAX_TURNS")
@@ -113,7 +127,16 @@ build_cmd() {
             [[ -n "$EFFORT"        ]] && CMD+=(--effort "$EFFORT")
             ;;
         opencode)
-            local text="${PROMPT:-Use the $SKILL skill now, and follow it to completion.}"
+            # OpenCode has no slash commands: a skill run is a prompt, so the arguments
+            # have to be stated in prose rather than appended as a positional.
+            local text="$PROMPT"
+            if [[ -z "$text" ]]; then
+                if [[ -n "$SKILL_ARGS" ]]; then
+                    text="Use the $SKILL skill now with these arguments: $SKILL_ARGS. Follow it to completion."
+                else
+                    text="Use the $SKILL skill now, and follow it to completion."
+                fi
+            fi
             CMD=("$OPENCODE_BIN" run --auto)
             [[ -n "$MODEL" ]] && CMD+=(--model "$MODEL")
             CMD+=("$text")
