@@ -1,0 +1,32 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/lorite-video-note-summary.service
+# Installed to ~/.config/systemd/user/ by install.sh. No paired .timer on purpose:
+# it is pulled in by lorite-nightly.target, the server's single 01:00 batch.
+[Unit]
+Description=Fill empty AI Summary + Flashcards on media/videos notes (headless LLM)
+# Ordering only, inside lorite-nightly.target: after the dotfiles pull so the skill and
+# the pending-detector are the freshest copies, and before vault-git-backup so tonight's
+# filled notes are committed by the same batch rather than waiting a day. Ignored on
+# hosts where those units are not queued, and harmless for standalone runs.
+After=dotfiles-pull.service
+Before=vault-git-backup.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/git/dotfiles/tools/lorite/video_note_summary.sh
+Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
+# Not pinned to a client. Unlike the morning briefing (whose git audit is a security
+# review, where a false "no issues" is worse than nothing), this job summarizes a
+# transcript that is right there in the note, so a weaker client degrades the prose
+# rather than hiding a problem. lorite-llm's OpenCode-first default keeps it off the
+# Claude quota, and the usual fallback still applies.
+#
+# Cap per run. Raising it makes one night longer, not more thorough: the pending list is
+# ordered oldest-first and any backlog simply drains over successive nights.
+Environment=LORITE_VIDEO_SUMMARY_LIMIT=5
+# Host-specific overrides (optional; '-' = ok if absent), shared with the briefing so
+# the server's LORITE_VAULT lands here too.
+EnvironmentFile=-%h/.config/lorite/morning-briefing.env
+# Long transcripts, up to 5 notes. Exits in milliseconds on the common nothing-pending
+# night, so this ceiling is only ever reached on a real backlog.
+TimeoutStartSec=45min
+# Failures show in `journalctl --user -u lorite-video-note-summary`

@@ -746,6 +746,9 @@ fi
 # server it runs as the LAST job of the lorite-nightly.target 01:00 batch (single
 # timer, strict After= ordering, tools/home-server/); the standalone 06:00 timer stays
 # a laptop-only fallback and is disabled everywhere by default.
+# lorite-video-note-summary.service rides the same batch (no timer of its own): it fills
+# the AI Summary / Flashcards sections that obsidian-clipper-cli cannot, having no LLM
+# interpreter, and is ordered before vault-git-backup so its notes are committed tonight.
 if systemctl --user show-environment >/dev/null 2>&1; then
 	mkdir -p "$HOME/.config/systemd/user"
 	cp "$DOTFILES_DIR/tools/lorite/lorite-morning-briefing.service" \
@@ -753,6 +756,7 @@ if systemctl --user show-environment >/dev/null 2>&1; then
 		"$DOTFILES_DIR/tools/home-server/lorite-nightly.timer" \
 		"$DOTFILES_DIR/tools/home-server/lorite-nightly.target" \
 		"$DOTFILES_DIR/tools/home-server/vault-git-backup.service" \
+		"$DOTFILES_DIR/tools/lorite/lorite-video-note-summary.service" \
 		"$HOME/.config/systemd/user/"
 	systemctl --user daemon-reload
 	if is_vault_processor; then
