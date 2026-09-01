@@ -141,6 +141,17 @@ Enrichment still happens on the laptop: the server has no `obsidian-clipper-cli`
 `yt-dlp` templates, so the stub travels by Syncthing and the laptop's already-running
 `obsidian-inbox-watcher.timer` turns it into a note.
 
+**What becomes a note is decided by CHANNEL, not by watch time**, because watch time gets
+it wrong both ways: a 3-minute Fireship video is worth keeping and a 40-minute League of
+Legends stream is not. The allow/deny lists live in the vault at
+`ai_chats/queues/Video capture channels.md`, deliberately not in this repo: an edit there
+reaches every host over Syncthing in seconds and can be made from the phone, whereas a
+list here would only reach the home server on the next nightly `dotfiles-pull`.
+
+Nothing is lost by not capturing. Every video already appears as a one-line entry in the
+daily note's `# 🧭 ActivityWatch Day Log`, built from the same data. A channel in neither
+list is reported for triage rather than captured or silently dropped.
+
 **Why ActivityWatch and not the YouTube API.** There is no API option: YouTube deprecated
 the watch-history playlist in 2016 and exposes no OAuth scope for history at all. Google
 Takeout can export history, but only as periodic manual exports and **without watch

@@ -214,22 +214,41 @@ def search_youtube(title, channel):
     return meta.get("id") if want_title and want_title == got_title else None
 
 
-CHANNELS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             "video-capture-channels.json")
+# The allow/deny lists live in the VAULT, not beside this script, so an edit reaches every
+# host over Syncthing within seconds and can be made from the phone. The same list in the
+# dotfiles repo would only reach the home server on the next nightly dotfiles-pull.
+CHANNELS_NOTE = os.path.join(VAULT, "ai_chats", "queues", "Video capture channels.md")
 
 
 def load_channels():
-    """Read the allow/deny lists. A missing file means capture nothing but report all."""
+    """Parse the allow/deny bullet lists out of the vault note.
+
+    Markdown rather than JSON because the user maintains it by hand, often on the phone.
+    Only the two headings matter: any other section (notes, undecided channels) is ignored,
+    so the note stays free to carry prose.
+    """
+    allow, deny, current = set(), set(), None
     try:
-        with open(CHANNELS_FILE, encoding="utf-8") as fh:
-            cfg = json.load(fh)
-    except (OSError, ValueError) as exc:
+        with open(CHANNELS_NOTE, encoding="utf-8") as fh:
+            lines = fh.read().split("\n")
+    except OSError as exc:
         print("warning: %s unreadable (%s), treating every channel as unknown"
-              % (CHANNELS_FILE, exc), file=sys.stderr)
-        cfg = {}
-    return ({norm(c) for c in cfg.get("allow", [])},
-            {norm(c) for c in cfg.get("deny", [])},
-            cfg.get("default_for_unknown", "report"))
+              % (CHANNELS_NOTE, exc), file=sys.stderr)
+        return allow, deny, "report"
+    for line in lines:
+        if line.startswith("#"):
+            head = norm(line.lstrip("#"))
+            current = allow if head.startswith("allow") else deny if head.startswith("deny") else None
+            continue
+        if current is None or not line.lstrip().startswith("- "):
+            continue
+        # "Channel (12.3 min) - example title" in the undecided section would be noise, but
+        # that section is not one of the two headings, so only the bare name arrives here.
+        name = line.lstrip()[2:].split(" - ")[0].split(" (")[0].strip()
+        name = re.sub(r"^\[\[|\]\]$", "", name).strip()
+        if name:
+            current.add(norm(name))
+    return allow, deny, "report"
 
 
 _CHANNEL_CACHE = {}
