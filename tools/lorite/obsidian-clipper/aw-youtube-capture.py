@@ -214,6 +214,50 @@ def search_youtube(title, channel):
     return meta.get("id") if want_title and want_title == got_title else None
 
 
+CHANNELS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "video-capture-channels.json")
+
+
+def load_channels():
+    """Read the allow/deny lists. A missing file means capture nothing but report all."""
+    try:
+        with open(CHANNELS_FILE, encoding="utf-8") as fh:
+            cfg = json.load(fh)
+    except (OSError, ValueError) as exc:
+        print("warning: %s unreadable (%s), treating every channel as unknown"
+              % (CHANNELS_FILE, exc), file=sys.stderr)
+        cfg = {}
+    return ({norm(c) for c in cfg.get("allow", [])},
+            {norm(c) for c in cfg.get("deny", [])},
+            cfg.get("default_for_unknown", "report"))
+
+
+_CHANNEL_CACHE = {}
+
+
+def channel_for_id(vid):
+    """Channel name for a video id, via yt-dlp. Cached; empty string when unavailable.
+
+    The laptop's `currently-playing` bucket carries no channel at all, so laptop viewing
+    would otherwise always land in the unknown bucket and never be capturable. The URL is
+    already known by then, so one metadata lookup recovers what the gate needs.
+    """
+    if vid in _CHANNEL_CACHE:
+        return _CHANNEL_CACHE[vid]
+    ch = ""
+    try:
+        out = subprocess.run(
+            ["yt-dlp", "--skip-download", "--dump-json", "--no-warnings",
+             "https://www.youtube.com/watch?v=" + vid],
+            capture_output=True, text=True, timeout=90)
+        if out.returncode == 0 and out.stdout.strip():
+            ch = json.loads(out.stdout.splitlines()[0]).get("channel") or ""
+    except (OSError, subprocess.SubprocessError, ValueError):
+        pass
+    _CHANNEL_CACHE[vid] = ch
+    return ch
+
+
 def known_ids():
     ids = set()
     if os.path.isdir(VIDEO_DIR):
@@ -253,8 +297,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--days", type=float, default=2.0, help="look-back window (default: 2)")
-    ap.add_argument("--min-minutes", type=float, default=5.0,
-                    help="minimum playback to qualify (default: 5)")
+    ap.add_argument("--min-minutes", type=float, default=2.0,
+                    help="floor to drop accidental plays (default: 2). The channel\n                          lists do the real filtering, since a 3-minute Fireship video\n                          deserves a note and a 40-minute stream does not")
     ap.add_argument("--limit", type=int, default=10,
                     help="max stubs to write per run (default: 10)")
     ap.add_argument("--no-search", action="store_true",
@@ -278,9 +322,28 @@ def main():
     print("%d distinct video(s) played in the last %g day(s); %d over %g min."
           % (len(plays), args.days, len(over), args.min_minutes))
 
+    allow, deny, default_unknown = load_channels()
     fresh, unresolved, dupes = [], [], 0
+    denied, unknown = [], {}
     for key, rec in over:
+        # Gate on the channel before resolving, so a denied video (always from the phone,
+        # which does report a channel) never costs a lookup. Laptop playback reports no
+        # channel, so for those the URL is resolved first and the channel recovered from it.
         vid = index.get(key)
+        if not rec["channel"] and vid and not args.no_search:
+            rec["channel"] = channel_for_id(vid)
+        ch = norm(rec["channel"])
+        if ch and ch in deny:
+            denied.append(rec)
+            continue
+        if not ch or ch not in allow:
+            label = rec["channel"] or "(no channel reported)"
+            slot = unknown.setdefault(label, {"seconds": 0.0, "titles": []})
+            slot["seconds"] += rec["seconds"]
+            if len(slot["titles"]) < 2:
+                slot["titles"].append(rec["title"])
+            if default_unknown != "capture":
+                continue
         how = "web-bucket"
         if not vid and not args.no_search:
             vid = search_youtube(rec["title"], rec["channel"])
@@ -297,8 +360,15 @@ def main():
         if len(fresh) >= args.limit:
             break
 
-    print("  %d already captured, %d could not be resolved to a URL, %d to write."
-          % (dupes, len(unresolved), len(fresh)))
+    print("  %d on denied channels (already in the Day Log, no note), %d already captured, "
+          "%d unresolvable, %d to write."
+          % (len(denied), dupes, len(unresolved), len(fresh)))
+    if unknown:
+        print("\n  new channels seen, neither allowed nor denied. Add each to the \"allow\" or")
+        print("  \"deny\" list in video-capture-channels.json:")
+        for ch, d in sorted(unknown.items(), key=lambda kv: -kv[1]["seconds"]):
+            print("     %6.1f min  %-28s e.g. %s" % (d["seconds"] / 60, ch[:28], d["titles"][0][:44]))
+        print()
     for rec in unresolved:
         print("     unresolved: %5.1f min  %s%s"
               % (rec["seconds"] / 60, rec["title"][:60],

@@ -741,6 +741,31 @@ else
 	print_warning "No systemd user session — skipped vault-git-track.timer"
 fi
 
+# yt-dlp: needed by the capture pipeline on every host that runs it.
+#
+#   - youtube-enrich.py uses it to fill the frontmatter and transcript the clipper CLI
+#     cannot see (YouTube's JSON-LD no longer carries title/thumbnail/uploadDate).
+#   - aw-youtube-capture.py uses it to resolve a phone-watched video to a URL, since the
+#     Android media watcher reports only a title and a channel, and to recover the channel
+#     for laptop playback, which reports neither.
+#
+# Installed as the upstream single-file binary into ~/.local/bin rather than via apt or
+# pip: it needs no root, and yt-dlp breaks whenever YouTube changes, so tracking upstream
+# releases matters more here than for most tools. Re-run with --force-update to refresh.
+if ! command -v yt-dlp >/dev/null 2>&1; then
+	mkdir -p "$HOME/.local/bin"
+	if curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+		-o "$HOME/.local/bin/yt-dlp"; then
+		chmod +x "$HOME/.local/bin/yt-dlp"
+		print_success "Installed yt-dlp -> ~/.local/bin ($("$HOME/.local/bin/yt-dlp" --version 2>/dev/null))"
+	else
+		rm -f "$HOME/.local/bin/yt-dlp"
+		print_warning "Could not download yt-dlp — the video capture pipeline will not resolve URLs"
+	fi
+else
+	print_success "yt-dlp already present ($(yt-dlp --version 2>/dev/null))"
+fi
+
 # Morning briefing: headless Claude Code run of the lorite-morning-briefing skill
 # (daily-note LLM summaries + vault git audit + ai_brain briefing note). On the home
 # server it runs as the LAST job of the lorite-nightly.target 01:00 batch (single
