@@ -1,0 +1,24 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/obsidian-clipper/aw-youtube-capture.service
+# Installed to ~/.config/systemd/user/ by install.sh. No paired .timer on purpose: it is
+# pulled in by lorite-nightly.target, the server's single 01:00 batch.
+[Unit]
+Description=Capture substantially-watched YouTube videos from ActivityWatch into the Obsidian inbox
+# The home server is the only host that sees the PHONE's buckets as well as the laptop's,
+# and most watching happens on the phone, so discovery belongs here rather than on the
+# laptop. Ordering only, inside lorite-nightly.target: after the dotfiles pull so the
+# script and the channel lists are current, and before vault-git-backup so any stub and
+# any note it produces are committed by the same batch.
+After=dotfiles-pull.service
+Before=vault-git-backup.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/git/dotfiles/tools/lorite/obsidian-clipper/aw-youtube-capture.py
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Host-specific overrides (optional; '-' = ok if absent), shared with the briefing so the
+# server's LORITE_VAULT lands here too.
+EnvironmentFile=-%h/.config/lorite/morning-briefing.env
+# Phone-only videos each need a yt-dlp lookup to resolve a title to a URL, so a backlog
+# night is network-bound rather than quick. A normal night resolves nothing new.
+TimeoutStartSec=30min
+# Failures show in `journalctl --user -u aw-youtube-capture`

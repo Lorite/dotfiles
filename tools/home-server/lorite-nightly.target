@@ -1,8 +1,8 @@
 # Canonical copy: ~/git/dotfiles/tools/home-server/lorite-nightly.target
 # The server's nightly batch: one 01:00 activation (lorite-nightly.timer) pulls in all
-# seven jobs, and After= lines inside the services run them in strict sequence with no
+# eight jobs, and After= lines inside the services run them in strict sequence with no
 # gaps and no overlap: ha-to-aw -> aw-daily-export -> work-blocks-to-stt ->
-# dotfiles-pull -> lorite-video-note-summary -> vault-git-backup
+# dotfiles-pull -> aw-youtube-capture -> lorite-video-note-summary -> vault-git-backup
 # -> morning briefing. vault-git-backup is ordered before the briefing so the briefing's
 # git audit reads commits that already exist. It was added 2026-08-12 to replace the
 # obsidian-git plugin, which used to commit the vault as a side effect of the hourly
@@ -17,5 +17,5 @@
 # night's timer activation re-runs the whole batch.
 [Unit]
 Description=Nightly server batch: HA import, AW export, dotfiles pull, video-note summaries, vault git backup, morning briefing
-Wants=ha-to-aw.service aw-daily-export.service work-blocks-to-stt.service dotfiles-pull.service lorite-video-note-summary.service vault-git-backup.service lorite-morning-briefing.service
+Wants=ha-to-aw.service aw-daily-export.service work-blocks-to-stt.service dotfiles-pull.service aw-youtube-capture.service lorite-video-note-summary.service vault-git-backup.service lorite-morning-briefing.service
 StopWhenUnneeded=true

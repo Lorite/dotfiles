@@ -782,6 +782,7 @@ if systemctl --user show-environment >/dev/null 2>&1; then
 		"$DOTFILES_DIR/tools/home-server/lorite-nightly.target" \
 		"$DOTFILES_DIR/tools/home-server/vault-git-backup.service" \
 		"$DOTFILES_DIR/tools/lorite/lorite-video-note-summary.service" \
+		"$DOTFILES_DIR/tools/lorite/obsidian-clipper/aw-youtube-capture.service" \
 		"$HOME/.config/systemd/user/"
 	systemctl --user daemon-reload
 	if is_vault_processor; then
