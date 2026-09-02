@@ -778,14 +778,17 @@ if systemctl --user show-environment >/dev/null 2>&1; then
 	mkdir -p "$HOME/.config/systemd/user"
 	cp "$DOTFILES_DIR/tools/lorite/obsidian-clipper/obsidian-inbox-watcher.service" \
 		"$DOTFILES_DIR/tools/lorite/obsidian-clipper/obsidian-inbox-watcher.timer" \
+		"$DOTFILES_DIR/tools/lorite/obsidian-clipper/obsidian-inbox-watcher.path" \
 		"$HOME/.config/systemd/user/"
 	systemctl --user daemon-reload
+	# The .path unit is the real trigger (inotify, sub-second); the .timer is only an
+	# hourly backstop for stubs that landed while the session was down.
 	if is_vault_processor; then
-		systemctl --user enable --now obsidian-inbox-watcher.timer
-		print_success "Enabled obsidian-inbox-watcher.timer (enrichment runs here, every 2 min)"
+		systemctl --user enable --now obsidian-inbox-watcher.path obsidian-inbox-watcher.timer
+		print_success "Enabled obsidian-inbox-watcher.path + hourly backstop timer (enrichment runs here)"
 	else
-		systemctl --user disable --now obsidian-inbox-watcher.timer 2>/dev/null || true
-		print_success "obsidian-inbox-watcher.timer disabled here (enrichment runs on the home server)"
+		systemctl --user disable --now obsidian-inbox-watcher.path obsidian-inbox-watcher.timer 2>/dev/null || true
+		print_success "obsidian-inbox-watcher disabled here (enrichment runs on the home server)"
 	fi
 else
 	print_warning "No systemd user session — skipped obsidian-inbox-watcher.timer"

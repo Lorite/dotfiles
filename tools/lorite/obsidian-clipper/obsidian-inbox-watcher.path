@@ -1,0 +1,24 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/obsidian-clipper/obsidian-inbox-watcher.path
+# Installed to ~/.config/systemd/user/ by install.sh, alongside the .timer.
+#
+# Why a .path unit rather than only a timer: the inbox is EVENT-driven, not periodic. A
+# stub appears when you share a URL from the phone or when the nightly capture writes one,
+# which is rare and unpredictable. Polling every 2 minutes meant ~720 runs a day to catch
+# an event that had happened 5 times in total since July. inotify costs nothing while idle
+# and fires in under a second, so this is both cheaper AND faster than the poll it replaces.
+#
+# Syncthing writes a synced file as temp-plus-rename, which raises IN_MOVED_TO on the
+# directory, so a stub arriving from the phone triggers this exactly as a local write does.
+#
+# PathExistsGlob re-checks after the service finishes, which is safe here because
+# inbox-watcher.py always MOVES a stub out of the watched directory: to processed/ on
+# success, to failed/ with a .reason on error. Nothing that stays behind can retrigger.
+[Unit]
+Description=Watch the Obsidian capture inbox for new URL stubs
+
+[Path]
+PathExistsGlob=%h/git/lorite-obsidian-notes/ai_chats/inbox/capture-*
+Unit=obsidian-inbox-watcher.service
+
+[Install]
+WantedBy=paths.target

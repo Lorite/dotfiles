@@ -1,9 +1,21 @@
+# Canonical copy: ~/git/dotfiles/tools/lorite/obsidian-clipper/obsidian-inbox-watcher.timer
+# Installed to ~/.config/systemd/user/ by install.sh, alongside the .path unit.
+#
+# SAFETY NET ONLY. The .path unit is the real trigger and fires within a second of a stub
+# appearing; this exists solely to catch the cases inotify cannot see: a stub that landed
+# while the user session was down, or a Syncthing write that arrived without an inotify
+# event reaching us.
+#
+# It used to be the primary trigger at every 2 minutes, which was ~720 runs a day to catch
+# an event that had occurred 5 times since July. Hourly is plenty for a backstop, and
+# Persistent=true means a missed hour runs once at the next start rather than never.
 [Unit]
-Description=Check the Obsidian capture inbox every 2 minutes
+Description=Hourly backstop for the Obsidian capture inbox (the .path unit is the real trigger)
 
 [Timer]
-OnBootSec=2min
-OnUnitActiveSec=2min
+OnBootSec=5min
+OnUnitActiveSec=1h
+Persistent=true
 
 [Install]
 WantedBy=timers.target
