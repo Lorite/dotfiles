@@ -766,6 +766,31 @@ else
 	print_success "yt-dlp already present ($(yt-dlp --version 2>/dev/null))"
 fi
 
+# Capture inbox watcher: turns URL stubs dropped in <vault>/ai_chats/inbox/ into full
+# notes (youtube-enrich.py for YouTube, obsidian-clipper-cli otherwise).
+#
+# Runs on the HOME SERVER ONLY, deliberately. Both hosts are capable, but two watchers
+# would race over the same stub file, and the server is always on, so a capture made from
+# the phone no longer waits for the laptop to be opened. The laptop's copy is disabled
+# here rather than left dormant, so a machine that used to run it stops when install.sh
+# next runs there.
+if systemctl --user show-environment >/dev/null 2>&1; then
+	mkdir -p "$HOME/.config/systemd/user"
+	cp "$DOTFILES_DIR/tools/lorite/obsidian-clipper/obsidian-inbox-watcher.service" \
+		"$DOTFILES_DIR/tools/lorite/obsidian-clipper/obsidian-inbox-watcher.timer" \
+		"$HOME/.config/systemd/user/"
+	systemctl --user daemon-reload
+	if is_vault_processor; then
+		systemctl --user enable --now obsidian-inbox-watcher.timer
+		print_success "Enabled obsidian-inbox-watcher.timer (enrichment runs here, every 2 min)"
+	else
+		systemctl --user disable --now obsidian-inbox-watcher.timer 2>/dev/null || true
+		print_success "obsidian-inbox-watcher.timer disabled here (enrichment runs on the home server)"
+	fi
+else
+	print_warning "No systemd user session — skipped obsidian-inbox-watcher.timer"
+fi
+
 # Morning briefing: headless Claude Code run of the lorite-morning-briefing skill
 # (daily-note LLM summaries + vault git audit + ai_brain briefing note). On the home
 # server it runs as the LAST job of the lorite-nightly.target 01:00 batch (single
