@@ -30,3 +30,8 @@ Terminal=false
 StartupWMClass=com.anthropic.Claude-Personal
 SingleMainWindow=true
 Categories=Utility;Development;
+# Declared so the entry can OWN the claude:// scheme during sign-in. It is not the default
+# handler: ~/.config/mimeapps.list decides that, and tools/lorite/claude-url-scheme.sh flips
+# it. The OAuth callback arrives as a claude:// deep link, and whichever entry is default
+# receives it, so the personal instance can only complete a login while it holds the scheme.
+MimeType=x-scheme-handler/claude;

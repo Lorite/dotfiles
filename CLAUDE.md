@@ -31,6 +31,8 @@ Running **two desktop apps** at once needs two separate things split, and one ob
 
 The personal launcher (`.local/share/applications/com.anthropic.Claude-Personal.desktop`, installed by `install.sh` with `@HOME@` substituted, because `.desktop` `Exec` has no field code for the home directory) sets all three plus `COWORK_VM_BACKEND=host`. Do not kill and immediately relaunch an instance: the previous process holds `SingletonLock` for a moment and the new one quits.
 
+**Signing in to the second instance needs the `claude://` scheme flipped.** The OAuth callback arrives as a `claude://` deep link, and `xdg-open` routes that scheme to exactly one `.desktop` entry (`x-scheme-handler/claude` in `~/.config/mimeapps.list`). Whichever entry is default receives it, so with the default pointing at the ITU entry the callback just raises the ITU window and the personal instance never gets its token. There is no per-instance routing and no manual code-paste fallback. Use `tools/lorite/claude-url-scheme.sh personal`, sign in, then `... itu` to hand it back. Only needed at sign-in and re-auth, since tokens persist per profile.
+
 **Claude-only user settings** live in `.claude/settings.json` (tracked here, **symlinked** verbatim → `~/.claude/settings.json` by `install.sh`; not synced to OpenCode/Copilot, not generated). Edit the repo copy, not the symlink. Keep it secret-free — it's plain-text symlinked.
 
 Four operative rules about sandboxing and subagents (the forensics behind each, and the full frontmatter-normalization mapping, are in the **`dotfiles-sandbox-and-spawning`** skill — read it before changing any `sandbox.*` key or the `install.sh` sync path):
