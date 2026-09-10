@@ -1,0 +1,32 @@
+[Desktop Entry]
+# Second Claude Desktop instance, for the PERSONAL account (Obsidian, self-hosting,
+# dotfiles). The DEFAULT instance (com.anthropic.Claude.desktop) stays on the ITU
+# account for PhD work, so it keeps ~/.claude and the whole lorite-* pipeline.
+#
+# Two separate things have to be split for this to be a real second account:
+#   --user-data-dir     the Electron profile -> which account the APP (chat) uses.
+#                       Must be Chromium's own switch: it is parsed before any app
+#                       JS runs, so requestSingleInstanceLock() lands in the new
+#                       profile. CLAUDE_USER_DATA_DIR does NOT work here — the lock
+#                       is taken against ~/.config/Claude first and the app quits.
+#   CLAUDE_CONFIG_DIR   the Claude Code config home -> which account the CODE TAB
+#                       uses, plus its own credentials, MCP servers and projects.
+#                       Without it both instances share ~/.claude.
+#
+# COWORK_VM_BACKEND=host matches the default instance's override: without it spawned
+# subagents get a stale-rootfs microVM. See the dotfiles-sandbox-and-spawning skill.
+#
+# Installed by install.sh. StartupWMClass differs from the default entry so docks
+# keep the two windows under separate icons.
+Name=Claude (Personal)
+Comment=Claude Desktop, personal account (separate profile)
+GenericName=AI Assistant
+Keywords=AI;Chat;Assistant;Claude;Code;LLM;Personal;
+Exec=env COWORK_VM_BACKEND=host CLAUDE_CONFIG_DIR=@HOME@/.claude-personal claude-desktop --user-data-dir=@HOME@/.config/Claude-Personal %U
+Icon=claude-desktop
+Type=Application
+StartupNotify=true
+Terminal=false
+StartupWMClass=com.anthropic.Claude-Personal
+SingleMainWindow=true
+Categories=Utility;Development;

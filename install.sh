@@ -315,6 +315,39 @@ normalize_frontmatter_for_claude() {
     ' "$source_file" >"$target_file"
 }
 
+# Claude Code config homes to sync, one per signed-in account.
+# ~/.claude is the default (CLAUDE_CONFIG_DIR unset); every additional account gets its own
+# ~/.claude-<name>, selected per desktop launcher or shell via CLAUDE_CONFIG_DIR. That dir holds
+# the account's credentials, MCP servers, projects and history, so each one needs its own copy of
+# the settings, global instructions, agents and skills. Adding an account is: create the dir, then
+# re-run this script. Only directories match, so ~/.claude.json is never picked up.
+claude_config_dirs() {
+	local dir
+	printf '%s\n' "$HOME/.claude"
+	for dir in "$HOME"/.claude-*; do
+		[ -d "$dir" ] || continue
+		printf '%s\n' "$dir"
+	done
+}
+
+# Register an MCP server at user scope in every Claude config home (see claude_config_dirs).
+# MCP registrations live in each config home's own .claude.json, so this has to run per account.
+register_claude_mcp() {
+	local name=$1
+	shift
+	local dir
+	while read -r dir; do
+		if CLAUDE_CONFIG_DIR="$dir" claude mcp list 2>/dev/null | grep -q "^${name}:"; then
+			print_success "$name already registered with Claude Code ($(basename "$dir"))"
+		elif CLAUDE_CONFIG_DIR="$dir" claude mcp add --scope user "$name" -- "$@" 2>/dev/null; then
+			print_success "$name registered with Claude Code (user scope, $(basename "$dir"))"
+		else
+			print_warning "Failed to register $name in $dir. Run manually:"
+			print_warning "  CLAUDE_CONFIG_DIR=$dir claude mcp add --scope user $name -- $*"
+		fi
+	done < <(claude_config_dirs)
+}
+
 # Sync Copilot customizations to Claude paths using Claude CLI format.
 sync_copilot_to_claude() {
 	local source_dir=$1
@@ -634,15 +667,39 @@ mkdir -p "$HOME/.copilot"
 create_symlink_path "$DOTFILES_DIR/.copilot/agents" "$HOME/.copilot/agents"
 create_symlink_path "$DOTFILES_DIR/.copilot/skills" "$HOME/.copilot/skills"
 
-# Claude uses transformed copies from .copilot source.
-mkdir -p "$HOME/.claude"
-# Claude user settings (sandbox allowlist etc.) — tracked here, symlinked (Claude-only, not synced to Copilot/OpenCode).
-create_symlink "$DOTFILES_DIR/.claude/settings.json" "$HOME/.claude/settings.json"
-# Global instructions (the .copilot/CLAUDE.md source-of-truth) — Claude Code's user-level memory,
-# loaded in every session; mirrors the OpenCode AGENTS.md link below.
-create_symlink "$DOTFILES_DIR/.copilot/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
-sync_copilot_to_claude "$DOTFILES_DIR/.copilot/agents" "$HOME/.claude/agents" "Copilot agents"
-sync_copilot_to_claude "$DOTFILES_DIR/.copilot/skills" "$HOME/.claude/skills" "Copilot skills"
+# Personal account's config home. Created before the sync loop below so claude_config_dirs
+# discovers it on a first run. ~/.claude stays the ITU/PhD account (CLAUDE_CONFIG_DIR unset).
+mkdir -p -m 700 "$HOME/.claude-personal"
+
+# Claude uses transformed copies from .copilot source, in every config home (one per account),
+# so both the ITU/PhD and personal accounts get the same settings, instructions, agents and skills.
+while read -r claude_dir; do
+	mkdir -p "$claude_dir"
+	# Claude user settings (sandbox allowlist etc.): tracked here, symlinked.
+	# Claude-only, not synced to Copilot/OpenCode.
+	create_symlink "$DOTFILES_DIR/.claude/settings.json" "$claude_dir/settings.json"
+	# Global instructions (the .copilot/CLAUDE.md source-of-truth): Claude Code's user-level
+	# memory, loaded in every session. Mirrors the OpenCode AGENTS.md link below.
+	create_symlink "$DOTFILES_DIR/.copilot/CLAUDE.md" "$claude_dir/CLAUDE.md"
+	sync_copilot_to_claude "$DOTFILES_DIR/.copilot/agents" "$claude_dir/agents" "Copilot agents"
+	sync_copilot_to_claude "$DOTFILES_DIR/.copilot/skills" "$claude_dir/skills" "Copilot skills"
+done < <(claude_config_dirs)
+
+# Second Claude Desktop launcher, for the personal account. Two things must be split for this to be
+# a real second instance: --user-data-dir (Chromium's own switch, parsed before app JS, so the
+# single-instance lock lands in the new profile) and CLAUDE_CONFIG_DIR (the Code tab's account).
+# @HOME@ is substituted here because .desktop Exec has no field code for the home directory
+# (%h is not in the spec) and the home server's user is not `lori`.
+print_info "Installing Claude (Personal) desktop launcher..."
+mkdir -p -m 700 "$HOME/.config/Claude-Personal"
+mkdir -p "$HOME/.local/share/applications"
+sed "s|@HOME@|$HOME|g" \
+	"$DOTFILES_DIR/.local/share/applications/com.anthropic.Claude-Personal.desktop" \
+	>"$HOME/.local/share/applications/com.anthropic.Claude-Personal.desktop"
+print_success "Installed Claude (Personal) launcher"
+if command -v update-desktop-database &>/dev/null; then
+	update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+fi
 
 # OpenCode uses transformed copies from .copilot source.
 mkdir -p "$HOME/.config/opencode"
@@ -951,16 +1008,10 @@ else
 		print_success "mcp-libre Python venv already exists"
 	fi
 
-	# Register the FastMCP bridge with Claude Code at user scope
+	# Register the FastMCP bridge with Claude Code at user scope, in every config home
 	if command -v claude &>/dev/null; then
-		if claude mcp list 2>/dev/null | grep -q "^libreoffice:"; then
-			print_success "mcp-libre already registered with Claude Code"
-		elif claude mcp add --scope user libreoffice -- \
-			"$MCP_LIBRE_DIR/.venv/bin/fastmcp" run "$MCP_LIBRE_DIR/libreoffice_mcp_server.py" 2>/dev/null; then
-			print_success "mcp-libre registered with Claude Code (user scope)"
-		else
-			print_warning "Failed to register mcp-libre with Claude Code — run manually: claude mcp add --scope user libreoffice -- $MCP_LIBRE_DIR/.venv/bin/fastmcp run $MCP_LIBRE_DIR/libreoffice_mcp_server.py"
-		fi
+		register_claude_mcp libreoffice \
+			"$MCP_LIBRE_DIR/.venv/bin/fastmcp" run "$MCP_LIBRE_DIR/libreoffice_mcp_server.py"
 	else
 		print_warning "claude CLI not found — skipping Claude Code MCP registration (re-run install.sh after installing Claude Code)"
 	fi
@@ -986,13 +1037,7 @@ else
 	chmod +x "$ZOTERO_MCP_LAUNCHER" 2>/dev/null || true
 	# Register with Claude Code at user scope (hybrid mode via the launcher's env)
 	if command -v claude &>/dev/null && command -v zotero-mcp &>/dev/null; then
-		if claude mcp list 2>/dev/null | grep -q "^zotero:"; then
-			print_success "zotero-mcp already registered with Claude Code"
-		elif claude mcp add --scope user zotero -- "$ZOTERO_MCP_LAUNCHER" 2>/dev/null; then
-			print_success "zotero-mcp registered with Claude Code (user scope)"
-		else
-			print_warning "Failed to register zotero-mcp — run manually: claude mcp add --scope user zotero -- $ZOTERO_MCP_LAUNCHER"
-		fi
+		register_claude_mcp zotero "$ZOTERO_MCP_LAUNCHER"
 	fi
 	# One-time: requires a write-enabled Zotero Web API key at ~/.config/paper-scout/zotero-api-key
 	# and the semantic-search DB built once with: zotero-mcp update-db  (status: zotero-mcp db-status)

@@ -14,6 +14,23 @@ Author everything **once** under `.copilot/`. `install.sh` propagates it to each
 
 **Never hand-edit `~/.claude/agents/`, `~/.config/opencode/...`, or `~/.copilot/...`** — they are generated. Edit `.copilot/`, then run `./install.sh` to re-sync.
 
+### Two Claude accounts, two config homes (2026-09-10)
+
+Two accounts are signed in on this laptop at once, each with its own Claude Code config home. The `~/.claude` targets in the table above are really **every** config home: `install.sh` discovers them with `claude_config_dirs()` (`~/.claude` plus any `~/.claude-*` directory) and syncs settings, `CLAUDE.md`, agents and skills into each, so both accounts behave identically. `register_claude_mcp()` does the same for MCP servers, which live in each config home's own `.claude.json`. Adding a third account is: create the dir, re-run `./install.sh`.
+
+| Account | Config home (Code) | Electron profile (app) | Used for |
+|---------|--------------------|------------------------|----------|
+| ITU (`lori@itu.dk`) | `~/.claude` (the default, `CLAUDE_CONFIG_DIR` unset) | `~/.config/Claude` | PhD work, the whole `lorite-*` pipeline |
+| Personal (`a.lorite.mora@gmail.com`) | `~/.claude-personal` | `~/.config/Claude-Personal` | Obsidian, self-hosting, dotfiles |
+
+Running **two desktop apps** at once needs two separate things split, and one obvious-looking approach does not work:
+
+- **`--user-data-dir`** (Chromium's own switch) sets the Electron profile, so it decides which account the **app** is signed into. It must be this switch: Chromium parses it before any app JS runs, so `requestSingleInstanceLock()` lands in the new profile.
+- **`CLAUDE_USER_DATA_DIR`** exists in `app.asar` but is **useless for a second instance**: the lock is taken against `~/.config/Claude` *before* the env var is applied, so the second process quits silently, leaving an empty dir and only a benign NSS warning in the log. It is for relocating a single instance's profile. (Desktop Settings exposes the same relocation for `CLAUDE_CONFIG_DIR`.)
+- **`CLAUDE_CONFIG_DIR`** sets the Claude Code config home, so it decides which account the **Code tab** uses. Without it both instances share `~/.claude` and the personal app would run Code as the ITU account.
+
+The personal launcher (`.local/share/applications/com.anthropic.Claude-Personal.desktop`, installed by `install.sh` with `@HOME@` substituted, because `.desktop` `Exec` has no field code for the home directory) sets all three plus `COWORK_VM_BACKEND=host`. Do not kill and immediately relaunch an instance: the previous process holds `SingletonLock` for a moment and the new one quits.
+
 **Claude-only user settings** live in `.claude/settings.json` (tracked here, **symlinked** verbatim → `~/.claude/settings.json` by `install.sh`; not synced to OpenCode/Copilot, not generated). Edit the repo copy, not the symlink. Keep it secret-free — it's plain-text symlinked.
 
 Four operative rules about sandboxing and subagents (the forensics behind each, and the full frontmatter-normalization mapping, are in the **`dotfiles-sandbox-and-spawning`** skill — read it before changing any `sandbox.*` key or the `install.sh` sync path):
