@@ -35,7 +35,14 @@ The personal launcher (`.local/share/applications/com.anthropic.Claude-Personal.
 
 Flipping the default handler does **not** reliably fix this: `"desktopName": "com.anthropic.Claude.desktop"` is baked into the app, so *every* instance re-registers that one entry on startup via `setAsDefaultProtocolClient`, and the personal instance clobbers the flip itself. Observed live: a flip to the personal entry was reverted within two minutes.
 
-What works is bypassing `xdg-open`. Launching `claude-desktop` with the same `--user-data-dir` as a running instance hands the URL to **that** instance through its own single-instance lock: `tools/lorite/claude-url-scheme.sh open-personal '<claude://...>'`. Copy the callback link out of the browser rather than letting it open. Only needed at sign-in and re-auth, since tokens persist per profile.
+Two things fix it, and the simple one is enough in practice:
+
+1. **The browser's app chooser (what actually worked, verified 2026-09-10).** The personal entry declares `MimeType=x-scheme-handler/claude;`, so the browser offers *both* "Claude" and "Claude (Personal)" when the callback fires and you pick the right one. This is why that `MimeType` line matters: without it the personal entry is not even a candidate.
+2. **Direct dispatch, if no chooser appears** (a browser set to always-open, or a headless flow). Launching `claude-desktop` with the same `--user-data-dir` as a running instance hands the URL to **that** instance through its own single-instance lock, bypassing `xdg-open`: `tools/lorite/claude-url-scheme.sh open-personal '<claude://...>'`.
+
+Only needed at sign-in and re-auth, since tokens persist per profile.
+
+**The app login and the Code-tab login are separate.** Signing the desktop app in does not authenticate its Code tab: that reads `CLAUDE_CONFIG_DIR`, so the personal instance's Code tab needs its own `CLAUDE_CONFIG_DIR=~/.claude-personal claude auth login`. Check either side with `claude auth status`.
 
 **Claude-only user settings** live in `.claude/settings.json` (tracked here, **symlinked** verbatim → `~/.claude/settings.json` by `install.sh`; not synced to OpenCode/Copilot, not generated). Edit the repo copy, not the symlink. Keep it secret-free — it's plain-text symlinked.
 
