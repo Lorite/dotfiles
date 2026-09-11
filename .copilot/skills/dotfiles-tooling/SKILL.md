@@ -18,6 +18,13 @@ Efficient read patterns: `obsidian outline path="..."` for structure before a fu
 
 Used to turn GitHub issues into `tasks/` notes.
 
+**Knap (since 2026-09-11).** Obsidian published [Knap](https://knap.md/), the template language behind Web Clipper and Importer, as a standalone MIT package, and upstream `obsidian-clipper` moved its whole templating layer onto it in `a9d33ce`. Two consequences for this repo, both in `tools/lorite/obsidian-clipper/`:
+
+- The pin moved to `a9d33ce` and **patch 0003 is gone**, because the file it patched was deleted. The escaped quotes the extension writes are now repaired in the **templates** by `knap-lint.mjs`, parser-gated so a rewrite is only kept when Knap accepts it. `export-templates.py` runs it on every export, since editing a template in the extension re-introduces the escaping. Knap rejects 16 of those expressions outright and **silently mangles far more**, which is the part that matters: `date:` timestamps come out wrapped in literal quotes, selectors are queried with backslashes still in them, and a prompt written `{{\"...\"}}` renders its instructions into the note.
+- `render-template.mjs` renders a Web Clipper template from data you already hold, with no page to clip, because Knap resolves `{{selector:...}}` from a variables key of that exact name. `gh_to_tasknote.py` uses it instead of its old hand-written copy of two templates.
+
+Knap is a renderer only. It does no fetching and no article extraction, so it replaces neither the clipper CLI nor `yt-dlp`.
+
 ## Zotero
 
 `/usr/bin/zotero` — reference manager feeding the paper's `references.bib`. Also exposed to `lorite-paper-reader` via the **`zotero-mcp` MCP server** (`54yyyu/zotero-mcp`, PyPI `zotero-mcp-server`; pilot since 2026-06).
