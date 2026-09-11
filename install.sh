@@ -707,25 +707,12 @@ create_symlink "$DOTFILES_DIR/.copilot/CLAUDE.md" "$HOME/.config/opencode/AGENTS
 sync_copilot_to_opencode "$DOTFILES_DIR/.copilot/agents" "$HOME/.config/opencode/agents" "Copilot agents"
 sync_copilot_to_opencode "$DOTFILES_DIR/.copilot/skills" "$HOME/.config/opencode/skills" "Copilot skills"
 
-# Zotero -> Obsidian literature-note sync (a vault note for every Zotero item).
-# Canonical unit copies live in tools/paper-reader/; the timer runs the idempotent
-# sync script every 15 min (no-op when Zotero is closed or nothing is missing).
-if systemctl --user show-environment >/dev/null 2>&1; then
-	mkdir -p "$HOME/.config/systemd/user"
-	cp "$DOTFILES_DIR/tools/paper-reader/zotero-obsidian-sync.service" \
-		"$DOTFILES_DIR/tools/paper-reader/zotero-obsidian-sync.timer" \
-		"$HOME/.config/systemd/user/"
-	systemctl --user daemon-reload
-	systemctl --user enable --now zotero-obsidian-sync.timer
-	print_success "Enabled zotero-obsidian-sync.timer (every 15 min)"
-else
-	print_warning "No systemd user session — skipped zotero-obsidian-sync.timer (headless server?)"
-fi
-
-# The home server is the single owner of the Obsidian-DRIVING workflow timers
-# (daily-note + morning-briefing): they run headless there (Xvfb, via the wrapper)
-# so they don't fight the laptop's live app or double-process the same daily note
-# over Syncthing. Detect it by hostname; override with DOTFILES_VAULT_PROCESSOR=1|0.
+# The home server is the single owner of every timer that WRITES to the Syncthing'd vault
+# or polls on its behalf: the Obsidian-driving ones (daily-note + morning-briefing) run
+# headless there (Xvfb, via the wrapper) so they don't fight the laptop's live app, the
+# inbox watcher runs there so two hosts don't race the same stub, and the Zotero sync runs
+# there so both don't write the same literature notes. The rule is one writer per vault.
+# Detect it by hostname; override with DOTFILES_VAULT_PROCESSOR=1|0.
 is_vault_processor() {
 	if [ -n "${DOTFILES_VAULT_PROCESSOR:-}" ]; then
 		[ "$DOTFILES_VAULT_PROCESSOR" = 1 ]
@@ -736,6 +723,34 @@ is_vault_processor() {
 		*) return 1 ;;
 	esac
 }
+
+# Zotero -> Obsidian literature-note sync (a vault note for every Zotero item).
+# Canonical unit copies live in tools/paper-reader/; the timer runs the idempotent
+# sync script every 15 min (no-op when Zotero is closed or nothing is missing).
+#
+# HOME SERVER ONLY since 2026-09-11. It used to be enabled on every machine, so both hosts
+# polled every 15 min and wrote literature notes into the same Syncthing'd vault. The
+# script is idempotent so nothing broke, but it was duplicated work and a write race on
+# the same files. The server wins because it is always on and its Zotero access is the Web
+# API, which needs no desktop app running; the laptop's copy only worked while Zotero was
+# open anyway. Verified before the switch: the server's timer had been completing cleanly
+# every 15 min for hours.
+if systemctl --user show-environment >/dev/null 2>&1; then
+	mkdir -p "$HOME/.config/systemd/user"
+	cp "$DOTFILES_DIR/tools/paper-reader/zotero-obsidian-sync.service" \
+		"$DOTFILES_DIR/tools/paper-reader/zotero-obsidian-sync.timer" \
+		"$HOME/.config/systemd/user/"
+	systemctl --user daemon-reload
+	if is_vault_processor; then
+		systemctl --user enable --now zotero-obsidian-sync.timer
+		print_success "Enabled zotero-obsidian-sync.timer (every 15 min, home server)"
+	else
+		systemctl --user disable --now zotero-obsidian-sync.timer 2>/dev/null || true
+		print_success "zotero-obsidian-sync.timer disabled here (runs on the home server)"
+	fi
+else
+	print_warning "No systemd user session — skipped zotero-obsidian-sync.timer (headless server?)"
+fi
 
 # On-demand headless-Obsidian wrapper: lets pipeline commands drive the Obsidian
 # CLI even with no GUI (Xvfb), used by the daily-note service and runnable by hand
