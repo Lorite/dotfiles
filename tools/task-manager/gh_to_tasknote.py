@@ -3,32 +3,52 @@
 Reproduce the user's two-note "GitHub issue -> Obsidian task" web-clipper pattern, headlessly,
 from clean `gh` data (no browser, no Web Clipper extension needed).
 
-It writes two notes that mirror clipper templates 20 (GitHub Issue) and 08 (TASK - GitHub Issue):
+It writes two notes from the REAL Web Clipper templates, rendered with Knap:
 
-  Note A  media/github/github_issues/GitHub Issue - <owner> - <repo> - <title>.md   (type: github_issue)
-  Note B  tasks/Solve GitHub Issue - <owner> - <repo> - <title>.md                  (type: task)
+  "GitHub Issue"        -> media/github/github_issues/GitHub Issue - <owner> - <repo> - <title>.md
+  "TASK - GitHub Issue" -> tasks/Solve GitHub Issue - <owner> - <repo> - <title>.md
 
-They embed each other exactly as the clipper templates do (A shows the issue body + embeds B's
-journal/outcome; B embeds A's task description). Note B is a TaskNotes task, so mtn / the
-TaskNotes plugin pick it up via its `task` tag and `tasks/` location.
+They embed each other exactly as the templates say, because they ARE the templates. Note B is
+a TaskNotes task, so mtn / the TaskNotes plugin pick it up via its `task` tag and `tasks/`
+location.
 
-Requires `gh` authenticated. Reads nothing secret. Usage:
+This used to hand-maintain a Python copy of both templates' note shape, which then drifted
+from the templates it was copied from. Since Obsidian published Knap (the template engine
+behind Web Clipper) the rendering half can be reused directly, so editing a template in the
+extension now changes this tool's output too. Re-export after editing:
+
+  ~/git/dotfiles/tools/lorite/obsidian-clipper/export-templates.py
+
+The page fields the templates scrape with `{{selector:...}}` are supplied here from the `gh`
+API response instead, under those exact variable names.
+
+Requires `gh` authenticated, node, and the exported templates. Reads nothing secret. Usage:
 
   gh_to_tasknote.py --repo <owner/repo> --issue <N> [options]
     --vault <path>          default: ~/git/lorite-obsidian-notes
     --projects "<wl>||<wl>" '||'-separated wikilinks, e.g. "[[Conference Paper ...]]||[[PhD ...]]"
-    --tags  t1,t2           EXTRA tags beyond the base set (e.g. a project tag)
-    --priority <p>          TaskNotes priority for Note B (default: none)
-    --due YYYY-MM-DD        optional date_due on Note B
-    --scheduled YYYY-MM-DD  optional date_scheduled on Note B
+    --tags  t1,t2           EXTRA tags beyond the template's own
+    --priority <p>          TaskNotes priority for the task note (default: none)
+    --due YYYY-MM-DD        optional date_due on the task note
+    --scheduled YYYY-MM-DD  optional date_scheduled on the task note
     --dry-run               print what would be written, write nothing
 """
 import argparse, json, os, re, subprocess, sys
 from datetime import datetime
 from pathlib import Path
 
-BASE_TASK_TAGS = ["task", "work", "phd_novo_itu", "github", "github_issues"]
-ISSUE_TAGS = ["media", "github", "github_issues"]
+CLIPPER_CONFIG = Path.home() / ".config/obsidian-clipper-cli"
+TEMPLATE_DIR = CLIPPER_CONFIG / "templates"
+PROPERTY_TYPES = CLIPPER_CONFIG / "property-types.json"
+RENDERER = Path.home() / "git/dotfiles/tools/lorite/obsidian-clipper/render-template.mjs"
+
+ISSUE_TEMPLATE = "GitHub Issue"
+TASK_TEMPLATE = "TASK - GitHub Issue"
+
+# The two page fields the templates scrape. Knap looks variables up by their full name, so
+# these keys resolve the template's {{selector:...}} expressions from `gh` data.
+SEL_AUTHOR = 'selector:[data-testid="issue-body-header-author"]'
+SEL_PUBLISHED = "selector:relative-time?datetime"
 
 
 def gh_issue(repo, num):
@@ -41,30 +61,59 @@ def gh_issue(repo, num):
     return json.loads(out.stdout)
 
 
-def safe_name(s):
-    """Filesystem-safe but readable, matching the clipper's safe_name spirit."""
-    s = s.replace(":", " - ").replace("/", "-")
-    s = re.sub(r'[\\*?"<>|]', "", s)          # strip illegal chars
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+def load_template(name):
+    """Find an exported template by its NAME. Filenames carry a list-order prefix that moves
+    whenever templates are reordered in the extension, so they are not a stable handle."""
+    if not TEMPLATE_DIR.is_dir():
+        sys.exit(f"No exported templates at {TEMPLATE_DIR}. Run export-templates.py first.")
+    for path in sorted(TEMPLATE_DIR.glob("*.json")):
+        tpl = json.loads(path.read_text())
+        if tpl.get("name") == name:
+            return tpl
+    sys.exit(f"No template named {name!r} in {TEMPLATE_DIR}")
 
 
-def fmt_local(iso):
-    """ISO 8601 (e.g. 2026-05-04T17:28:00Z) -> 'YYYY-MM-DDTHH:mm' to match existing notes."""
-    try:
-        dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
-        return dt.strftime("%Y-%m-%dT%H:%M")
-    except Exception:
-        return datetime.now().strftime("%Y-%m-%dT%H:%M")
+def property_types():
+    if not PROPERTY_TYPES.is_file():
+        return {}
+    return {e["name"]: e.get("type", "text") for e in json.loads(PROPERTY_TYPES.read_text())}
 
 
-def yaml_list(items, indent="  "):
-    return "".join(f"\n{indent}- {it}" for it in items)
+def render(template, variables, types):
+    if not os.access(RENDERER, os.X_OK):
+        sys.exit(f"Renderer not executable: {RENDERER}")
+    payload = json.dumps({"template": template, "variables": variables, "propertyTypes": types})
+    out = subprocess.run([str(RENDERER)], input=payload, capture_output=True, text=True)
+    if out.returncode != 0:
+        sys.exit(f"render-template.mjs failed: {out.stderr.strip()}")
+    result = json.loads(out.stdout)
+    for err in result.get("errors", []):
+        print(f"WARNING: template error: {err}", file=sys.stderr)
+    return result
 
 
-def yq(s):
-    """YAML-safe double-quoted scalar (values may contain ':', '[', '#', quotes)."""
-    return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"') + '"'
+def set_property(template, name, value, ptype="text", after=None):
+    """Apply a CLI override to the template before rendering, so there is still a single
+    render pass and the frontmatter is generated in exactly one place."""
+    props = template.setdefault("properties", [])
+    for p in props:
+        if p.get("name") == name:
+            p["value"] = value
+            return
+    entry = {"name": name, "value": value, "type": ptype}
+    if after:
+        for i, p in enumerate(props):
+            if p.get("name") == after:
+                props.insert(i + 1, entry)
+                return
+    props.append(entry)
+
+
+def append_to_property(template, name, extra):
+    for p in template.get("properties", []):
+        if p.get("name") == name:
+            p["value"] = f"{p['value']}, {extra}" if p.get("value") else extra
+            return
 
 
 def main():
@@ -82,91 +131,65 @@ def main():
 
     owner, repo = a.repo.split("/", 1)
     iss = gh_issue(a.repo, a.issue)
-    title = safe_name(iss["title"])
-    stem = f"{owner} - {repo} - {title}"            # shared suffix for both notes + embeds
-    now = datetime.now().strftime("%Y-%m-%dT%H:%M")
-    created = fmt_local(iss.get("createdAt", ""))
     body = iss.get("body") or "_(no issue description)_"
-    author = (iss.get("author") or {}).get("login", "")
-    desc = re.sub(r"\s+", " ", body).strip()[:150]
 
+    # The templates parse GitHub's own page title ("<title> · Issue #N · <owner>/<repo>") with
+    # split:"·" to recover the repo, owner and issue title, so hand them that exact shape.
+    variables = {
+        "title": f"{iss['title']} · Issue #{iss['number']} · {owner}/{repo}",
+        "url": iss.get("url", ""),
+        "content": body,
+        "description": re.sub(r"\s+", " ", body).strip()[:150],
+        "time": datetime.now().astimezone().isoformat(),
+        SEL_AUTHOR: (iss.get("author") or {}).get("login", ""),
+        SEL_PUBLISHED: iss.get("createdAt", ""),
+    }
+
+    types = property_types()
+    issue_tpl = load_template(ISSUE_TEMPLATE)
+    task_tpl = load_template(TASK_TEMPLATE)
+
+    # CLI overrides. The template carries the defaults; these replace or extend them.
+    set_property(task_tpl, "priority", a.priority)
     projects = [p.strip() for p in a.projects.split("||") if p.strip()]
-    extra_tags = [t.strip() for t in a.tags.split(",") if t.strip()]
-    repo_tag = f"github_repo_{safe_name(repo).replace('-', '_')}"
-    issue_tags = ISSUE_TAGS + [repo_tag]
-    task_tags = BASE_TASK_TAGS + [repo_tag] + extra_tags
-
-    note_a_name = f"GitHub Issue - {stem}"
-    note_b_name = f"Solve GitHub Issue - {stem}"
-
-    # --- Note A: the clipped GitHub issue (type: github_issue) ---
-    a_front = (
-        "---\n"
-        f"created: {now}\n"
-        f"url: {iss.get('url','')}\n"
-        f"title: {yq(title)}\n"
-        f"opened_by: {yq(author)}\n"
-        f"published: {created}\n"
-        f"description: {yq(desc)}\n"
-        f"tags:{yaml_list(issue_tags)}\n"
-        f"github_repository: {repo}\n"
-        f"github_user: {owner}\n"
-        "is_completed: false\n"
-        f"aliases:\n  - {yq(title)}\n"
-        "type: github_issue\n"
-        f"updated: {now}\n"
-        "---\n"
-    )
-    a_body = (
-        f"\n# 🎯 Task Description\n\n{body}\n\n"
-        f"# 📓 Task Notes\n\n![[{note_b_name}#📓 Journal / Work Log]]\n\n"
-        f"# ✅ Outcome & Learnings\n\n![[{note_b_name}#✅ Outcome & Learnings]]\n"
-    )
-
-    # --- Note B: the TaskNotes task (type: task) ---
-    extra_dates = ""
-    if a.due:
-        extra_dates += f"date_due: {a.due}\n"
+    if projects:
+        set_property(task_tpl, "projects", ", ".join(projects), "multitext")
+    # Inserted scheduled-then-due because each lands directly after `projects`, so the
+    # second insert ends up first. This keeps the due/scheduled order the notes already use.
     if a.scheduled:
-        extra_dates += f"date_scheduled: {a.scheduled}\n"
-    b_front = (
-        "---\n"
-        "status: new\n"
-        f"priority: {a.priority}\n"
-        + (f"projects:{yaml_list([yq(p) for p in projects])}\n" if projects else "projects: []\n")
-        + extra_dates
-        + f"date_created: {created}\n"
-        f"date_updated: {now}\n"
-        f"tags:{yaml_list(task_tags)}\n"
-        "type: task\n"
-        f"created: {now}\n"
-        f"updated: {now}\n"
-        "---\n"
-    )
-    today = datetime.now().strftime("%Y-%m-%d")
-    b_body = (
-        f"\n# 🎯 Task Description\n\n![[{note_a_name}#🎯 Task Description]]\n\n"
-        f"# 📓 Journal / Work Log\n\n## [[{today}]]\n\n- TODO\n\n"
-        f"# ✅ Outcome & Learnings\n\n## Outcome\n\n- TODO\n\n## Learnings\n\n- TODO\n\n## Next Steps\n\n- TODO\n"
-    )
+        set_property(task_tpl, "date_scheduled", a.scheduled, "date", after="projects")
+    if a.due:
+        set_property(task_tpl, "date_due", a.due, "date", after="projects")
+    extra_tags = [t.strip() for t in a.tags.split(",") if t.strip()]
+    if extra_tags:
+        append_to_property(task_tpl, "tags", ", ".join(extra_tags))
+
+    issue_note = render(issue_tpl, variables, types)
+    task_note = render(task_tpl, variables, types)
 
     vault = Path(a.vault)
-    path_a = vault / "media/github/github_issues" / f"{note_a_name}.md"
-    path_b = vault / "tasks" / f"{note_b_name}.md"
+    targets = []
+    for note in (issue_note, task_note):
+        path = vault / note["path"] / f"{note['noteName']}.md"
+        targets.append((path, note["frontmatter"] + note["content"]))
 
     if a.dry_run:
-        print(f"[dry-run] would write:\n  {path_a}\n  {path_b}\n")
-        print("--- Note B frontmatter ---\n" + b_front)
+        print("[dry-run] would write:")
+        for path, _ in targets:
+            print(f"  {path}")
+        print()
+        for path, content in targets:
+            print(f"--- {path.name} ---\n{content}")
         return
 
-    for p, content in ((path_a, a_front + a_body), (path_b, b_front + b_body)):
-        if p.exists():
-            print(f"SKIP (exists): {p}")
+    for path, content in targets:
+        if path.exists():
+            print(f"SKIP (exists): {path}")
             continue
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(content)
-        print(f"WROTE: {p}")
-    print(f"\nIssue #{iss['number']} ({iss.get('state','')}) -> task '{note_b_name}'.")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+        print(f"WROTE: {path}")
+    print(f"\nIssue #{iss['number']} ({iss.get('state','')}) -> task '{task_note['noteName']}'.")
 
 
 if __name__ == "__main__":

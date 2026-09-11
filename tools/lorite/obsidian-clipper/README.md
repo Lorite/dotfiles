@@ -79,6 +79,21 @@ On the current templates it repairs 145 expressions and deliberately leaves 18 a
 
 **Verification of the migration.** Old build (`ec27f8b` + three patches, original templates) and new build (`a9d33ce` + two patches, repaired templates) produce **byte-identical notes** for an article URL and a YouTube URL. Without the template repair the same comparison showed the interpreter prompt leaking into `description:` and datetime properties coming out quoted.
 
+## `render-template.mjs` — the templates, without a page to clip
+
+Knap is a library as well as an engine, so a generator that already holds its data can render a Web Clipper template directly instead of keeping a hand-written copy of the note shape. That copy is what drifts: `gh_to_tasknote.py` carried a Python reproduction of templates "GitHub Issue" and "TASK - GitHub Issue" that had to be edited by hand whenever the real templates changed. It now renders those templates.
+
+```bash
+echo '{"template": <template json>, "variables": {...}, "propertyTypes": {...}}' | ./render-template.mjs
+# -> {"noteName": ..., "frontmatter": ..., "content": ..., "properties": [...], "errors": [...]}
+```
+
+Variable names go to Knap verbatim, which is the trick that makes this work off-page: a template's `{{selector:[data-testid="issue-body-header-author"]}}` resolves from a variables key of that exact name, so a caller feeds scraped-looking fields straight from an API response. Unknown variables render empty, the same as a selector that matched nothing.
+
+Frontmatter generation is transcribed from the clipper's own `src/utils/shared.ts` so property types serialise identically, which is why a rendered note is quoted the way the extension quotes it rather than the way the old Python did. Re-check that transcription after a pin bump. The clipper's `dist/api.mjs` would be a better source than a copy, but it currently fails to load: it imports `defuddle/full`, which is CommonJS, as if it were ESM.
+
+Look up templates by `name`, not filename. The numeric prefix encodes `template_list` order and moves whenever templates are reordered in the extension.
+
 ## `export-templates.py`
 
 The extension's settings export keeps each template under its own `template_<id>` key; the
