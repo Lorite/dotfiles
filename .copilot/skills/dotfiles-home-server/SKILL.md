@@ -66,6 +66,8 @@ The Obsidian **vault is kept live by Syncthing**. There's no Obsidian *GUI* ther
 
 The wrapper is on-demand (launch → run → stop), so it never fights the laptop's live instance over the Syncthing-synced `.obsidian/`; enabling it was a one-time `"cli":true` in the server's global `~/.config/obsidian/obsidian.json` (machine-local, not synced). It's a passthrough when Obsidian is already up (laptop) and degrades to file-only if it can't launch. See the task note *"Set up headless Obsidian on the home server for the pipeline"*. Agents can still fall back to direct file writes when they don't need the app.
 
+**The Obsidian capture pipeline runs there** (since 2026-09-02), not on the laptop: `obsidian-inbox-watcher.path` picks up a stub within a second of Syncthing delivering it, enriches it with the server's own `obsidian-clipper-cli` build and `yt-dlp`, and files the note. The laptop's copy is deliberately not installed, because two watchers over a synced inbox would race and the loser writes a ` (2)` duplicate. One catch: `dotfiles-pull.service` never runs build scripts, so after a clipper pin bump the server keeps its old build until someone runs `build-cli.sh && export-templates.py` there by hand (done 2026-09-11 for the Knap migration).
+
 **Zotero** runs **web-only** there (the `zotero-mcp` launcher auto-detects this — see the `dotfiles-tooling` skill; the Web API key is at `~/.config/paper-scout/zotero-api-key`).
 
 **Robotics / dev-container / hardware work stays on the laptop** (can't move to a headless box).

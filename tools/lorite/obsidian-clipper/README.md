@@ -50,6 +50,12 @@ There used to be a third, unescaping quotes in filter arguments. It is **gone as
 Refresh a patch after upstream moves: build with `--latest`, fix the conflict in the build
 dir, then `git format-patch` back into `patches/`.
 
+**A pin bump has to be applied on the home server by hand.** `dotfiles-pull.service` deliberately never runs build scripts, so pulling the new `build-cli.sh` does not rebuild anything. Until someone runs it there, the server keeps its old build. Run both, in this order, because the linter needs the `knap` the build installs:
+
+```bash
+ssh lorite@100.72.103.27 'cd ~/git/dotfiles/tools/lorite/obsidian-clipper && ./build-cli.sh && ./export-templates.py'
+```
+
 ## Knap, and why template repair replaced patch 0003
 
 Upstream commit `a9d33ce` (2026-09-03, *"Move templating to Knap"*) deleted `src/utils/renderer.ts` and moved the whole template engine into [Knap](https://knap.md/), a standalone package. Our pin moved from `ec27f8b` to `a9d33ce` on 2026-09-11. Patches 0001 and 0002 still apply unchanged. Patch 0003 could not, because its file no longer exists.
@@ -149,7 +155,7 @@ phone. The phone's only job is to drop a tiny file into the Syncthing-synced vau
 <vault>/ai_chats/inbox/capture-<anything>.md      # content: the shared URL on any line
 ```
 
-`inbox-watcher.py` (run by `obsidian-inbox-watcher.timer`, every 2 min) picks stubs up,
+`inbox-watcher.py` (triggered by `obsidian-inbox-watcher.path` on inotify, within a second, with `obsidian-inbox-watcher.timer` as an hourly backstop) picks stubs up,
 clips the URL headlessly — `youtube-enrich.py` for YouTube, the CLI (with a
 "Website Default" fallback, since the CLI errors on unmatched URLs instead of falling
 back like the extension) for everything else — files the note where the matched
@@ -176,9 +182,9 @@ the default look-back is 2 days and every candidate is deduped against the notes
 including `processed/` and `failed/`, so cadence only controls latency and a failed clip is
 never retried in a loop.
 
-Enrichment still happens on the laptop: the server has no `obsidian-clipper-cli` or
-`yt-dlp` templates, so the stub travels by Syncthing and the laptop's already-running
-`obsidian-inbox-watcher.timer` turns it into a note.
+**Enrichment runs on the home server too** (since 2026-09-02), so capture and enrichment are both there and nothing waits for the laptop. The server has its own `obsidian-clipper-cli` build, `yt-dlp`, and its own export of the templates, which it can regenerate itself because the Web Clipper settings file is in the Syncthing-synced vault. Its build was brought to the Knap pin on 2026-09-11 and verified byte-identical to the laptop's for the same article URL, with the YouTube path giving the same 89 transcript lines.
+
+**Run it on one machine only.** The laptop's `.path` unit is not installed and its timer is disabled, deliberately: the inbox is synced, so two watchers would both see the same stub, and `inbox-watcher.py` never overwrites an existing note, so the loser of the race writes a ` (2)` duplicate rather than failing.
 
 **What becomes a note is decided by CHANNEL, not by watch time**, because watch time gets
 it wrong both ways: a 3-minute Fireship video is worth keeping and a 40-minute League of
