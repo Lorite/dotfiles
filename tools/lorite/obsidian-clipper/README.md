@@ -67,6 +67,10 @@ Knap did not fix the underlying problem, it only relocated it. The extension sto
 
 The silent half is the dangerous half, and it is much larger than the loud half. So the repair now happens to the **templates**, in `knap-lint.mjs`, which also fixes the browser extension if you re-import the repaired settings.
 
+**The settings export was repaired at the source on 2026-09-11**, so exports now come out clean and the browser extension renders these expressions correctly too. It needs a re-import into Web Clipper to take effect there. The repair touched only template expressions and `property_types`: 155 changed lines against 155 removed, every one containing an escaped quote, with `general_settings`, `interpreter_settings` and `template_list` untouched.
+
+`property-types.json` is linted alongside the templates, because its `defaultValue` fields are template expressions too. Ten of them were broken, including one Knap could not even parse (`Missing closing }}`).
+
 ```bash
 ./knap-lint.mjs                              # report
 ./knap-lint.mjs --fix                        # repair the exported CLI templates in place
@@ -223,8 +227,7 @@ fire-and-forget capture.
 
 ## Known gaps
 
-- The `first` filter crashes on YouTube (`JSON.parse` on a plain string). Harmless — it
-  only affects `thumbnailUrl`, which resolves anyway — but it is noisy on stderr.
+- ~~The `first` filter crashes on YouTube (`JSON.parse` on a plain string)~~ **fixed by the Knap migration (2026-09-11)**. Knap's `first` returns a plain string unchanged with no error, and a full `youtube-enrich.py` run now finishes with silent stderr, 89 transcript lines and every field filled.
 - No JavaScript execution: great for articles/blogs/docs, useless for SPA-rendered pages.
 - `youtube-enrich.py` fills the gaps *after* rendering, so a template that puts the channel
   inside `noteNameFormat` (the filename) still gets it empty.

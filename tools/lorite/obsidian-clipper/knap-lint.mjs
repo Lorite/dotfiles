@@ -259,6 +259,14 @@ async function main() {
         ? [opts.settings]
         : fs.readdirSync(opts.dir).filter((f) => f.endsWith('.json')).sort().map((f) => path.join(opts.dir, f));
 
+    // property-types.json sits beside the templates directory, not inside it, and its
+    // `defaultValue` fields are template expressions too — one of them carries the same
+    // broken `replace` the YouTube templates did. Lint it with them.
+    if (!opts.settings) {
+        const propertyTypes = path.join(path.dirname(opts.dir), 'property-types.json');
+        if (fs.existsSync(propertyTypes)) targets.push(propertyTypes);
+    }
+
     if (targets.length === 0) {
         console.error(`No templates found in ${opts.dir}. Run ./export-templates.py first.`);
         process.exit(2);
@@ -288,6 +296,12 @@ async function main() {
                 console.log(`  ERROR  ${f.where}`);
                 console.log(`    expr: ${brief(f.span)}`);
                 console.log(`    knap: ${f.message}`);
+            } else if (!opts.fix) {
+                // Report mode attempts no repairs, so it must not claim a repair failed.
+                skipped++;
+                console.log(`  NEEDS FIX  ${f.where}`);
+                console.log(`    expr: ${brief(f.span)}`);
+                console.log(`    why : ${f.message} — run --fix`);
             } else {
                 // Knap accepts it as written and no safe repair exists, e.g. `replace:"\"":""`,
                 // where the escaped quote IS the value being searched for. Left alone on purpose.
@@ -298,13 +312,20 @@ async function main() {
             }
         }
         if (opts.fix && findings.some((f) => f.fixed)) {
-            fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
+            // Keep the file's own trailing-newline convention. The Web Clipper settings export
+            // ends without one, and adding it would put an unrelated line in the vault's diff.
+            const trailer = original.endsWith('\n') ? '\n' : '';
+            fs.writeFileSync(file, JSON.stringify(data, null, 2) + trailer);
         }
     }
 
     console.log();
     if (repaired) console.log(`Repaired ${repaired} expression(s).`);
-    if (skipped) console.log(`Left ${skipped} expression(s) alone (knap accepts them; review the SKIP list above).`);
+    if (skipped) {
+        console.log(opts.fix
+            ? `Left ${skipped} expression(s) alone (knap accepts them; review the SKIP list above).`
+            : `${skipped} expression(s) need --fix.`);
+    }
     if (broken) {
         console.log(`${broken} expression(s) rejected by knap and not repairable.`);
         process.exit(1);
