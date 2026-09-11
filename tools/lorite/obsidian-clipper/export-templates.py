@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 
 DEFAULT_SETTINGS = os.path.expanduser("~/git/lorite-obsidian-notes/obsidian-web-clipper-settings.json")
@@ -27,13 +28,16 @@ def slugify(name):
     return slug or "untitled"
 
 
-# NOTE: templates are exported VERBATIM. Do not "fix" the escaped quotes the extension
-# writes in filter arguments ({{words|calc:\"/238\"}}). An earlier version rewrote them
-# here because the CLI's parser choked on them, but doing it at this level is unsafe:
-# interpreter prompts ({{"...."}}) legitimately contain \", and a prompt containing }}
-# cannot be delimited by a regex, so the rewrite silently corrupted one of them.
-# The escaping is now handled properly inside the CLI itself — see
-# patches/0003-Unescape-quotes-in-filter-arguments.patch.
+# NOTE: templates are exported VERBATIM, then repaired by ./knap-lint.mjs as a separate,
+# parser-aware pass. Do NOT "fix" the escaped quotes the extension writes
+# ({{words|calc:\"/238\"}}) with a regex here. An earlier version did, and it silently
+# corrupted an interpreter prompt: prompts ({{"...."}}) legitimately contain \", and a
+# prompt containing }} cannot be delimited by a regex.
+#
+# It used to be handled inside the CLI (patches/0003), but upstream deleted that file when
+# it moved templating to Knap, so the repair now happens to the templates themselves. The
+# linter only keeps a rewrite that Knap then renders without errors, so it cannot make a
+# template worse, and anything it cannot prove safe is reported and left alone.
 
 
 def main():
@@ -92,6 +96,17 @@ def main():
 
     if not written:
         sys.exit("No template_* keys found in %s" % args.settings)
+
+    lint = os.path.join(os.path.dirname(os.path.abspath(__file__)), "knap-lint.mjs")
+    if os.access(lint, os.X_OK):
+        print("Repairing templates for knap ...")
+        # Exit 1 just means some expressions could not be repaired; the linter prints them.
+        rc = subprocess.call([lint, "--dir", tpl_dir, "--fix"])
+        if rc not in (0, 1):
+            print("WARNING: knap-lint.mjs could not run (exit %d); templates are unrepaired." % rc,
+                  file=sys.stderr)
+    else:
+        print("WARNING: knap-lint.mjs not executable; templates are unrepaired.", file=sys.stderr)
 
     print("Exported %d templates -> %s" % (written, tpl_dir))
     if prop_path:

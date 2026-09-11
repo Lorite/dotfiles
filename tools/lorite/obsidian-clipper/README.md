@@ -31,11 +31,11 @@ build regressed to empty output.
 | `./build-cli.sh` | deterministic build (pinned commit + patches) |
 | `./build-cli.sh --latest` | build today's `origin/main` — use to check whether the patches still apply or have been fixed upstream |
 | `./build-cli.sh --check` | re-run the smoke test against the existing build |
+| `./knap-lint.mjs [--fix]` | check (or repair) the templates against knap |
 
 ## The patches (`patches/`)
 
-Upstream carries three defects. A PR was closed as the CLI being work-in-progress, so we
-carry the fixes ourselves rather than wait.
+Upstream carries two defects the CLI cannot work without. A PR was closed as the CLI being work-in-progress, so we carry the fixes ourselves rather than wait.
 
 1. **Empty output** — the Node polyfill banner in `scripts/build-cli.mjs` defines
    `document` but not `navigator`/`getComputedStyle`, which `defuddle` needs; and
@@ -44,16 +44,40 @@ carry the fixes ourselves rather than wait.
 2. **Non-deterministic template matching** — `matchTemplate()` returns the *first* trigger
    match, but the CLI reads the template directory with `fs.readdirSync` **unsorted**; on
    ext4 that is hash order. Patch adds `.sort()`.
-3. **Escaped quotes in filter arguments are silently dropped.** The extension writes
-   `{{words|calc:\"/238\"}}`. The lexer turns `\"` into `"` but keeps the surrounding
-   quotes, so the argument arrives **double-quoted** (`""/238""`); each filter strips only
-   one pair, `calc` then reads `"` as its operator, rejects the argument, and returns the
-   value **unfiltered**. Result: `read_length_minutes` came out as the raw word count
-   (748 instead of 3.14) with only a console warning. Patch collapses the doubling in
-   `evaluateFilter`.
+
+There used to be a third, unescaping quotes in filter arguments. It is **gone as of 2026-09-11**, along with the file it patched.
 
 Refresh a patch after upstream moves: build with `--latest`, fix the conflict in the build
 dir, then `git format-patch` back into `patches/`.
+
+## Knap, and why template repair replaced patch 0003
+
+Upstream commit `a9d33ce` (2026-09-03, *"Move templating to Knap"*) deleted `src/utils/renderer.ts` and moved the whole template engine into [Knap](https://knap.md/), a standalone package. Our pin moved from `ec27f8b` to `a9d33ce` on 2026-09-11. Patches 0001 and 0002 still apply unchanged. Patch 0003 could not, because its file no longer exists.
+
+Knap did not fix the underlying problem, it only relocated it. The extension stores many expressions with escaped quotes, and Knap rejects or mangles them just as the old renderer did. Measured across the 33 exported templates:
+
+| shape | count | what Knap does |
+|---|---|---|
+| `calc:\"/238\"` | 14 | rejects the argument, value passes through unfiltered |
+| `replace:\"PT\",\"\",\"S\",\"\"` | 2 | rejects it, and Knap's `replace` takes only one `old:new` pair anyway |
+| `date:\"YYYY-MM-DDTHH:mm\"` | 48 | **accepts it**, and wraps the timestamp in literal quotes |
+| `join:\"\\n- \"` | 8 | **accepts it**, and leaks quotes between list items |
+| `[data-testid=\"x\"]` in a selector | many | **accepts it**, and queries the DOM with the backslashes still in |
+| `{{\"Make 4-5 lines description...\"}}` | 11 | no longer recognised as an interpreter prompt, so the prompt text renders into the note |
+
+The silent half is the dangerous half, and it is much larger than the loud half. So the repair now happens to the **templates**, in `knap-lint.mjs`, which also fixes the browser extension if you re-import the repaired settings.
+
+```bash
+./knap-lint.mjs                              # report
+./knap-lint.mjs --fix                        # repair the exported CLI templates in place
+./knap-lint.mjs --settings <export> --fix    # repair a settings export, to re-import into the extension
+```
+
+Every repair is parser-gated: a rewrite is only kept when Knap then renders it with **no errors**, so the linter cannot make a template worse than it found it. That is what makes this safe where the old regex rewrite in `export-templates.py` was not. Escaping is peeled to a fixed point, because some LinkedIn selectors are escaped twice over, and peeling stops at the first unbalanced quote count, which is what protects `replace:"\"":""` where the escaped quote **is** the value being searched for.
+
+On the current templates it repairs 145 expressions and deliberately leaves 18 alone. `build-cli.sh` runs it in report mode as a gate, and `export-templates.py` runs it with `--fix` on every export, because the extension re-introduces the escaping each time you edit a template there.
+
+**Verification of the migration.** Old build (`ec27f8b` + three patches, original templates) and new build (`a9d33ce` + two patches, repaired templates) produce **byte-identical notes** for an article URL and a YouTube URL. Without the template repair the same comparison showed the interpreter prompt leaking into `description:` and datetime properties coming out quoted.
 
 ## `export-templates.py`
 
@@ -67,11 +91,7 @@ a trigger — `Wikipedia` and `Wikipedia (person)` have an *identical* regex —
 extension breaks the tie by list order. Export them alphabetically and a Wikipedia article
 clips as a **person**.
 
-Otherwise templates are written **verbatim**. An earlier version rewrote the escaped
-quotes in filter arguments here; don't reintroduce that. Interpreter prompts (`{{"…"}}`)
-contain `\"` legitimately, and a prompt containing `}}` can't be delimited by a regex, so
-the rewrite silently corrupted one. That escaping is now handled inside the CLI by
-patch 0003, where the parser actually knows what is an argument and what is prose.
+Otherwise templates are written **verbatim**, and then repaired by `knap-lint.mjs` as a separate pass. Don't reintroduce a regex rewrite here. Interpreter prompts (`{{"…"}}`) contain `\"` legitimately, and a prompt containing `}}` can't be delimited by a regex, so the old rewrite silently corrupted one. The linter avoids that by only keeping a rewrite Knap accepts, and by skipping any span whose quotes don't balance.
 
 Re-run it whenever you change templates in the extension.
 

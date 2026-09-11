@@ -11,6 +11,11 @@
 # Upstream has these bugs open; a PR was closed as the CLI being work-in-progress, so we
 # carry the patches ourselves rather than waiting for them to land.
 #
+# The third patch (escaped quotes in filter arguments) is GONE as of 2026-09-11: upstream
+# deleted src/utils/renderer.ts when it moved templating to Knap, and the malformed
+# arguments are now repaired in the TEMPLATES by ./knap-lint.mjs instead, which fixes the
+# browser extension too. That linter runs at the end of this build as a gate.
+#
 # Usage:
 #   ./build-cli.sh              # build the pinned commit + patches (deterministic)
 #   ./build-cli.sh --latest     # build today's origin/main instead, to see if the
@@ -23,9 +28,11 @@ set -euo pipefail
 
 REPO="https://github.com/obsidianmd/obsidian-clipper.git"
 BUILD_DIR="${OBSIDIAN_CLIPPER_DIR:-$HOME/.local/share/obsidian-clipper-cli}"
-# Pinned upstream commit the patches are known to apply to (main @ 2026-07-27).
-PIN="${OBSIDIAN_CLIPPER_COMMIT:-ec27f8b}"
-PATCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/patches"
+# Pinned upstream commit the patches are known to apply to (main @ 2026-09-03, the commit
+# that moved templating to Knap). Bumped from ec27f8b on 2026-09-11.
+PIN="${OBSIDIAN_CLIPPER_COMMIT:-a9d33ce}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PATCH_DIR="$SCRIPT_DIR/patches"
 WRAPPER="$HOME/.local/bin/obsidian-clipper-cli"
 # Smoke-test target: small, stable, and thematically ours.
 SMOKE_URL="https://docs.activitywatch.net/en/latest/getting-started.html"
@@ -73,6 +80,11 @@ fi
 
 # Detached checkout + hard clean: the patches are the only source of local change, so the
 # tree must start exactly at upstream or `git apply` will conflict on a re-run.
+# Discard them BEFORE checking out: the previous build left patched files and an
+# npm-rewritten package-lock.json behind, and `git checkout` refuses to move across them.
+# This only shows up when $target actually changes, which is why it survived until the
+# 2026-09-11 pin bump.
+git reset --quiet --hard HEAD
 git checkout --quiet --detach "$target"
 git reset --quiet --hard "$target"
 git clean -qfd -e node_modules -e dist
@@ -119,3 +131,18 @@ exec node "$BUILD_DIR/dist/cli.cjs" "\$@"
 EOF
 chmod 0755 "$WRAPPER"
 echo "Wrapper -> $WRAPPER"
+
+# Template gate. Knap (which upstream now renders with) rejects some of the escaped filter
+# arguments the extension writes, and silently mangles others, so a green build alone no
+# longer means the pipeline produces correct notes. Report only: repairing is
+# ./knap-lint.mjs --fix, which export-templates.py runs for you.
+if [ -d "$HOME/.config/obsidian-clipper-cli/templates" ]; then
+    echo
+    if ! "$SCRIPT_DIR/knap-lint.mjs" >/tmp/knap-lint.$$ 2>&1; then
+        tail -n 20 /tmp/knap-lint.$$
+        echo "Templates need repair: run ./knap-lint.mjs --fix (or ./export-templates.py)" >&2
+    else
+        tail -n 2 /tmp/knap-lint.$$
+    fi
+    rm -f /tmp/knap-lint.$$
+fi
