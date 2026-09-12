@@ -429,6 +429,90 @@ sync_copilot_to_opencode() {
 	print_success "Synced $label to $target_dir"
 }
 
+# OneDrive (abraunegg client) apt repository.
+#
+# Ubuntu's own archive trails upstream, and the client hard-refuses to run once
+# Microsoft marks a version obsolete, so the package has to come from the OBS
+# repo. An Ubuntu release upgrade disables any '.list' file it cannot migrate to
+# deb822 (renaming it '.list.disabled'), which silently strands the client on the
+# stale archive version until the obsolete-version warning is noticed -- exactly
+# what happened on the 26.04 upgrade. Re-asserting the repo makes that self-heal.
+setup_onedrive_repo() {
+	local base="https://download.opensuse.org/repositories/home:/npreining:/debian-ubuntu-onedrive"
+	local keyring="/usr/share/keyrings/obs-onedrive.gpg"
+	local sources="/etc/apt/sources.list.d/onedrive.sources"
+	local version arch url builds fallback tmpkey desired stale changed=0
+
+	if ! command -v curl >/dev/null 2>&1; then
+		print_warning "curl not available yet -- skipping OneDrive repo (re-run to configure)"
+		return 0
+	fi
+
+	version="$(. /etc/os-release && echo "$VERSION_ID")"
+	arch="$(dpkg --print-architecture)"
+	url="$base/xUbuntu_$version/"
+
+	# OBS builds one directory per Ubuntu release, and a brand-new release may not
+	# be published yet. Fall back to the newest build that is not newer than this
+	# machine rather than writing a repo that breaks every later 'apt update'.
+	if ! curl -fsS --max-time 15 -o /dev/null "${url}Release" 2>/dev/null; then
+		builds="$(curl -fsS --max-time 20 "$base/" 2>/dev/null |
+			grep -oE 'xUbuntu_[0-9.]+' | sed 's/^xUbuntu_//' | sort -u -V || true)"
+		fallback="$(printf '%s\n%s\n' "$builds" "$version" | sort -u -V |
+			awk -v v="$version" '$0 == v { exit } { last = $0 } END { print last }')"
+		if [ -z "$fallback" ]; then
+			print_warning "No OneDrive build published for Ubuntu $version -- skipping repo setup"
+			return 0
+		fi
+		print_warning "No OneDrive build for Ubuntu $version -- falling back to xUbuntu_$fallback"
+		url="$base/xUbuntu_$fallback/"
+	fi
+
+	if [ ! -s "$keyring" ]; then
+		tmpkey="$(mktemp)"
+		if curl -fsSL --max-time 20 -o "$tmpkey" "${url}Release.key" 2>/dev/null &&
+			[ -s "$tmpkey" ] &&
+			gpg --dearmor <"$tmpkey" 2>/dev/null | sudo -n tee "$keyring" >/dev/null 2>&1; then
+			print_success "Installed OneDrive repository signing key"
+		else
+			rm -f "$tmpkey"
+			print_warning "Could not install OneDrive repository key (no sudo?) -- skipping repo setup"
+			return 0
+		fi
+		rm -f "$tmpkey"
+	fi
+
+	# Flat repo: 'Suites: ./' with no Components, which is why the old one-line
+	# 'deb [signed-by=...] <url> ./' form had no automatic deb822 migration.
+	desired="$(printf 'Types: deb\nURIs: %s\nSuites: ./\nArchitectures: %s\nSigned-By: %s\n' \
+		"$url" "$arch" "$keyring")"
+
+	if [ -f "$sources" ] && [ "$(cat "$sources")" = "$desired" ]; then
+		print_success "OneDrive apt repository already configured"
+	elif printf '%s\n' "$desired" | sudo -n tee "$sources" >/dev/null 2>&1; then
+		print_success "Configured OneDrive apt repository ($url)"
+		changed=1
+	else
+		print_warning "Could not write $sources (no sudo) -- configure manually"
+		return 0
+	fi
+
+	# A leftover '.list' would double up the repo; the '.disabled' twin is inert
+	# but hides why upgrades stopped, so clear both once deb822 is in place.
+	for stale in "${sources%.sources}.list" "${sources%.sources}.list.disabled"; do
+		if [ -e "$stale" ] && sudo -n rm -f "$stale" 2>/dev/null; then
+			print_info "Removed superseded $stale"
+			changed=1
+		fi
+	done
+
+	if [ "$changed" -eq 1 ]; then
+		if sudo -n apt-get update -qq 2>/dev/null; then
+			print_success "Refreshed package list for the OneDrive repository"
+		fi
+	fi
+}
+
 # Check if running on Linux
 if [[ "$OSTYPE" != "linux-gnu"* ]]; then
 	print_error "This script is designed for Linux only"
@@ -470,6 +554,10 @@ for package in "${PACKAGES[@]}"; do
 		print_success "$package already installed"
 	fi
 done
+
+# OneDrive apt repository (kept current so a release upgrade cannot strand the client)
+print_info "Configuring OneDrive apt repository..."
+setup_onedrive_repo
 
 # Install Oh-My-Zsh
 print_info "Installing Oh-My-Zsh..."
