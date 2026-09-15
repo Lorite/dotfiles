@@ -70,8 +70,10 @@ The briefing's old Claude pin was *measured*: on 2026-07-25 OpenCode returned "�
 
 Two consequences follow from the flip, and they compound:
 
-- **OpenCode is now the FIRST substitute** when the pinned client fails (chain: antigravity → opencode → claude), where it used to be second behind antigravity. So the client measured to produce a false clean audit is now first in line.
-- **An unauthenticated `agy` fails every single night by definition** (it waits ~60 s for a pasted auth code, then exits 1), which turns "first in line" into "every night". Until `agy` is signed in on this host, the briefing's security audit effectively runs on OpenCode — the exact failure mode the original pin existed to prevent. One interactive `agy` login fixes it.
+- **OpenCode is now the FIRST substitute** when the pinned client fails (chain: antigravity → opencode → claude), where it used to be second behind antigravity. So the client measured to produce a false clean audit is now first in line whenever agy fails.
+- **An unauthenticated `agy` fails every single night by definition** (it waits ~60 s for a pasted auth code, then exits 1), which would turn "first in line" into "every night". ~~This host is not signed in.~~ **Signed in 2026-09-16** and verified end to end: a prompt returns in ~10 s instead of the 60 s timeout, `lorite-llm` runs through antigravity with no fallback line, agy sees all the skills, and — the check that actually matters, since a keyring can behave differently outside an interactive shell — the same run succeeds under `systemd-run --user` with the units' own PATH. Re-check this after anything that resets the credential store.
+
+**The auth is per host and interactive, so it cannot be automated.** `agy` signs in through the OS keyring locally or an SSH paste-the-code flow on a headless box. `install.sh` installs the binary and warns when `~/.gemini/antigravity-cli` is missing, but a new machine always needs one hand-run `agy` login before its nightly jobs stop falling back.
 
 The swap is logged to the journal by `lorite-llm`, so check it when a briefing reports a clean audit. Add `Environment=LLM_FALLBACK=0` to `lorite-morning-briefing.service` if a false-negative audit is ever worse than a missing briefing.
 
