@@ -33,7 +33,7 @@ You are the implementation subagent for paper-to-presentation workflows.
 - Visual-first: prefer figure/video/table placeholders over dense text.
 - No manual numbering in slide titles.
 - For diagrams, use `[DIAGRAM_PLACEHOLDER: Description]`.
-- Keep section transitions explicit using agenda separator slides.
+- Keep section transitions explicit using agenda separator slides. An agenda item can carry sub-points (a bullet list under its heading, e.g. the experiments under "Results") to keep the agenda distinctive; see the theme README.
 - Match the storytelling cadence of the user's `slides.md` (context -> problem -> questions -> methods -> results -> implications -> close).
 
 ## Required Frontmatter
