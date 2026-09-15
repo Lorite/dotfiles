@@ -167,3 +167,7 @@ export PATH="$OBSIDIAN_CLIPPER_HOME:$PATH"
 export ANDROID_SDK_ROOT="$HOME/android-sdk"
 export PATH="$ANDROID_SDK_ROOT/platform-tools:$PATH"
 . "/home/lori/.deno/env"
+
+
+# Added by Antigravity CLI installer
+export PATH="/home/lori/.local/bin:$PATH"

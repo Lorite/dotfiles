@@ -1,18 +1,25 @@
 # CLAUDE.md — dotfiles
 
-Personal Linux dotfiles **and** the single source of truth for AI coding-assistant customizations (agents, skills, global instructions) shared across **Claude Code, OpenCode, and GitHub Copilot**.
+Personal Linux dotfiles **and** the single source of truth for AI coding-assistant customizations (agents, skills, global instructions) shared across **Claude Code, OpenCode, GitHub Copilot, and Antigravity (`agy`)**.
 
 ## Source-of-truth & sync model (read this first)
 
 Author everything **once** under `.copilot/`. `install.sh` propagates it to each tool:
 
-| Source (edit here) | Claude Code | OpenCode | Copilot |
-|--------------------|-------------|----------|---------|
-| `.copilot/agents/*.agent.md` | copied + tool names translated to Claude's (`normalize_frontmatter_for_claude`) → `~/.claude/agents/` | copied + frontmatter normalized → `~/.config/opencode/agents/` | symlinked → `~/.copilot/agents/` |
-| `.copilot/skills/<name>/SKILL.md` | symlinked → `~/.claude/skills/` | symlinked → `~/.config/opencode/skills/` | symlinked → `~/.copilot/skills/` |
-| `.copilot/CLAUDE.md` | symlinked → `~/.claude/CLAUDE.md` (user-level global memory; wired 2026-07-06 — documented but never actually linked before, so Claude Code sessions had not been loading it) | → `~/.config/opencode/AGENTS.md` | (global instructions) |
+| Source (edit here) | Claude Code | OpenCode | Copilot | Antigravity (`agy`) |
+|--------------------|-------------|----------|---------|---------------------|
+| `.copilot/agents/*.agent.md` | copied + tool names translated to Claude's (`normalize_frontmatter_for_claude`) → `~/.claude/agents/` | copied + frontmatter normalized → `~/.config/opencode/agents/` | symlinked → `~/.copilot/agents/` | copied + `tools:` dropped (`normalize_frontmatter_for_antigravity`) → `~/.gemini/config/agents/` |
+| `.copilot/skills/<name>/SKILL.md` | symlinked → `~/.claude/skills/` | symlinked → `~/.config/opencode/skills/` | symlinked → `~/.copilot/skills/` | symlinked → `~/.gemini/config/skills/` |
+| `.copilot/CLAUDE.md` | symlinked → `~/.claude/CLAUDE.md` (user-level global memory; wired 2026-07-06 — documented but never actually linked before, so Claude Code sessions had not been loading it) | → `~/.config/opencode/AGENTS.md` | (global instructions) | symlinked → `~/.gemini/config/AGENTS.md` (agy's rules format) |
 
-**Never hand-edit `~/.claude/agents/`, `~/.config/opencode/...`, or `~/.copilot/...`** — they are generated. Edit `.copilot/`, then run `./install.sh` to re-sync.
+**Never hand-edit `~/.claude/agents/`, `~/.config/opencode/...`, `~/.copilot/...`, or `~/.gemini/config/...`** — they are generated. Edit `.copilot/`, then run `./install.sh` to re-sync.
+
+### Antigravity specifics (added 2026-09-15, verified against agy 1.2.3)
+
+`agy`'s global customization root is **`~/.gemini/config/`**: `skills/<name>/SKILL.md` (identical layout to Claude/Copilot, so a symlink is enough), `agents/<name>.md`, and `AGENTS.md`/`GEMINI.md` as rules. Two things are worth knowing before changing the sync:
+
+- **agy has no `tools:` agent-frontmatter key** — custom agents inherit the ambient toolset. Its `AgentFrontmatter` requires `name` + `description` and understands `model`, `skills`, `agents`, `rules`, `mainAgent`, `subagent`, `hidden`, `inheritMcp`, `commandExecutionPolicy`, `excludeDefaultComponents`. `normalize_frontmatter_for_antigravity()` therefore **drops** the Copilot-namespace `tools:` list rather than translating it. agy tolerates the unknown key today, but leaving it in is the same latent trap already documented for Claude: the day agy adds a `tools:` of its own, every agent would silently come up with a foreign tool registry.
+- **A `description:` containing `": "` must be quoted.** agy parses the frontmatter strictly, so an unquoted YAML scalar with a colon-space is a parse error and the agent is **silently dropped** from `agy agents` with no warning. This bit three real agents (`lorite-experiment-coder`, `lorite-paper-writer`, `lorite-robotics-theorist`), which were invisible to agy until their descriptions were quoted on 2026-09-15. Claude's parser is lenient and never surfaced it. When adding an agent, run `agy agents` and check it appears.
 
 ### Two Claude accounts, two config homes (2026-09-10)
 

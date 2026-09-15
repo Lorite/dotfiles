@@ -38,21 +38,27 @@ It **deliberately never runs `install.sh`** (unattended-run bug history + this h
 
 **Control:** `tmux attach -t {phd,vault}`; `systemctl --user {status,restart,stop} claude-rc claude-rc-vault` (needs `XDG_RUNTIME_DIR=/run/user/$(id -u)` over SSH).
 
-## Which LLM the nightly jobs use (set 2026-07-31)
+## Which LLM the nightly jobs use (changed to Antigravity 2026-09-15)
 
-Headless jobs go through **`lorite-llm.sh`**, whose built-in default is **OpenCode-first with Claude as fallback** (to keep low-effort work off the Claude quota). The server overrides that in **`~/.config/environment.d/lorite-llm.conf`** (machine-local; `install.sh` never overwrites an existing copy):
+Headless jobs go through **`lorite-llm.sh`**, which since 2026-09-15 knows **three** clients and auto-detects them in the order **antigravity → opencode → claude**. The server overrides that in **`~/.config/environment.d/lorite-llm.conf`** (machine-local; `install.sh` never overwrites an existing copy):
 
 ```
-LLM_CLIENT=claude
-LLM_MODEL=claude-sonnet-5
-LLM_EFFORT=xhigh
+LLM_CLIENT=antigravity
+LLM_MODEL=gemini-3.1-pro-high
+LLM_EFFORT=high
 ```
 
-So every headless job on this host runs **Claude Sonnet 5 at extra-high reasoning effort** — today that means the morning briefing plus the daily-note LLM summaries it performs (`obsidian_daily_note.py` deliberately does no LLM work itself). The **full model name is pinned rather than the `sonnet` alias**, so a future Sonnet release cannot silently change what runs overnight. `LLM_EFFORT` maps to Claude's `--effort` (`low|medium|high|xhigh|max`); unset means the client's own `settings.json` default, and OpenCode ignores it. Higher effort trades wall-clock for thoroughness, which suits jobs running at 01:00 with nobody waiting. Reload with `systemctl --user daemon-reload`, then confirm with `systemctl --user show-environment | grep -i llm`.
+So every unpinned headless job on this host now runs **Gemini 3.1 Pro (High) through `agy`**, which resolves to `agy -p "<prompt or /skill args>" --model gemini-3.1-pro-high --mode accept-edits --dangerously-skip-permissions --effort high`. It ran `claude` / `claude-sonnet-5` / `xhigh` from 2026-07-31 to 2026-09-15. The **full model name is pinned rather than a floating alias**, so a future release cannot silently change what runs overnight. Reload with `systemctl --user daemon-reload`, then confirm with `systemctl --user show-environment | grep -i llm`.
 
-**Fallback (changed 2026-07-31):** pinning `LLM_CLIENT` selects the **primary** client only — a pinned client **still falls back** to the other one when it fails, and the retry drops `LLM_MODEL` because model names are client-specific. So a Claude quota limit no longer kills the job, which is what happened on 2026-07-20. `LLM_FALLBACK=0` opts out.
+**The effort trap, and why `lorite-llm.sh` clamps.** Claude's `--effort` takes `low|medium|high|xhigh|max`; **agy takes only `low|medium|high`** and exits immediately with `invalid --effort "xhigh" (valid: low, medium, high)`. The server had `LLM_EFFORT=xhigh` set for Claude, so passing it through unchanged would have failed *every* nightly job at launch the moment the client flipped. `clamp_effort()` maps `xhigh`/`max` to `high` for antigravity, so a stale `xhigh` in the conf is now harmless rather than fatal. OpenCode has no equivalent and ignores it.
 
-**The catch, worth knowing before you trust a briefing:** the morning briefing pins Claude for a *measured* reason — on 2026-07-25 OpenCode returned "✅ No issues found" on a commit where Claude caught live Google OAuth tokens committed in plaintext. With fallback now active, a Claude outage means that security audit silently runs on the weaker client. The swap is logged to the journal by `lorite-llm`, so check it when a briefing reports a clean audit after an outage. Add `Environment=LLM_FALLBACK=0` to `lorite-morning-briefing.service` if a false-negative audit is ever worse than a missing briefing.
+**`agy` needs one interactive sign-in per machine.** It authenticates through the OS keyring locally, or an SSH paste-the-code flow on a headless box, and neither can run unattended. `install.sh` installs the binary and warns if `~/.gemini/antigravity-cli` is absent, but a fresh server needs one hand-run `agy` login before the nightly jobs can use it. Until then the fallback chain carries them.
+
+**Fallback (chain since 2026-09-15):** pinning `LLM_CLIENT` selects the **primary** client only — a pinned client **still falls back** when it fails, and since this change the retry walks the **whole remaining chain** in `CLIENT_ORDER` rather than one hardcoded partner, so a job survives two clients failing. The retry drops `LLM_MODEL` because model names are client-specific. So a quota limit no longer kills the job, which is what happened on 2026-07-20. `LLM_FALLBACK=0` opts out.
+
+**The catch, worth knowing before you trust a briefing:** `lorite-morning-briefing.service` and `lorite-weekly-note.service` still pin **`LLM_CLIENT=claude`**, deliberately left in place on 2026-09-15. The briefing's pin is *measured* — on 2026-07-25 OpenCode returned "✅ No issues found" on a commit where Claude caught live Google OAuth tokens committed in plaintext — and **Antigravity has not been measured on that security audit**, so it was not silently promoted into the job that checks for committed secrets. The upside of the new chain is that a Claude outage now retries on **antigravity before opencode**, so the weakest measured client is no longer the first substitute. Re-measure agy against a known-bad commit before flipping those two pins. The swap is logged to the journal by `lorite-llm`, so check it when a briefing reports a clean audit after an outage. Add `Environment=LLM_FALLBACK=0` to `lorite-morning-briefing.service` if a false-negative audit is ever worse than a missing briefing.
+
+**agy sees the same agents and skills as every other client**, synced by `install.sh` into `~/.gemini/config/` (`skills/` symlink, `agents/*.md` copies, `AGENTS.md` → `.copilot/CLAUDE.md`). Skills work as slash commands in print mode, so `lorite-llm.sh --skill lorite-weekly-note --skill-args 2026-W36` becomes `agy -p "/lorite-weekly-note 2026-W36"` — the same shape as the Claude branch, not the prose-prompt workaround OpenCode needs. See the dotfiles `CLAUDE.md` for the two frontmatter gotchas.
 
 ## Auth note (401s)
 

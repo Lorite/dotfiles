@@ -315,6 +315,75 @@ normalize_frontmatter_for_claude() {
     ' "$source_file" >"$target_file"
 }
 
+# Antigravity (agy) agent frontmatter.
+#
+# agy's AgentFrontmatter requires `name` + `description` (it refuses a file missing either) and
+# understands `model`, `skills`, `agents`, `rules`, `mainAgent`, `subagent`, `hidden`, `inheritMcp`,
+# `commandExecutionPolicy` and `excludeDefaultComponents`. It has NO `tools` key — custom agents
+# inherit the ambient toolset — so the Copilot-namespace `tools:` list is dropped rather than
+# translated. Verified 2026-09-15 that agy tolerates the unknown key, but leaving it in is the
+# same latent trap already documented for Claude: the day agy adds a `tools:` of its own, every
+# agent would silently come up with a foreign (probably empty) tool registry. Drop it at sync time.
+normalize_frontmatter_for_antigravity() {
+	local source_file=$1
+	local target_file=$2
+
+	awk '
+        NR == 1 && $0 == "---" { in_fm = 1; print; next }
+        in_fm && $0 == "---"   { in_fm = 0; skipping = 0; print; next }
+        in_fm {
+            # Continuation lines of a dropped multi-line or wrapped-inline tools: value.
+            if (skipping) {
+                if ($0 ~ /^[[:space:]]/) next
+                skipping = 0
+            }
+            if ($0 ~ /^tools:[[:space:]]*$/)   { skipping = 1; next }   # block list
+            if ($0 ~ /^tools:[[:space:]]*\[/) {                          # inline list
+                if ($0 !~ /\]/) skipping = 1                             # ...possibly wrapped
+                next
+            }
+            print; next
+        }
+        { print }
+    ' "$source_file" >"$target_file"
+}
+
+# Sync Copilot customizations to Antigravity's global customization root (~/.gemini/config).
+# Layout verified against the installed agy 1.2.3 binary on 2026-09-15:
+#   skills  -> ~/.gemini/config/skills/<name>/SKILL.md   (same shape as Claude/Copilot: symlink)
+#   agents  -> ~/.gemini/config/agents/<name>.md         (name+description frontmatter, H1 body)
+sync_copilot_to_antigravity() {
+	local source_dir=$1
+	local target_dir=$2
+	local label=$3
+
+	if [ ! -d "$source_dir" ]; then
+		print_warning "No $label found at $source_dir, skipping"
+		return
+	fi
+
+	if [ -L "$target_dir" ]; then
+		backup_path "$target_dir"
+	fi
+
+	# Skills use the identical SKILL.md layout, so a symlink is enough (as for Claude/OpenCode).
+	if [[ "$target_dir" == *"skills" ]]; then
+		ln -sfn "$source_dir" "$target_dir"
+		print_success "Linked $label to $target_dir"
+		return
+	fi
+
+	mkdir -p "$target_dir"
+
+	find "$source_dir" -type f -name '*.md' | while IFS= read -r source_file; do
+		local base
+		base=$(basename "$source_file")
+		normalize_frontmatter_for_antigravity "$source_file" "$target_dir/$base"
+	done
+
+	print_success "Synced $label to $target_dir"
+}
+
 # Claude Code config homes to sync, one per signed-in account.
 # ~/.claude is the default (CLAUDE_CONFIG_DIR unset); every additional account gets its own
 # ~/.claude-<name>, selected per desktop launcher or shell via CLAUDE_CONFIG_DIR. That dir holds
@@ -727,7 +796,28 @@ for opencode_path in '$HOME/.local/bin' '$HOME/.opencode/bin'; do
 	fi
 done
 
-# lorite-llm wrapper: OpenCode (Big Pickle) with Claude fallback.
+# Install the Antigravity CLI (agy) — the preferred lorite-llm client since 2026-09-15.
+# Official installer, which drops the binary in ~/.local/bin/agy.
+print_info "Installing Antigravity CLI (agy)..."
+if command -v agy &>/dev/null || [ -x "$HOME/.local/bin/agy" ]; then
+	print_success "Antigravity CLI already installed ($(command -v agy || echo "$HOME/.local/bin/agy"))"
+else
+	if curl -fsSL https://antigravity.google/cli/install.sh | bash; then
+		print_success "Antigravity CLI installed to ~/.local/bin/agy"
+	else
+		print_warning "Antigravity CLI install failed — lorite-llm will fall through to OpenCode/Claude"
+	fi
+fi
+# agy signs in through the OS keyring locally, or an SSH paste-the-code flow on a headless box.
+# Neither can run unattended, so a fresh machine needs ONE interactive `agy` login by hand; until
+# then lorite-llm's fallback chain carries the nightly jobs.
+if [ -x "$HOME/.local/bin/agy" ] || command -v agy &>/dev/null; then
+	if ! ls "$HOME/.gemini/antigravity-cli" &>/dev/null; then
+		print_warning "agy is installed but not signed in yet — run 'agy' once interactively to authenticate"
+	fi
+fi
+
+# lorite-llm wrapper: Antigravity first, then OpenCode, then Claude.
 # Installed to ~/.local/bin so it's available system-wide (used by morning_briefing.sh, etc.).
 print_info "Installing lorite-llm wrapper..."
 mkdir -p "$HOME/.local/bin"
@@ -794,6 +884,15 @@ mkdir -p "$HOME/.config/opencode"
 create_symlink "$DOTFILES_DIR/.copilot/CLAUDE.md" "$HOME/.config/opencode/AGENTS.md"
 sync_copilot_to_opencode "$DOTFILES_DIR/.copilot/agents" "$HOME/.config/opencode/agents" "Copilot agents"
 sync_copilot_to_opencode "$DOTFILES_DIR/.copilot/skills" "$HOME/.config/opencode/skills" "Copilot skills"
+
+# Antigravity (agy) reads its global customizations from ~/.gemini/config — skills, agents, and
+# rules — so the same .copilot source drives it too. AGENTS.md is agy's rules format (it reads
+# GEMINI.md/AGENTS.md hierarchically), which makes this link the exact analogue of the OpenCode
+# AGENTS.md and the Claude CLAUDE.md above: one source of truth, three clients.
+mkdir -p "$HOME/.gemini/config"
+create_symlink "$DOTFILES_DIR/.copilot/CLAUDE.md" "$HOME/.gemini/config/AGENTS.md"
+sync_copilot_to_antigravity "$DOTFILES_DIR/.copilot/agents" "$HOME/.gemini/config/agents" "Copilot agents"
+sync_copilot_to_antigravity "$DOTFILES_DIR/.copilot/skills" "$HOME/.gemini/config/skills" "Copilot skills"
 
 # The home server is the single owner of every timer that WRITES to the Syncthing'd vault
 # or polls on its behalf: the Obsidian-driving ones (daily-note + morning-briefing) run
