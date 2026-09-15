@@ -11,8 +11,11 @@ Type=oneshot
 ExecStart=%h/git/dotfiles/tools/lorite/weekly_note.sh
 Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
 # Same client pinning rationale as the morning briefing: the roll-up distills a week
-# of notes and the drafted reflections go in front of the user every Monday, so pin
-# Claude and accept the lorite-llm fallback to OpenCode on failure.
-Environment=LLM_CLIENT=claude
+# of notes and the drafted reflections go in front of the user every Monday, so pin the
+# strongest available client and accept the lorite-llm fallback down the chain on failure.
+# FLIPPED TO ANTIGRAVITY 2026-09-16 at the user's explicit request, alongside the briefing.
+# No security-audit caveat applies here (this job writes reflections, it does not audit
+# commits), so this flip carries none of the briefing's measurement risk.
+Environment=LLM_CLIENT=antigravity
 EnvironmentFile=-%h/.config/lorite/morning-briefing.env
 TimeoutStartSec=30min

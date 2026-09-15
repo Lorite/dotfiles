@@ -24,11 +24,21 @@ Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
 # briefing BACKFILL well on the same free model. Re-measure once OpenCode Go's paid
 # models (GLM-5.2 / Kimi K2.7 Code) are wired, and drop this line if they pass.
 # CONSEQUENCE of the 2026-07-31 fallback change: a pinned client now still falls back, so if
-# Claude fails (quota), this job retries on OpenCode — the very client measured above to return
-# a false "no issues found" on the security audit. That is the deliberate trade: a briefing from
-# the weaker client beats no briefing, and the swap is logged to the journal by lorite-llm.
+# the pinned client fails (quota), this job retries down the chain — which includes OpenCode,
+# the very client measured above to return a false "no issues found" on the security audit.
+# That is the deliberate trade: a briefing from the weaker client beats no briefing, and the
+# swap is logged to the journal by lorite-llm.
 # If a false-negative audit is ever worse than a missing one, add Environment=LLM_FALLBACK=0.
-Environment=LLM_CLIENT=claude
+#
+# FLIPPED TO ANTIGRAVITY 2026-09-16, at the user's explicit request after being shown the
+# caveat below. Antigravity has NOT been measured on the audit case above — the 2026-07-25
+# comparison was Claude vs OpenCode only — so this pin is a preference, not a measurement.
+# Re-measure agy against a known-bad commit (live OAuth tokens in .obsidian/plugins/) and
+# record the result here; if it returns a false "no issues found", revert this to claude.
+# NOTE the fallback order that follows from this pin: antigravity -> opencode -> claude, so
+# OpenCode is now the FIRST substitute when agy fails, where it used to be second. That matters
+# most while agy is unauthenticated on a host, since then it fails every night by definition.
+Environment=LLM_CLIENT=antigravity
 # Host-specific overrides (optional; '-' = ok if absent). The home server writes
 # LORITE_VAULT_GIT=%h/git/lorite-obsidian-notes here: since 2026-08-12 the vault
 # directory on that host is itself a clone of the GitHub remote (Syncthing excludes
