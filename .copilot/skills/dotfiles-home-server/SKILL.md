@@ -66,7 +66,17 @@ systemctl --user set-environment LLM_CLIENT=antigravity LLM_MODEL=gemini-3.1-pro
 
 **The catch, worth knowing before you trust a briefing.** `lorite-morning-briefing.service` and `lorite-weekly-note.service` now pin **`LLM_CLIENT=antigravity`**, flipped 2026-09-16 at the user's explicit request (they were left on `claude` the day before, and the user overrode that after being shown this caveat).
 
-The briefing's old Claude pin was *measured*: on 2026-07-25 OpenCode returned "✅ No issues found" on a commit where Claude caught live Google OAuth tokens committed in plaintext. That comparison was **Claude vs OpenCode only — Antigravity has never been run against it**, so the current pin is a preference, not a measurement. Re-measure `agy` against a known-bad commit and record the result in the unit file; revert to `claude` if it returns a false clean.
+The briefing's old Claude pin was *measured*: on 2026-07-25 OpenCode returned "✅ No issues found" on a commit where Claude caught live Google OAuth tokens committed in plaintext.
+
+**Antigravity has now been measured on that same case (2026-09-16) and passes.** The replay fed vault commit `4d658895a` through this skill's own audit checklist and verdict format, with token *values* swapped for format-identical synthetic ones (`ya29.` / `1//0` prefixes) so a possibly-still-live refresh token was not re-transmitted to a third party — detection keys on format and context, not the secret bytes.
+
+| Client | Result on the known-bad commit |
+|--------|-------------------------------|
+| Antigravity (`gemini-3.1-pro-high`) | **3/3 runs flagged** the OAuth leak, in both commits in the window |
+| OpenCode (`big-pickle`) | flagged it |
+| Claude (`sonnet`) | flagged it, sharpest write-up (noted the refresh token does not expire, gave remediation) |
+
+Two things follow. The 2026-07-25 miss was **model-specific** — OpenCode was on `deepseek-v4-flash-free` then and is on `big-pickle` now — rather than a standing property of OpenCode, which makes the "OpenCode is first substitute" consequence below much less alarming. And the pin is now a measurement rather than a preference. **Caveat on how much weight it carries:** one known-bad case, n=3, synthetic values. It clears agy for this job; it is not a general secret-detection benchmark, so re-run it if the model or the job changes.
 
 Two consequences follow from the flip, and they compound:
 

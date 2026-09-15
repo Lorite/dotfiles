@@ -30,14 +30,21 @@ Environment=PATH=%h/.local/bin:%h/.opencode/bin:/usr/local/bin:/usr/bin:/bin
 # swap is logged to the journal by lorite-llm.
 # If a false-negative audit is ever worse than a missing one, add Environment=LLM_FALLBACK=0.
 #
-# FLIPPED TO ANTIGRAVITY 2026-09-16, at the user's explicit request after being shown the
-# caveat below. Antigravity has NOT been measured on the audit case above — the 2026-07-25
-# comparison was Claude vs OpenCode only — so this pin is a preference, not a measurement.
-# Re-measure agy against a known-bad commit (live OAuth tokens in .obsidian/plugins/) and
-# record the result here; if it returns a false "no issues found", revert this to claude.
+# FLIPPED TO ANTIGRAVITY 2026-09-16, and MEASURED the same day on the audit case above.
+# Replay: vault commit 4d658895a (2026-07-25, the one Claude caught and OpenCode missed), fed
+# through this skill's own audit checklist and verdict format. Token VALUES were replaced with
+# format-identical synthetic ones (`ya29.`/`1//0` prefixes) so a possibly-still-live refresh
+# token was not re-transmitted; detection keys on format and context, not the secret bytes.
+#   Antigravity (gemini-3.1-pro-high)  3/3 runs flagged the OAuth leak in both commits
+#   OpenCode    (big-pickle)           flagged it
+#   Claude      (sonnet)               flagged it, with the sharpest write-up (called out that
+#                                      the refresh token does not expire, and gave remediation)
+# So the 2026-07-25 miss was MODEL-specific (OpenCode was on deepseek-v4-flash-free then), not
+# a standing property of OpenCode. Caveat on the strength of this: one known-bad case, n=3,
+# synthetic values. It clears agy for this job; it is not a general secret-detection benchmark.
 # NOTE the fallback order that follows from this pin: antigravity -> opencode -> claude, so
-# OpenCode is now the FIRST substitute when agy fails, where it used to be second. That matters
-# most while agy is unauthenticated on a host, since then it fails every night by definition.
+# OpenCode is now the FIRST substitute when agy fails, where it used to be second — which the
+# measurement above makes far less alarming than it was.
 Environment=LLM_CLIENT=antigravity
 # Host-specific overrides (optional; '-' = ok if absent). The home server writes
 # LORITE_VAULT_GIT=%h/git/lorite-obsidian-notes here: since 2026-08-12 the vault
