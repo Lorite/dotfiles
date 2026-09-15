@@ -48,7 +48,15 @@ LLM_MODEL=gemini-3.1-pro-high
 LLM_EFFORT=high
 ```
 
-So every unpinned headless job on this host now runs **Gemini 3.1 Pro (High) through `agy`**, which resolves to `agy -p "<prompt or /skill args>" --model gemini-3.1-pro-high --mode accept-edits --dangerously-skip-permissions --effort high`. It ran `claude` / `claude-sonnet-5` / `xhigh` from 2026-07-31 to 2026-09-15. The **full model name is pinned rather than a floating alias**, so a future release cannot silently change what runs overnight. Reload with `systemctl --user daemon-reload`, then confirm with `systemctl --user show-environment | grep -i llm`.
+So every unpinned headless job on this host now runs **Gemini 3.1 Pro (High) through `agy`**, which resolves to `agy -p "<prompt or /skill args>" --model gemini-3.1-pro-high --mode accept-edits --dangerously-skip-permissions --effort high`. It ran `claude` / `claude-sonnet-5` / `xhigh` from 2026-07-31 to 2026-09-15. The **full model name is pinned rather than a floating alias**, so a future release cannot silently change what runs overnight.
+
+**Editing that file is not enough, and `daemon-reload` will not save you.** Measured on this host 2026-09-15: neither `systemctl --user daemon-reload` nor `daemon-reexec` re-reads `environment.d`, so the user manager keeps serving the **old** values and every nightly job silently runs the previous client while the conf on disk says otherwise. (This skill and the conf both used to claim `daemon-reload` sufficed.) `environment.d` is read only when the user manager starts, so either re-login/reboot or push the values in directly:
+
+```
+systemctl --user set-environment LLM_CLIENT=antigravity LLM_MODEL=gemini-3.1-pro-high LLM_EFFORT=high
+```
+
+**Always** confirm with `systemctl --user show-environment | grep -i llm`. The file being right is not evidence the manager agrees.
 
 **The effort trap, and why `lorite-llm.sh` clamps.** Claude's `--effort` takes `low|medium|high|xhigh|max`; **agy takes only `low|medium|high`** and exits immediately with `invalid --effort "xhigh" (valid: low, medium, high)`. The server had `LLM_EFFORT=xhigh` set for Claude, so passing it through unchanged would have failed *every* nightly job at launch the moment the client flipped. `clamp_effort()` maps `xhigh`/`max` to `high` for antigravity, so a stale `xhigh` in the conf is now harmless rather than fatal. OpenCode has no equivalent and ignores it.
 
