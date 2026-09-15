@@ -1,4 +1,7 @@
 {
+  "permissions": {
+    "defaultMode": "auto"
+  },
   "sandbox": {
     "enabled": false,
     "network": {
@@ -27,9 +30,6 @@
       "docker *",
       "devcontainer *"
     ]
-  },
-  "permissions": {
-    "defaultMode": "auto"
   },
   "effortLevel": "high",
   "inputNeededNotifEnabled": true,
