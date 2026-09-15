@@ -168,6 +168,8 @@ export ANDROID_SDK_ROOT="$HOME/android-sdk"
 export PATH="$ANDROID_SDK_ROOT/platform-tools:$PATH"
 . "/home/lori/.deno/env"
 
-
-# Added by Antigravity CLI installer
-export PATH="/home/lori/.local/bin:$PATH"
+# Added by the Antigravity CLI installer, rewritten to $HOME. The installer hardcodes the
+# absolute home of whatever machine it ran on, and this file is tracked and shared, so the
+# laptop's "/home/lori/..." was wrong on the home server (user "lorite") and each machine kept
+# appending its own copy. Keep this $HOME-based and portable.
+export PATH="$HOME/.local/bin:$PATH"
