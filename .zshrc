@@ -166,3 +166,4 @@ export PATH="$OBSIDIAN_CLIPPER_HOME:$PATH"
 # android platform-tools (adb, fastboot)
 export ANDROID_SDK_ROOT="$HOME/android-sdk"
 export PATH="$ANDROID_SDK_ROOT/platform-tools:$PATH"
+. "/home/lori/.deno/env"
